@@ -1348,16 +1348,28 @@ function Dashboard({ summary, profile, plan }) {
         </div>
         <div style={card}>
           <div style={{ fontWeight:700, fontSize:15, marginBottom:14 }}>⏰ Upcoming Deadlines</div>
-          {COMPLIANCE.map((c,i) => (
-            <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 12px", borderRadius:7, background:C.bg, border:`1px solid ${C.border}`, marginBottom:8 }}>
-              <div><div style={{ fontSize:13, fontWeight:600 }}>{c.task}</div><div style={{ fontSize:11, color:C.textMuted }}>{c.period}</div></div>
-              <span style={badge(c.color)}>Due {c.due}</span>
-            </div>
-          ))}
+          {(() => {
+            const today = new Date();
+            const deadlines = [];
+            for (let i = 0; i < 3; i++) {
+              const m = (today.getMonth() + i) % 12;
+              const y = today.getMonth() + i >= 12 ? today.getFullYear() + 1 : today.getFullYear();
+              const mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m];
+              deadlines.push({ task:'GSTR-1 Filing', due:'11 '+mn+' '+y, period:mn+' '+y, color:'#2E86C1', date: new Date(y, m, 11) });
+              deadlines.push({ task:'GSTR-3B Filing', due:'20 '+mn+' '+y, period:mn+' '+y, color:'#F39C12', date: new Date(y, m, 20) });
+              deadlines.push({ task:'TDS Deposit', due:'7 '+mn+' '+y, period:mn+' '+y, color:'#E67E22', date: new Date(y, m, 7) });
+            }
+            return deadlines.filter(d => d.date >= today).sort((a,b) => a.date - b.date).slice(0,5).map((c,i) => (
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 12px", borderRadius:7, background:C.bg, border:`1px solid ${C.border}`, marginBottom:8 }}>
+                <div><div style={{ fontSize:13, fontWeight:600 }}>{c.task}</div><div style={{ fontSize:11, color:C.textMuted }}>{c.period}</div></div>
+                <span style={badge(c.color)}>Due {c.due}</span>
+              </div>
+            ));
+          })()}
         </div>
       </div>
       <div style={{ ...card, marginTop:20 }}>
-        <div style={{ fontWeight:700, fontSize:15, marginBottom:16 }}>📊 Monthly GST Overview — FY 2024</div>
+        <div style={{ fontWeight:700, fontSize:15, marginBottom:16 }}>📊 Monthly GST Overview — FY {new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear()-1}-{(new Date().getMonth() >= 3 ? new Date().getFullYear()+1 : new Date().getFullYear()).toString().slice(2)}</div>
         <div style={{ display:"flex", gap:6, alignItems:"flex-end", height:120 }}>
           {[65,82,54,91,73,88,61,95,78,84,92,100].map((h,i) => (
             <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
@@ -2053,6 +2065,362 @@ function EWayBill({ company, sales }) {
 // ─── DARK MODE TOGGLE ─────────────────────────────────────────────────────────
 // Dark mode is handled via CSS variables in index.html
 // The toggle button is added to the top navbar
+// Simple upload/reports/calendar/clients/settings pages (unchanged from v1)
+function UploadPage({ data }) {
+  const [files, setFiles] = useState({ sales:null, purchase:null });
+  const [done, setDone] = useState({ sales:false, purchase:false });
+  const [toast, setToast] = useState("");
+  async function doUpload(type) {
+    if (!files[type]) return;
+    try {
+      const result = await data.uploadExcel(files[type], type);
+      setDone(d => ({ ...d, [type]:true }));
+      setToast(`✅ ${result.count} records saved to Supabase!`);
+      setTimeout(() => setToast(""), 4000);
+    } catch(e) { setToast("❌ " + e.message); setTimeout(()=>setToast(""),5000); }
+  }
+  return (
+    <div>
+      {toast && <div style={{ position:"fixed", top:20, right:20, background:C.text, color:C.white, padding:"12px 20px", borderRadius:8, zIndex:9999, fontSize:14, fontWeight:600 }}>{toast}</div>}
+      <div style={{ fontSize:20, fontWeight:800, marginBottom:4 }}>📤 Upload GST Data</div>
+      <div style={{ fontSize:13, color:C.textMuted, marginBottom:20 }}>Upload Excel/CSV — auto-saved to Supabase</div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+        {[{type:"sales",label:"Sales Data",icon:"📈"},{type:"purchase",label:"Purchase Data",icon:"📉"}].map(({type,label,icon})=>(
+          <div key={type} style={card}>
+            <div style={{ fontWeight:700, fontSize:15, marginBottom:14 }}>{icon} Upload {label}</div>
+            {done[type] ? (
+              <div style={{ padding:16, background:C.successLight, borderRadius:8, display:"flex", gap:12, alignItems:"center" }}>
+                <span style={{ fontSize:24 }}>✅</span>
+                <div style={{ flex:1 }}><div style={{ fontWeight:700, color:C.success }}>Uploaded!</div><div style={{ fontSize:12, color:C.success }}>{files[type]?.name}</div></div>
+                <button style={{ ...btn("outline"), fontSize:12, padding:"5px 12px" }} onClick={()=>{ setFiles(f=>({...f,[type]:null})); setDone(d=>({...d,[type]:false})); }}>New</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ border:`2px dashed ${C.border}`, borderRadius:10, padding:"24px 20px", textAlign:"center", background:C.bg, marginBottom:12 }}>
+                  <div style={{ fontSize:32, marginBottom:8 }}>📊</div>
+                  <label style={{ ...btn(), display:"inline-flex", cursor:"pointer" }}>
+                    📁 Browse Excel / CSV
+                    <input type="file" accept=".xlsx,.xls,.csv" style={{ display:"none" }} onChange={e=>setFiles(f=>({...f,[type]:e.target.files[0]}))} />
+                  </label>
+                </div>
+                {files[type] && (
+                  <div style={{ background:C.bg, borderRadius:8, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <span style={{ fontSize:13 }}>{files[type].name}</span>
+                    <button style={btn()} onClick={()=>doUpload(type)} disabled={data.uploading}>{data.uploading?"Uploading…":"Upload & Save"}</button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ReportsPage({ data, summary }) {
+  const [tab, setTab] = useState("gstr1");
+  return (
+    <div>
+      <div style={{ fontSize:20, fontWeight:800, marginBottom:4 }}>📄 GST Reports</div>
+      <div style={{ fontSize:13, color:C.textMuted, marginBottom:16 }}>{new Date().toLocaleString("en-IN", {month:"long", year:"numeric"})}</div>
+      <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
+        {[{id:"gstr1",label:"GSTR-1"},{id:"gstr3b",label:"GSTR-3B"},{id:"sales",label:"Sales Register"},{id:"purchase",label:"Purchase Register"}].map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{ padding:"8px 18px", borderRadius:7, background:tab===t.id?C.primary:C.white, color:tab===t.id?C.white:C.textMuted, fontWeight:tab===t.id?700:500, fontSize:13, cursor:"pointer", border:`1px solid ${tab===t.id?C.primary:C.border}` }}>{t.label}</button>
+        ))}
+        <button style={{ ...btn("outline"), marginLeft:"auto" }}>⬇️ Download PDF</button>
+      </div>
+      <div style={card}>
+        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+          <thead><tr>{(tab==="sales"?["Invoice No","Date","Customer","Taxable","CGST","SGST","IGST","Total"]:tab==="purchase"?["Bill No","Date","Supplier","Taxable","CGST","SGST","IGST","Total"]:tab==="gstr1"?["Invoice No","Customer","GSTIN","HSN","Taxable","Rate","GST","Total"]:["Category","Gross Tax","ITC","Net Payable"]).map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <tbody>
+            {(tab==="sales"||tab==="gstr1") && data.sales.map((r,i)=><tr key={i}><td style={{...TD,color:C.primary,fontWeight:600}}>{r.invoice_number}</td><td style={TD}>{r.invoice_date}</td><td style={TD}>{r.customer_name}</td>{tab==="gstr1"&&<><td style={{...TD,fontSize:11,fontFamily:"monospace"}}>{r.gstin||"—"}</td><td style={TD}>{r.hsn}</td><td style={TD}>{r.gst_rate}%</td></>}<td style={TD}>{fmt(r.taxable_value)}</td>{tab!=="gstr1"&&<><td style={TD}>{r.cgst?fmt(r.cgst):"—"}</td><td style={TD}>{r.sgst?fmt(r.sgst):"—"}</td><td style={TD}>{r.igst?fmt(r.igst):"—"}</td></>}{tab==="gstr1"&&<td style={TD}>{fmt((r.cgst||0)+(r.sgst||0)+(r.igst||0))}</td>}<td style={{...TD,fontWeight:700}}>{fmt(r.total_value)}</td></tr>)}
+            {tab==="purchase" && data.purchases.map((r,i)=><tr key={i}><td style={{...TD,color:C.success,fontWeight:600}}>{r.bill_number}</td><td style={TD}>{r.bill_date}</td><td style={TD}>{r.supplier_name}</td><td style={TD}>{fmt(r.taxable_value)}</td><td style={TD}>{r.cgst?fmt(r.cgst):"—"}</td><td style={TD}>{r.sgst?fmt(r.sgst):"—"}</td><td style={TD}>{r.igst?fmt(r.igst):"—"}</td><td style={{...TD,fontWeight:700}}>{fmt(r.total_value)}</td></tr>)}
+            {tab==="gstr3b" && [["CGST",fmt(summary.cgstTotal),fmt(data.purchases.reduce((a,r)=>a+Number(r.cgst||0),0)),fmt(summary.cgstTotal-data.purchases.reduce((a,r)=>a+Number(r.cgst||0),0))],["SGST",fmt(summary.sgstTotal),fmt(data.purchases.reduce((a,r)=>a+Number(r.sgst||0),0)),fmt(summary.sgstTotal-data.purchases.reduce((a,r)=>a+Number(r.sgst||0),0))],["IGST",fmt(summary.igstTotal),fmt(data.purchases.reduce((a,r)=>a+Number(r.igst||0),0)),fmt(summary.igstTotal-data.purchases.reduce((a,r)=>a+Number(r.igst||0),0))]].map((r,i)=><tr key={i}>{r.map((c,j)=><td key={j} style={{...TD,fontWeight:j===3?700:400}}>{c}</td>)}</tr>)}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function CalendarPage() {
+  const today = new Date();
+  const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const [selectedDay, setSelectedDay] = useState(null);
+
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const FY = currentDate.getMonth() >= 3 ? currentDate.getFullYear() : currentDate.getFullYear() - 1;
+
+  // Dynamic GST deadlines based on current month/year
+  function getDeadlines(year) {
+    const d = [];
+    for (let m = 0; m < 12; m++) {
+      const mn = MONTHS[m];
+      const y = m >= 3 ? year : year + 1;
+      const period = mn.slice(0,3) + " " + y;
+      d.push({ task:"GSTR-1 Filing",    date:new Date(y, m+1, 11), period, color:"#2E86C1", type:"GST",  desc:"Monthly outward supplies return" });
+      d.push({ task:"GSTR-3B Filing",   date:new Date(y, m+1, 20), period, color:"#F39C12", type:"GST",  desc:"Summary return with tax payment" });
+      d.push({ task:"TDS Deposit",      date:new Date(y, m+1, 7),  period, color:"#E67E22", type:"TDS",  desc:"Deposit TDS deducted last month" });
+      if (m === 6) d.push({ task:"ITR Filing",   date:new Date(year+1, 6, 31), period:"FY "+year+"-"+(year+1).toString().slice(2), color:"#C0392B", type:"ITR", desc:"Income Tax Return deadline" });
+      if (m === 2) d.push({ task:"GSTR-9 Annual",date:new Date(year+1, 11, 31), period:"FY "+year+"-"+(year+1).toString().slice(2), color:"#1B4F72", type:"Annual", desc:"Annual GST return" });
+    }
+    return d;
+  }
+
+  const allDeadlines = getDeadlines(FY);
+
+  // Get deadlines for current month
+  const monthDeadlines = allDeadlines.filter(d =>
+    d.date.getMonth() === currentDate.getMonth() &&
+    d.date.getFullYear() === currentDate.getFullYear()
+  );
+
+  // Get deadlines for selected day
+  const dayDeadlines = selectedDay ? allDeadlines.filter(d =>
+    d.date.getDate() === selectedDay &&
+    d.date.getMonth() === currentDate.getMonth() &&
+    d.date.getFullYear() === currentDate.getFullYear()
+  ) : [];
+
+  // Upcoming deadlines (next 60 days)
+  const upcoming = allDeadlines
+    .filter(d => d.date >= today)
+    .sort((a,b) => a.date - b.date)
+    .slice(0, 8);
+
+  // Calendar grid
+  const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth()+1, 0).getDate();
+  const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+
+  function prevMonth() { setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth()-1, 1)); setSelectedDay(null); }
+  function nextMonth() { setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth()+1, 1)); setSelectedDay(null); }
+  function goToday()   { setCurrentDate(new Date(today.getFullYear(), today.getMonth(), 1)); setSelectedDay(today.getDate()); }
+
+  const daysUntil = (date) => {
+    const diff = Math.ceil((date - today) / (1000*60*60*24));
+    if (diff === 0) return { label:"Today!", color:C.danger };
+    if (diff < 0)  return { label:`${Math.abs(diff)}d ago`, color:C.textMuted };
+    if (diff <= 3) return { label:`${diff}d left`, color:C.danger };
+    if (diff <= 7) return { label:`${diff}d left`, color:C.warning };
+    return { label:`${diff}d left`, color:C.success };
+  };
+
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+        <div>
+          <div style={{ fontSize:20, fontWeight:800 }}>📅 Compliance Calendar</div>
+          <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>FY {FY}-{(FY+1).toString().slice(2)} — Live GST & Tax Deadlines</div>
+        </div>
+        <button style={{ ...btn("outline"), fontSize:12 }} onClick={goToday}>📍 Today</button>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1.2fr 1fr", gap:20 }}>
+        {/* Calendar */}
+        <div style={card}>
+          {/* Month Navigation */}
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+            <button onClick={prevMonth} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:7, padding:"6px 12px", cursor:"pointer", fontSize:16 }}>‹</button>
+            <div style={{ textAlign:"center" }}>
+              <div style={{ fontWeight:800, fontSize:17 }}>{MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}</div>
+              <div style={{ fontSize:11, color:C.textMuted }}>{monthDeadlines.length} deadlines this month</div>
+            </div>
+            <button onClick={nextMonth} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:7, padding:"6px 12px", cursor:"pointer", fontSize:16 }}>›</button>
+          </div>
+
+          {/* Day Headers */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2, marginBottom:4 }}>
+            {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d =>
+              <div key={d} style={{ textAlign:"center", fontSize:11, fontWeight:700, color:C.textMuted, padding:"4px 0" }}>{d}</div>
+            )}
+          </div>
+
+          {/* Calendar Days */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2 }}>
+            {Array.from({length: startOffset}).map((_,i) => <div key={"e"+i} />)}
+            {Array.from({length: daysInMonth}).map((_,i) => {
+              const day = i + 1;
+              const dayEvents = allDeadlines.filter(d =>
+                d.date.getDate() === day &&
+                d.date.getMonth() === currentDate.getMonth() &&
+                d.date.getFullYear() === currentDate.getFullYear()
+              );
+              const isToday = today.getDate()===day && today.getMonth()===currentDate.getMonth() && today.getFullYear()===currentDate.getFullYear();
+              const isSelected = selectedDay === day;
+              const isPast = new Date(currentDate.getFullYear(), currentDate.getMonth(), day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+              return (
+                <div key={day} onClick={() => setSelectedDay(isSelected ? null : day)}
+                  style={{ aspectRatio:"1", borderRadius:8, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"pointer", background:isSelected?C.primary:isToday?C.primaryLighter:dayEvents.length>0?"#FFF9E6":"transparent", border:`1.5px solid ${isSelected?C.primary:isToday?C.primaryLight:dayEvents.length>0?"#F39C12":"transparent"}`, opacity:isPast?0.45:1, transition:"all 0.15s" }}>
+                  <div style={{ fontSize:13, fontWeight:isToday||isSelected?800:400, color:isSelected?C.white:isToday?C.primary:C.text }}>{day}</div>
+                  {dayEvents.length > 0 && !isSelected && (
+                    <div style={{ display:"flex", gap:2, marginTop:2 }}>
+                      {dayEvents.slice(0,3).map((e,i) => <div key={i} style={{ width:5, height:5, borderRadius:"50%", background:e.color }} />)}
+                    </div>
+                  )}
+                  {isSelected && dayEvents.length > 0 && <div style={{ fontSize:8, color:"rgba(255,255,255,0.9)", fontWeight:700 }}>{dayEvents.length} due</div>}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Selected day details */}
+          {selectedDay && (
+            <div style={{ marginTop:14, padding:"12px 14px", background:C.bg, borderRadius:8, border:`1px solid ${C.border}` }}>
+              <div style={{ fontWeight:700, fontSize:13, marginBottom:8 }}>
+                {MONTHS[currentDate.getMonth()]} {selectedDay}, {currentDate.getFullYear()}
+                {dayDeadlines.length === 0 && <span style={{ color:C.textMuted, fontWeight:400, marginLeft:8 }}>— No deadlines</span>}
+              </div>
+              {dayDeadlines.map((d,i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"7px 10px", background:C.white, borderRadius:7, marginBottom:5, border:`1px solid ${d.color}30` }}>
+                  <div style={{ width:8, height:8, borderRadius:"50%", background:d.color, flexShrink:0 }} />
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:600, fontSize:12 }}>{d.task}</div>
+                    <div style={{ fontSize:11, color:C.textMuted }}>{d.desc}</div>
+                  </div>
+                  <span style={badge(d.color)}>{d.type}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Legend */}
+          <div style={{ display:"flex", gap:14, marginTop:12, flexWrap:"wrap" }}>
+            {[["Today",C.primaryLight,"border"],["Has Deadline","#FFF9E6","#F39C12"],["Selected",C.primary,"fill"]].map(([label,bg,border])=>(
+              <div key={label} style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:C.textMuted }}>
+                <div style={{ width:12, height:12, borderRadius:3, background:bg, border:`1.5px solid ${border===C.primary?border:border==="border"?C.primaryLight:border}` }} />
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Upcoming Deadlines */}
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          <div style={card}>
+            <div style={{ fontWeight:700, fontSize:15, marginBottom:14 }}>⏰ Upcoming Deadlines</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {upcoming.map((d,i) => {
+                const { label, color } = daysUntil(d.date);
+                return (
+                  <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:8, background:C.bg, border:`1px solid ${C.border}`, cursor:"pointer" }}
+                    onClick={() => { setCurrentDate(new Date(d.date.getFullYear(), d.date.getMonth(), 1)); setSelectedDay(d.date.getDate()); }}>
+                    <div style={{ width:42, height:42, borderRadius:8, background:d.color, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                      <div style={{ fontSize:14, fontWeight:900, color:C.white, lineHeight:1 }}>{d.date.getDate()}</div>
+                      <div style={{ fontSize:9, color:"rgba(255,255,255,0.8)", fontWeight:700 }}>{MONTHS[d.date.getMonth()].slice(0,3).toUpperCase()}</div>
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight:700, fontSize:12, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{d.task}</div>
+                      <div style={{ fontSize:11, color:C.textMuted }}>{d.type} • {d.period}</div>
+                    </div>
+                    <span style={{ ...badge(color), whiteSpace:"nowrap" }}>{label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* This Month Summary */}
+          <div style={card}>
+            <div style={{ fontWeight:700, fontSize:14, marginBottom:12 }}>📊 This Month</div>
+            {["GST","TDS","ITR","Annual"].map(type => {
+              const count = monthDeadlines.filter(d=>d.type===type).length;
+              if (!count) return null;
+              const colors = {GST:"#2E86C1",TDS:"#E67E22",ITR:"#C0392B",Annual:"#1B4F72"};
+              return (
+                <div key={type} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:`1px solid ${C.border}` }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ width:10, height:10, borderRadius:"50%", background:colors[type] }} />
+                    <span style={{ fontSize:13 }}>{type} Deadlines</span>
+                  </div>
+                  <span style={badge(colors[type])}>{count}</span>
+                </div>
+              );
+            })}
+            <div style={{ marginTop:10, fontSize:12, color:C.textMuted, textAlign:"center" }}>
+              FY {FY}-{(FY+1).toString().slice(2)}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function ClientsPage({ data, auth }) {
+  const [show, setShow] = useState(false);
+  const [f, setF] = useState({ company_name:"", gstin:"", contact_name:"", email:"", mobile:"", state:"Maharashtra" });
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+        <div><div style={{ fontSize:20, fontWeight:800 }}>👥 Clients</div><div style={{ fontSize:13, color:C.textMuted }}>{data.clients.length} clients</div></div>
+        <button style={btn()} onClick={()=>setShow(!show)}>+ Add Client</button>
+      </div>
+      {show && (
+        <div style={{ ...card, marginBottom:20, background:C.primaryLighter }}>
+          <div style={{ fontWeight:700, marginBottom:14, color:C.primary }}>New Client</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+            <div><div style={lbl}>Company</div><input style={inp} onChange={e=>setF({...f,company_name:e.target.value})} /></div>
+            <div><div style={lbl}>GSTIN</div><input style={inp} onChange={e=>setF({...f,gstin:e.target.value})} /></div>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:14 }}>
+            <div><div style={lbl}>Contact</div><input style={inp} onChange={e=>setF({...f,contact_name:e.target.value})} /></div>
+            <div><div style={lbl}>Email</div><input style={inp} onChange={e=>setF({...f,email:e.target.value})} /></div>
+            <div><div style={lbl}>State</div><select style={inp} onChange={e=>setF({...f,state:e.target.value})}>{STATES.map(s=><option key={s}>{s}</option>)}</select></div>
+          </div>
+          <div style={{ display:"flex", gap:10 }}>
+            <button style={btn()} onClick={async()=>{ await data.addClient({...f,user_id:auth.activeCompany?.id,status:"Active"}); setShow(false); }}>Save</button>
+            <button style={btn("outline")} onClick={()=>setShow(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+      <div style={card}>
+        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+          <thead><tr>{["Company","GSTIN","State","Contact","Email","Status"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <tbody>{data.clients.map((c,i)=>(
+            <tr key={i}>
+              <td style={{...TD,fontWeight:700}}>{c.company_name}</td>
+              <td style={{...TD,fontFamily:"monospace",fontSize:11}}>{c.gstin}</td>
+              <td style={TD}>{c.state}</td>
+              <td style={TD}>{c.contact_name||"—"}</td>
+              <td style={TD}>{c.email||"—"}</td>
+              <td style={TD}><span style={badge(c.status==="Active"?C.success:C.textMuted)}>{c.status}</span></td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function SettingsPage({ auth }) {
+  const [pf, setPf] = useState({ name:auth.profile?.name||"", email:auth.profile?.email||"", mobile:auth.profile?.mobile||"" });
+  const [co, setCo] = useState({ company_name:auth.activeCompany?.company_name||"", gstin:auth.activeCompany?.gstin||"", address:auth.activeCompany?.address||"", state:auth.activeCompany?.state||"Maharashtra" });
+  const [saved, setSaved] = useState(false);
+  return (
+    <div>
+      <div style={{ fontSize:20, fontWeight:800, marginBottom:20 }}>⚙️ Settings</div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+        <div style={card}>
+          <div style={{ fontWeight:700, fontSize:15, marginBottom:14, borderBottom:`1px solid ${C.border}`, paddingBottom:10 }}>👤 Profile</div>
+          <div style={{ marginBottom:12 }}><div style={lbl}>Name</div><input style={inp} value={pf.name} onChange={e=>setPf({...pf,name:e.target.value})} /></div>
+          <div style={{ marginBottom:12 }}><div style={lbl}>Email</div><input style={inp} value={pf.email} onChange={e=>setPf({...pf,email:e.target.value})} /></div>
+          <div style={{ marginBottom:16 }}><div style={lbl}>Mobile</div><input style={inp} value={pf.mobile} onChange={e=>setPf({...pf,mobile:e.target.value})} /></div>
+          <button style={btn()} onClick={async()=>{ await auth.updateProfile(pf); setSaved(true); setTimeout(()=>setSaved(false),2500); }}>{saved?"✓ Saved!":"Update Profile"}</button>
+        </div>
+        <div style={card}>
+          <div style={{ fontWeight:700, fontSize:15, marginBottom:14, borderBottom:`1px solid ${C.border}`, paddingBottom:10 }}>🏢 Company</div>
+          <div style={{ marginBottom:12 }}><div style={lbl}>Company Name</div><input style={inp} value={co.company_name} onChange={e=>setCo({...co,company_name:e.target.value})} /></div>
+          <div style={{ marginBottom:12 }}><div style={lbl}>GSTIN</div><input style={inp} value={co.gstin} onChange={e=>setCo({...co,gstin:e.target.value})} /></div>
+          <div style={{ marginBottom:12 }}><div style={lbl}>Address</div><input style={inp} value={co.address} onChange={e=>setCo({...co,address:e.target.value})} /></div>
+          <div style={{ marginBottom:16 }}><div style={lbl}>State</div><select style={inp} value={co.state} onChange={e=>setCo({...co,state:e.target.value})}>{STATES.map(s=><option key={s}>{s}</option>)}</select></div>
+          <button style={btn()} onClick={()=>auth.updateCompany(co)}>Update Company</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const auth = useAuth();
   const data = useData(auth.activeCompany?.id);
@@ -2102,361 +2470,8 @@ export default function App() {
     { id:"settings", label:"Settings", icon:"⚙️" },
   ];
 
-  // Simple upload/reports/calendar/clients/settings pages (unchanged from v1)
-  function UploadPage() {
-    const [files, setFiles] = useState({ sales:null, purchase:null });
-    const [done, setDone] = useState({ sales:false, purchase:false });
-    const [toast, setToast] = useState("");
-    async function doUpload(type) {
-      if (!files[type]) return;
-      try {
-        const result = await data.uploadExcel(files[type], type);
-        setDone(d => ({ ...d, [type]:true }));
-        setToast(`✅ ${result.count} records saved to Supabase!`);
-        setTimeout(() => setToast(""), 4000);
-      } catch(e) { setToast("❌ " + e.message); setTimeout(()=>setToast(""),5000); }
-    }
-    return (
-      <div>
-        {toast && <div style={{ position:"fixed", top:20, right:20, background:C.text, color:C.white, padding:"12px 20px", borderRadius:8, zIndex:9999, fontSize:14, fontWeight:600 }}>{toast}</div>}
-        <div style={{ fontSize:20, fontWeight:800, marginBottom:4 }}>📤 Upload GST Data</div>
-        <div style={{ fontSize:13, color:C.textMuted, marginBottom:20 }}>Upload Excel/CSV — auto-saved to Supabase</div>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
-          {[{type:"sales",label:"Sales Data",icon:"📈"},{type:"purchase",label:"Purchase Data",icon:"📉"}].map(({type,label,icon})=>(
-            <div key={type} style={card}>
-              <div style={{ fontWeight:700, fontSize:15, marginBottom:14 }}>{icon} Upload {label}</div>
-              {done[type] ? (
-                <div style={{ padding:16, background:C.successLight, borderRadius:8, display:"flex", gap:12, alignItems:"center" }}>
-                  <span style={{ fontSize:24 }}>✅</span>
-                  <div style={{ flex:1 }}><div style={{ fontWeight:700, color:C.success }}>Uploaded!</div><div style={{ fontSize:12, color:C.success }}>{files[type]?.name}</div></div>
-                  <button style={{ ...btn("outline"), fontSize:12, padding:"5px 12px" }} onClick={()=>{ setFiles(f=>({...f,[type]:null})); setDone(d=>({...d,[type]:false})); }}>New</button>
-                </div>
-              ) : (
-                <>
-                  <div style={{ border:`2px dashed ${C.border}`, borderRadius:10, padding:"24px 20px", textAlign:"center", background:C.bg, marginBottom:12 }}>
-                    <div style={{ fontSize:32, marginBottom:8 }}>📊</div>
-                    <label style={{ ...btn(), display:"inline-flex", cursor:"pointer" }}>
-                      📁 Browse Excel / CSV
-                      <input type="file" accept=".xlsx,.xls,.csv" style={{ display:"none" }} onChange={e=>setFiles(f=>({...f,[type]:e.target.files[0]}))} />
-                    </label>
-                  </div>
-                  {files[type] && (
-                    <div style={{ background:C.bg, borderRadius:8, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <span style={{ fontSize:13 }}>{files[type].name}</span>
-                      <button style={btn()} onClick={()=>doUpload(type)} disabled={data.uploading}>{data.uploading?"Uploading…":"Upload & Save"}</button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // Pages are defined as top-level components below
 
-  function ReportsPage() {
-    const [tab, setTab] = useState("gstr1");
-    return (
-      <div>
-        <div style={{ fontSize:20, fontWeight:800, marginBottom:4 }}>📄 GST Reports</div>
-        <div style={{ fontSize:13, color:C.textMuted, marginBottom:16 }}>March 2026</div>
-        <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
-          {[{id:"gstr1",label:"GSTR-1"},{id:"gstr3b",label:"GSTR-3B"},{id:"sales",label:"Sales Register"},{id:"purchase",label:"Purchase Register"}].map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)} style={{ padding:"8px 18px", borderRadius:7, background:tab===t.id?C.primary:C.white, color:tab===t.id?C.white:C.textMuted, fontWeight:tab===t.id?700:500, fontSize:13, cursor:"pointer", border:`1px solid ${tab===t.id?C.primary:C.border}` }}>{t.label}</button>
-          ))}
-          <button style={{ ...btn("outline"), marginLeft:"auto" }}>⬇️ Download PDF</button>
-        </div>
-        <div style={card}>
-          <table style={{ width:"100%", borderCollapse:"collapse" }}>
-            <thead><tr>{(tab==="sales"?["Invoice No","Date","Customer","Taxable","CGST","SGST","IGST","Total"]:tab==="purchase"?["Bill No","Date","Supplier","Taxable","CGST","SGST","IGST","Total"]:tab==="gstr1"?["Invoice No","Customer","GSTIN","HSN","Taxable","Rate","GST","Total"]:["Category","Gross Tax","ITC","Net Payable"]).map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
-            <tbody>
-              {(tab==="sales"||tab==="gstr1") && data.sales.map((r,i)=><tr key={i}><td style={{...TD,color:C.primary,fontWeight:600}}>{r.invoice_number}</td><td style={TD}>{r.invoice_date}</td><td style={TD}>{r.customer_name}</td>{tab==="gstr1"&&<><td style={{...TD,fontSize:11,fontFamily:"monospace"}}>{r.gstin||"—"}</td><td style={TD}>{r.hsn}</td><td style={TD}>{r.gst_rate}%</td></>}<td style={TD}>{fmt(r.taxable_value)}</td>{tab!=="gstr1"&&<><td style={TD}>{r.cgst?fmt(r.cgst):"—"}</td><td style={TD}>{r.sgst?fmt(r.sgst):"—"}</td><td style={TD}>{r.igst?fmt(r.igst):"—"}</td></>}{tab==="gstr1"&&<td style={TD}>{fmt((r.cgst||0)+(r.sgst||0)+(r.igst||0))}</td>}<td style={{...TD,fontWeight:700}}>{fmt(r.total_value)}</td></tr>)}
-              {tab==="purchase" && data.purchases.map((r,i)=><tr key={i}><td style={{...TD,color:C.success,fontWeight:600}}>{r.bill_number}</td><td style={TD}>{r.bill_date}</td><td style={TD}>{r.supplier_name}</td><td style={TD}>{fmt(r.taxable_value)}</td><td style={TD}>{r.cgst?fmt(r.cgst):"—"}</td><td style={TD}>{r.sgst?fmt(r.sgst):"—"}</td><td style={TD}>{r.igst?fmt(r.igst):"—"}</td><td style={{...TD,fontWeight:700}}>{fmt(r.total_value)}</td></tr>)}
-              {tab==="gstr3b" && [["CGST",fmt(summary.cgstTotal),fmt(data.purchases.reduce((a,r)=>a+Number(r.cgst||0),0)),fmt(summary.cgstTotal-data.purchases.reduce((a,r)=>a+Number(r.cgst||0),0))],["SGST",fmt(summary.sgstTotal),fmt(data.purchases.reduce((a,r)=>a+Number(r.sgst||0),0)),fmt(summary.sgstTotal-data.purchases.reduce((a,r)=>a+Number(r.sgst||0),0))],["IGST",fmt(summary.igstTotal),fmt(data.purchases.reduce((a,r)=>a+Number(r.igst||0),0)),fmt(summary.igstTotal-data.purchases.reduce((a,r)=>a+Number(r.igst||0),0))]].map((r,i)=><tr key={i}>{r.map((c,j)=><td key={j} style={{...TD,fontWeight:j===3?700:400}}>{c}</td>)}</tr>)}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
-
-  function CalendarPage() {
-    const today = new Date();
-    const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
-    const [selectedDay, setSelectedDay] = useState(null);
-
-    const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-    const FY = currentDate.getMonth() >= 3 ? currentDate.getFullYear() : currentDate.getFullYear() - 1;
-
-    // Dynamic GST deadlines based on current month/year
-    function getDeadlines(year) {
-      const d = [];
-      for (let m = 0; m < 12; m++) {
-        const mn = MONTHS[m];
-        const y = m >= 3 ? year : year + 1;
-        const period = mn.slice(0,3) + " " + y;
-        d.push({ task:"GSTR-1 Filing",    date:new Date(y, m+1, 11), period, color:"#2E86C1", type:"GST",  desc:"Monthly outward supplies return" });
-        d.push({ task:"GSTR-3B Filing",   date:new Date(y, m+1, 20), period, color:"#F39C12", type:"GST",  desc:"Summary return with tax payment" });
-        d.push({ task:"TDS Deposit",      date:new Date(y, m+1, 7),  period, color:"#E67E22", type:"TDS",  desc:"Deposit TDS deducted last month" });
-        if (m === 6) d.push({ task:"ITR Filing",   date:new Date(year+1, 6, 31), period:"FY "+year+"-"+(year+1).toString().slice(2), color:"#C0392B", type:"ITR", desc:"Income Tax Return deadline" });
-        if (m === 2) d.push({ task:"GSTR-9 Annual",date:new Date(year+1, 11, 31), period:"FY "+year+"-"+(year+1).toString().slice(2), color:"#1B4F72", type:"Annual", desc:"Annual GST return" });
-      }
-      return d;
-    }
-
-    const allDeadlines = getDeadlines(FY);
-
-    // Get deadlines for current month
-    const monthDeadlines = allDeadlines.filter(d =>
-      d.date.getMonth() === currentDate.getMonth() &&
-      d.date.getFullYear() === currentDate.getFullYear()
-    );
-
-    // Get deadlines for selected day
-    const dayDeadlines = selectedDay ? allDeadlines.filter(d =>
-      d.date.getDate() === selectedDay &&
-      d.date.getMonth() === currentDate.getMonth() &&
-      d.date.getFullYear() === currentDate.getFullYear()
-    ) : [];
-
-    // Upcoming deadlines (next 60 days)
-    const upcoming = allDeadlines
-      .filter(d => d.date >= today)
-      .sort((a,b) => a.date - b.date)
-      .slice(0, 8);
-
-    // Calendar grid
-    const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
-    const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth()+1, 0).getDate();
-    const startOffset = firstDay === 0 ? 6 : firstDay - 1;
-
-    function prevMonth() { setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth()-1, 1)); setSelectedDay(null); }
-    function nextMonth() { setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth()+1, 1)); setSelectedDay(null); }
-    function goToday()   { setCurrentDate(new Date(today.getFullYear(), today.getMonth(), 1)); setSelectedDay(today.getDate()); }
-
-    const daysUntil = (date) => {
-      const diff = Math.ceil((date - today) / (1000*60*60*24));
-      if (diff === 0) return { label:"Today!", color:C.danger };
-      if (diff < 0)  return { label:`${Math.abs(diff)}d ago`, color:C.textMuted };
-      if (diff <= 3) return { label:`${diff}d left`, color:C.danger };
-      if (diff <= 7) return { label:`${diff}d left`, color:C.warning };
-      return { label:`${diff}d left`, color:C.success };
-    };
-
-    return (
-      <div>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-          <div>
-            <div style={{ fontSize:20, fontWeight:800 }}>📅 Compliance Calendar</div>
-            <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>FY {FY}-{(FY+1).toString().slice(2)} — Live GST & Tax Deadlines</div>
-          </div>
-          <button style={{ ...btn("outline"), fontSize:12 }} onClick={goToday}>📍 Today</button>
-        </div>
-
-        <div style={{ display:"grid", gridTemplateColumns:"1.2fr 1fr", gap:20 }}>
-          {/* Calendar */}
-          <div style={card}>
-            {/* Month Navigation */}
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-              <button onClick={prevMonth} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:7, padding:"6px 12px", cursor:"pointer", fontSize:16 }}>‹</button>
-              <div style={{ textAlign:"center" }}>
-                <div style={{ fontWeight:800, fontSize:17 }}>{MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}</div>
-                <div style={{ fontSize:11, color:C.textMuted }}>{monthDeadlines.length} deadlines this month</div>
-              </div>
-              <button onClick={nextMonth} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:7, padding:"6px 12px", cursor:"pointer", fontSize:16 }}>›</button>
-            </div>
-
-            {/* Day Headers */}
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2, marginBottom:4 }}>
-              {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d =>
-                <div key={d} style={{ textAlign:"center", fontSize:11, fontWeight:700, color:C.textMuted, padding:"4px 0" }}>{d}</div>
-              )}
-            </div>
-
-            {/* Calendar Days */}
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2 }}>
-              {Array.from({length: startOffset}).map((_,i) => <div key={"e"+i} />)}
-              {Array.from({length: daysInMonth}).map((_,i) => {
-                const day = i + 1;
-                const dayEvents = allDeadlines.filter(d =>
-                  d.date.getDate() === day &&
-                  d.date.getMonth() === currentDate.getMonth() &&
-                  d.date.getFullYear() === currentDate.getFullYear()
-                );
-                const isToday = today.getDate()===day && today.getMonth()===currentDate.getMonth() && today.getFullYear()===currentDate.getFullYear();
-                const isSelected = selectedDay === day;
-                const isPast = new Date(currentDate.getFullYear(), currentDate.getMonth(), day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                return (
-                  <div key={day} onClick={() => setSelectedDay(isSelected ? null : day)}
-                    style={{ aspectRatio:"1", borderRadius:8, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"pointer", background:isSelected?C.primary:isToday?C.primaryLighter:dayEvents.length>0?"#FFF9E6":"transparent", border:`1.5px solid ${isSelected?C.primary:isToday?C.primaryLight:dayEvents.length>0?"#F39C12":"transparent"}`, opacity:isPast?0.45:1, transition:"all 0.15s" }}>
-                    <div style={{ fontSize:13, fontWeight:isToday||isSelected?800:400, color:isSelected?C.white:isToday?C.primary:C.text }}>{day}</div>
-                    {dayEvents.length > 0 && !isSelected && (
-                      <div style={{ display:"flex", gap:2, marginTop:2 }}>
-                        {dayEvents.slice(0,3).map((e,i) => <div key={i} style={{ width:5, height:5, borderRadius:"50%", background:e.color }} />)}
-                      </div>
-                    )}
-                    {isSelected && dayEvents.length > 0 && <div style={{ fontSize:8, color:"rgba(255,255,255,0.9)", fontWeight:700 }}>{dayEvents.length} due</div>}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Selected day details */}
-            {selectedDay && (
-              <div style={{ marginTop:14, padding:"12px 14px", background:C.bg, borderRadius:8, border:`1px solid ${C.border}` }}>
-                <div style={{ fontWeight:700, fontSize:13, marginBottom:8 }}>
-                  {MONTHS[currentDate.getMonth()]} {selectedDay}, {currentDate.getFullYear()}
-                  {dayDeadlines.length === 0 && <span style={{ color:C.textMuted, fontWeight:400, marginLeft:8 }}>— No deadlines</span>}
-                </div>
-                {dayDeadlines.map((d,i) => (
-                  <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"7px 10px", background:C.white, borderRadius:7, marginBottom:5, border:`1px solid ${d.color}30` }}>
-                    <div style={{ width:8, height:8, borderRadius:"50%", background:d.color, flexShrink:0 }} />
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontWeight:600, fontSize:12 }}>{d.task}</div>
-                      <div style={{ fontSize:11, color:C.textMuted }}>{d.desc}</div>
-                    </div>
-                    <span style={badge(d.color)}>{d.type}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Legend */}
-            <div style={{ display:"flex", gap:14, marginTop:12, flexWrap:"wrap" }}>
-              {[["Today",C.primaryLight,"border"],["Has Deadline","#FFF9E6","#F39C12"],["Selected",C.primary,"fill"]].map(([label,bg,border])=>(
-                <div key={label} style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:C.textMuted }}>
-                  <div style={{ width:12, height:12, borderRadius:3, background:bg, border:`1.5px solid ${border===C.primary?border:border==="border"?C.primaryLight:border}` }} />
-                  {label}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Upcoming Deadlines */}
-          <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-            <div style={card}>
-              <div style={{ fontWeight:700, fontSize:15, marginBottom:14 }}>⏰ Upcoming Deadlines</div>
-              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {upcoming.map((d,i) => {
-                  const { label, color } = daysUntil(d.date);
-                  return (
-                    <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:8, background:C.bg, border:`1px solid ${C.border}`, cursor:"pointer" }}
-                      onClick={() => { setCurrentDate(new Date(d.date.getFullYear(), d.date.getMonth(), 1)); setSelectedDay(d.date.getDate()); }}>
-                      <div style={{ width:42, height:42, borderRadius:8, background:d.color, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                        <div style={{ fontSize:14, fontWeight:900, color:C.white, lineHeight:1 }}>{d.date.getDate()}</div>
-                        <div style={{ fontSize:9, color:"rgba(255,255,255,0.8)", fontWeight:700 }}>{MONTHS[d.date.getMonth()].slice(0,3).toUpperCase()}</div>
-                      </div>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontWeight:700, fontSize:12, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{d.task}</div>
-                        <div style={{ fontSize:11, color:C.textMuted }}>{d.type} • {d.period}</div>
-                      </div>
-                      <span style={{ ...badge(color), whiteSpace:"nowrap" }}>{label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* This Month Summary */}
-            <div style={card}>
-              <div style={{ fontWeight:700, fontSize:14, marginBottom:12 }}>📊 This Month</div>
-              {["GST","TDS","ITR","Annual"].map(type => {
-                const count = monthDeadlines.filter(d=>d.type===type).length;
-                if (!count) return null;
-                const colors = {GST:"#2E86C1",TDS:"#E67E22",ITR:"#C0392B",Annual:"#1B4F72"};
-                return (
-                  <div key={type} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:`1px solid ${C.border}` }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <div style={{ width:10, height:10, borderRadius:"50%", background:colors[type] }} />
-                      <span style={{ fontSize:13 }}>{type} Deadlines</span>
-                    </div>
-                    <span style={badge(colors[type])}>{count}</span>
-                  </div>
-                );
-              })}
-              <div style={{ marginTop:10, fontSize:12, color:C.textMuted, textAlign:"center" }}>
-                FY {FY}-{(FY+1).toString().slice(2)}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  function ClientsPage() {
-    const [show, setShow] = useState(false);
-    const [f, setF] = useState({ company_name:"", gstin:"", contact_name:"", email:"", mobile:"", state:"Maharashtra" });
-    return (
-      <div>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-          <div><div style={{ fontSize:20, fontWeight:800 }}>👥 Clients</div><div style={{ fontSize:13, color:C.textMuted }}>{data.clients.length} clients</div></div>
-          <button style={btn()} onClick={()=>setShow(!show)}>+ Add Client</button>
-        </div>
-        {show && (
-          <div style={{ ...card, marginBottom:20, background:C.primaryLighter }}>
-            <div style={{ fontWeight:700, marginBottom:14, color:C.primary }}>New Client</div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
-              <div><div style={lbl}>Company</div><input style={inp} onChange={e=>setF({...f,company_name:e.target.value})} /></div>
-              <div><div style={lbl}>GSTIN</div><input style={inp} onChange={e=>setF({...f,gstin:e.target.value})} /></div>
-            </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:14 }}>
-              <div><div style={lbl}>Contact</div><input style={inp} onChange={e=>setF({...f,contact_name:e.target.value})} /></div>
-              <div><div style={lbl}>Email</div><input style={inp} onChange={e=>setF({...f,email:e.target.value})} /></div>
-              <div><div style={lbl}>State</div><select style={inp} onChange={e=>setF({...f,state:e.target.value})}>{STATES.map(s=><option key={s}>{s}</option>)}</select></div>
-            </div>
-            <div style={{ display:"flex", gap:10 }}>
-              <button style={btn()} onClick={async()=>{ await data.addClient({...f,user_id:auth.activeCompany?.id,status:"Active"}); setShow(false); }}>Save</button>
-              <button style={btn("outline")} onClick={()=>setShow(false)}>Cancel</button>
-            </div>
-          </div>
-        )}
-        <div style={card}>
-          <table style={{ width:"100%", borderCollapse:"collapse" }}>
-            <thead><tr>{["Company","GSTIN","State","Contact","Email","Status"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
-            <tbody>{data.clients.map((c,i)=>(
-              <tr key={i}>
-                <td style={{...TD,fontWeight:700}}>{c.company_name}</td>
-                <td style={{...TD,fontFamily:"monospace",fontSize:11}}>{c.gstin}</td>
-                <td style={TD}>{c.state}</td>
-                <td style={TD}>{c.contact_name||"—"}</td>
-                <td style={TD}>{c.email||"—"}</td>
-                <td style={TD}><span style={badge(c.status==="Active"?C.success:C.textMuted)}>{c.status}</span></td>
-              </tr>
-            ))}</tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
-
-  function SettingsPage() {
-    const [pf, setPf] = useState({ name:auth.profile?.name||"", email:auth.profile?.email||"", mobile:auth.profile?.mobile||"" });
-    const [co, setCo] = useState({ company_name:auth.activeCompany?.company_name||"", gstin:auth.activeCompany?.gstin||"", address:auth.activeCompany?.address||"", state:auth.activeCompany?.state||"Maharashtra" });
-    const [saved, setSaved] = useState(false);
-    return (
-      <div>
-        <div style={{ fontSize:20, fontWeight:800, marginBottom:20 }}>⚙️ Settings</div>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
-          <div style={card}>
-            <div style={{ fontWeight:700, fontSize:15, marginBottom:14, borderBottom:`1px solid ${C.border}`, paddingBottom:10 }}>👤 Profile</div>
-            <div style={{ marginBottom:12 }}><div style={lbl}>Name</div><input style={inp} value={pf.name} onChange={e=>setPf({...pf,name:e.target.value})} /></div>
-            <div style={{ marginBottom:12 }}><div style={lbl}>Email</div><input style={inp} value={pf.email} onChange={e=>setPf({...pf,email:e.target.value})} /></div>
-            <div style={{ marginBottom:16 }}><div style={lbl}>Mobile</div><input style={inp} value={pf.mobile} onChange={e=>setPf({...pf,mobile:e.target.value})} /></div>
-            <button style={btn()} onClick={async()=>{ await auth.updateProfile(pf); setSaved(true); setTimeout(()=>setSaved(false),2500); }}>{saved?"✓ Saved!":"Update Profile"}</button>
-          </div>
-          <div style={card}>
-            <div style={{ fontWeight:700, fontSize:15, marginBottom:14, borderBottom:`1px solid ${C.border}`, paddingBottom:10 }}>🏢 Company</div>
-            <div style={{ marginBottom:12 }}><div style={lbl}>Company Name</div><input style={inp} value={co.company_name} onChange={e=>setCo({...co,company_name:e.target.value})} /></div>
-            <div style={{ marginBottom:12 }}><div style={lbl}>GSTIN</div><input style={inp} value={co.gstin} onChange={e=>setCo({...co,gstin:e.target.value})} /></div>
-            <div style={{ marginBottom:12 }}><div style={lbl}>Address</div><input style={inp} value={co.address} onChange={e=>setCo({...co,address:e.target.value})} /></div>
-            <div style={{ marginBottom:16 }}><div style={lbl}>State</div><select style={inp} value={co.state} onChange={e=>setCo({...co,state:e.target.value})}>{STATES.map(s=><option key={s}>{s}</option>)}</select></div>
-            <button style={btn()} onClick={()=>auth.updateCompany(co)}>Update Company</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={{ display:"flex", height:"100vh", fontFamily:"'Segoe UI', Arial, sans-serif", background:C.bg, overflow:"hidden" }}>
@@ -2513,19 +2528,19 @@ export default function App() {
         <div style={{ flex:1, overflowY:"auto", padding:page==="ai"?20:24 }}>
           {page==="dashboard"  && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} />}
           {page==="invoice"    && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} />}
-          {page==="upload"     && <UploadPage />}
-          {page==="reports"    && <ReportsPage />}
+          {page==="upload"     && <UploadPage data={data} />}
+          {page==="reports"    && <ReportsPage data={data} summary={summary} />}
           {page==="ai"         && <AIAssistant summary={summary} company={auth.activeCompany} />}
           {page==="ca"         && <CAMarketplace />}
           {page==="companies"  && <MultiCompany companies={auth.companies} activeCompany={auth.activeCompany} setActiveCompany={auth.setActiveCompany} addCompany={auth.addCompany} plan={auth.plan} />}
           {page==="calendar"   && <CalendarPage />}
-          {page==="clients"    && <ClientsPage />}
+          {page==="clients"    && <ClientsPage data={data} auth={auth} />}
           {page==="einvoice"   && <EInvoice company={auth.activeCompany} sales={data.sales} />}
           {page==="ewaybill"   && <EWayBill company={auth.activeCompany} sales={data.sales} />}
           {page==="whatsapp"   && <WhatsAppNotifications clients={data.clients} company={auth.activeCompany} />}
           {page==="ca_enroll"  && <CAEnrollment />}
           {page==="billing"    && <Subscription plan={auth.plan} upgradePlan={auth.upgradePlan} />}
-          {page==="settings"   && <SettingsPage />}
+          {page==="settings"   && <SettingsPage auth={auth} />}
         </div>
       </div>
     </div>
