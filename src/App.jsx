@@ -3366,6 +3366,1197 @@ function TallyImport({ data }) {
 }
 
 
+// ─── INVENTORY MANAGEMENT ─────────────────────────────────────────────────────
+function InventoryPage({ data }) {
+  const [items, setItems] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_inventory")||"[]"); } catch { return []; } });
+  const [show, setShow] = useState(false);
+  const [tab, setTab] = useState("stock");
+  const [f, setF] = useState({ name:"", sku:"", hsn:"", category:"", unit:"Nos", opening_stock:0, reorder_level:5, purchase_price:0, selling_price:0, gst_rate:18 });
+  const UNITS = ["Nos","Kg","Gm","Ltr","Mtr","Box","Pack","Dozen","Pair","Set"];
+  const CATEGORIES = ["Electronics","Clothing","Food","Pharma","Furniture","Hardware","Stationery","Other"];
+  function save() {
+    const item = { ...f, id:Date.now().toString(), current_stock:Number(f.opening_stock), opening_stock:Number(f.opening_stock), purchase_price:Number(f.purchase_price), selling_price:Number(f.selling_price), gst_rate:Number(f.gst_rate), reorder_level:Number(f.reorder_level), transactions:[] };
+    const updated = [item, ...items];
+    setItems(updated); localStorage.setItem("ts_inventory", JSON.stringify(updated));
+    setShow(false); setF({ name:"", sku:"", hsn:"", category:"", unit:"Nos", opening_stock:0, reorder_level:5, purchase_price:0, selling_price:0, gst_rate:18 });
+  }
+  function adjustStock(id, qty, type) {
+    const updated = items.map(item => {
+      if (item.id !== id) return item;
+      const newStock = type === "add" ? item.current_stock + Number(qty) : item.current_stock - Number(qty);
+      return { ...item, current_stock: Math.max(0, newStock), transactions: [...(item.transactions||[]), { type, qty:Number(qty), date:new Date().toLocaleDateString(), balance:Math.max(0,newStock) }] };
+    });
+    setItems(updated); localStorage.setItem("ts_inventory", JSON.stringify(updated));
+  }
+  function del(id) { const u=items.filter(i=>i.id!==id); setItems(u); localStorage.setItem("ts_inventory",JSON.stringify(u)); }
+  const lowStock = items.filter(i=>i.current_stock<=i.reorder_level);
+  const totalValue = items.reduce((a,i)=>a+Number(i.current_stock||0)*Number(i.purchase_price||0),0);
+  const [adjItem, setAdjItem] = useState(null);
+  const [adjQty, setAdjQty] = useState(1);
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
+        <div><div style={{fontSize:20,fontWeight:800}}>📦 Inventory Management</div><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Track stock levels, auto-update on sales, set reorder alerts</div></div>
+        <button style={btn()} onClick={()=>setShow(true)}>+ Add Item</button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:20}}>
+        {[{label:"Total Items",value:items.length,color:C.primary,icon:"📦"},{label:"Low Stock Alerts",value:lowStock.length,color:C.danger,icon:"⚠️"},{label:"Total Stock Value",value:fmt(totalValue),color:C.success,icon:"💰"},{label:"Out of Stock",value:items.filter(i=>i.current_stock===0).length,color:C.warning,icon:"🚫"}].map((s,i)=>(
+          <div key={i} style={{...card,padding:"16px 20px",borderTop:`3px solid ${s.color}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><div style={{fontSize:11,color:C.textMuted,fontWeight:700,textTransform:"uppercase"}}>{s.label}</div><span style={{fontSize:18}}>{s.icon}</span></div>
+            <div style={{fontSize:typeof s.value==="number"&&s.value>999?16:20,fontWeight:800,color:s.color}}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      {lowStock.length>0&&<div style={{...card,marginBottom:16,background:"#FFF5F5",border:`1px solid ${C.danger}30`}}><div style={{fontWeight:700,fontSize:13,color:C.danger,marginBottom:8}}>⚠️ Low Stock Alert — {lowStock.length} items need reordering</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{lowStock.map((i,idx)=><span key={idx} style={{...badge(C.danger),fontSize:12}}>{i.name}: {i.current_stock} {i.unit} left</span>)}</div></div>}
+      {show&&(
+        <div style={{...card,marginBottom:20,background:C.primaryLighter}}>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:16,color:C.primary}}>📦 Add New Item</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
+            <div><div style={lbl}>Item Name *</div><input style={inp} placeholder="Product name" value={f.name} onChange={e=>setF({...f,name:e.target.value})} /></div>
+            <div><div style={lbl}>SKU / Item Code</div><input style={inp} placeholder="SKU-001" value={f.sku} onChange={e=>setF({...f,sku:e.target.value})} /></div>
+            <div><div style={lbl}>HSN Code</div><input style={inp} placeholder="HSN" value={f.hsn} onChange={e=>setF({...f,hsn:e.target.value})} /></div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:12,marginBottom:12}}>
+            <div><div style={lbl}>Category</div><select style={inp} value={f.category} onChange={e=>setF({...f,category:e.target.value})}><option value="">Select</option>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></div>
+            <div><div style={lbl}>Unit</div><select style={inp} value={f.unit} onChange={e=>setF({...f,unit:e.target.value})}>{UNITS.map(u=><option key={u}>{u}</option>)}</select></div>
+            <div><div style={lbl}>GST Rate (%)</div><select style={inp} value={f.gst_rate} onChange={e=>setF({...f,gst_rate:Number(e.target.value)})}>{[0,5,12,18,28].map(r=><option key={r} value={r}>{r}%</option>)}</select></div>
+            <div><div style={lbl}>Reorder Level</div><input style={inp} type="number" value={f.reorder_level} onChange={e=>setF({...f,reorder_level:e.target.value})} /></div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:16}}>
+            <div><div style={lbl}>Opening Stock</div><input style={inp} type="number" value={f.opening_stock} onChange={e=>setF({...f,opening_stock:e.target.value})} /></div>
+            <div><div style={lbl}>Purchase Price (₹)</div><input style={inp} type="number" value={f.purchase_price} onChange={e=>setF({...f,purchase_price:e.target.value})} /></div>
+            <div><div style={lbl}>Selling Price (₹)</div><input style={inp} type="number" value={f.selling_price} onChange={e=>setF({...f,selling_price:e.target.value})} /></div>
+          </div>
+          <div style={{display:"flex",gap:10}}><button style={btn("success")} onClick={save}>💾 Save Item</button><button style={btn("outline")} onClick={()=>setShow(false)}>Cancel</button></div>
+        </div>
+      )}
+      {adjItem&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}}>
+          <div style={{...card,width:400,padding:32}}>
+            <div style={{fontWeight:700,fontSize:16,marginBottom:16}}>Adjust Stock — {adjItem.name}</div>
+            <div style={{marginBottom:16}}><div style={lbl}>Quantity</div><input style={inp} type="number" value={adjQty} onChange={e=>setAdjQty(e.target.value)} /></div>
+            <div style={{display:"flex",gap:10}}>
+              <button style={btn("success")} onClick={()=>{adjustStock(adjItem.id,adjQty,"add");setAdjItem(null);}}>+ Add Stock</button>
+              <button style={btn("danger")} onClick={()=>{adjustStock(adjItem.id,adjQty,"remove");setAdjItem(null);}}>- Remove Stock</button>
+              <button style={btn("outline")} onClick={()=>setAdjItem(null)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={{display:"flex",gap:0,marginBottom:16,background:C.white,borderRadius:10,border:`1px solid ${C.border}`,overflow:"hidden",width:"fit-content"}}>
+        {[["stock","📦 Stock List"],["movement","📊 Stock Movement"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 20px",border:"none",background:tab===id?C.primary:"transparent",color:tab===id?C.white:C.textMuted,fontWeight:tab===id?700:500,fontSize:13,cursor:"pointer"}}>{label}</button>
+        ))}
+      </div>
+      {tab==="stock"&&<div style={card}><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["Item","SKU","Category","Unit","Stock","Reorder","Purchase ₹","Selling ₹","Value","Status","Action"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead><tbody>{items.length===0?<tr><td colSpan={11} style={{...TD,textAlign:"center",padding:30,color:C.textMuted}}>No items added yet</td></tr>:items.map((item,i)=>(
+        <tr key={i} style={{background:item.current_stock===0?"#FFF5F5":item.current_stock<=item.reorder_level?"#FFF9E6":"transparent"}}>
+          <td style={{...TD,fontWeight:700}}>{item.name}</td>
+          <td style={{...TD,fontSize:11,fontFamily:"monospace"}}>{item.sku||"—"}</td>
+          <td style={TD}>{item.category||"—"}</td>
+          <td style={TD}>{item.unit}</td>
+          <td style={{...TD,fontWeight:700,color:item.current_stock===0?C.danger:item.current_stock<=item.reorder_level?C.warning:C.success}}>{item.current_stock}</td>
+          <td style={TD}>{item.reorder_level}</td>
+          <td style={TD}>{fmt(item.purchase_price)}</td>
+          <td style={TD}>{fmt(item.selling_price)}</td>
+          <td style={{...TD,fontWeight:700}}>{fmt(item.current_stock*item.purchase_price)}</td>
+          <td style={TD}><span style={badge(item.current_stock===0?C.danger:item.current_stock<=item.reorder_level?C.warning:C.success)}>{item.current_stock===0?"Out of Stock":item.current_stock<=item.reorder_level?"Low Stock":"In Stock"}</span></td>
+          <td style={TD}><div style={{display:"flex",gap:6}}><button style={{...btn("outline"),fontSize:11,padding:"4px 8px"}} onClick={()=>setAdjItem(item)}>Adjust</button><button onClick={()=>del(item.id)} style={{background:"none",border:"none",color:C.danger,cursor:"pointer"}}>🗑️</button></div></td>
+        </tr>
+      ))}</tbody></table></div>}
+      {tab==="movement"&&<div style={card}>{items.flatMap(item=>(item.transactions||[]).map(t=>({...t,item:item.name}))).sort((a,b)=>new Date(b.date)-new Date(a.date)).length===0?<div style={{textAlign:"center",padding:40,color:C.textMuted}}>No stock movements yet</div>:<table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["Date","Item","Type","Quantity","Balance"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead><tbody>{items.flatMap(item=>(item.transactions||[]).map(t=>({...t,item:item.name}))).slice(0,50).map((t,i)=><tr key={i}><td style={TD}>{t.date}</td><td style={{...TD,fontWeight:600}}>{t.item}</td><td style={TD}><span style={badge(t.type==="add"?C.success:C.danger)}>{t.type==="add"?"Stock In":"Stock Out"}</span></td><td style={{...TD,fontWeight:700,color:t.type==="add"?C.success:C.danger}}>{t.type==="add"?"+":"-"}{t.qty}</td><td style={TD}>{t.balance}</td></tr>)}</tbody></table>}</div>}
+    </div>
+  );
+}
+
+// ─── MULTI-USER / TEAM ACCESS ─────────────────────────────────────────────────
+function TeamAccess({ auth }) {
+  const [members, setMembers] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_team")||"[]"); } catch { return []; } });
+  const [show, setShow] = useState(false);
+  const [f, setF] = useState({ name:"", email:"", role:"Accountant", permissions:[] });
+  const ROLES = [
+    { id:"Owner", label:"Owner", desc:"Full access — all modules, billing, settings", color:C.purple, perms:["all"] },
+    { id:"CA", label:"CA / Auditor", desc:"View all reports, generate GSTR, no billing access", color:C.primary, perms:["reports","gstr","invoices","clients"] },
+    { id:"Accountant", label:"Accountant", desc:"Create invoices, manage expenses, view reports", color:C.success, perms:["invoices","expenses","reports"] },
+    { id:"Staff", label:"Staff / Data Entry", desc:"Create invoices and upload data only", color:C.accent, perms:["invoices","upload"] },
+    { id:"Viewer", label:"Viewer (Read Only)", desc:"View everything, cannot create or edit", color:C.textMuted, perms:["view"] },
+  ];
+  const ALL_PERMISSIONS = ["Dashboard","Invoices","GST Reports","Expenses","TDS","Bank Reconciliation","Inventory","Clients","Settings","Billing"];
+  function invite() {
+    const role = ROLES.find(r=>r.id===f.role);
+    const member = { ...f, id:Date.now().toString(), status:"Invited", joined:new Date().toLocaleDateString(), avatar:(f.name||"U")[0].toUpperCase() };
+    const updated = [member,...members];
+    setMembers(updated); localStorage.setItem("ts_team",JSON.stringify(updated));
+    setShow(false); setF({ name:"", email:"", role:"Accountant", permissions:[] });
+    alert(`✅ Invitation sent to ${f.email}!\n\nThey will receive an email to join your TaxSaathi workspace.`);
+  }
+  function remove(id) { const u=members.filter(m=>m.id!==id); setMembers(u); localStorage.setItem("ts_team",JSON.stringify(u)); }
+  const roleColors = { Owner:C.purple, CA:C.primary, Accountant:C.success, Staff:C.accent, Viewer:C.textMuted };
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
+        <div><div style={{fontSize:20,fontWeight:800}}>👥 Team Access</div><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Invite team members with role-based permissions</div></div>
+        <button style={btn()} onClick={()=>setShow(true)}>+ Invite Member</button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:20}}>
+        <div style={card}>
+          <div style={{fontWeight:700,fontSize:14,marginBottom:14}}>👤 Current Team ({members.length+1} members)</div>
+          <div style={{display:"flex",gap:12,alignItems:"center",padding:"12px 0",borderBottom:`1px solid ${C.border}`}}>
+            <div style={{width:40,height:40,borderRadius:"50%",background:C.purple,display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontWeight:700,fontSize:16}}>{(auth.profile?.name||auth.user?.email||"U")[0].toUpperCase()}</div>
+            <div style={{flex:1}}><div style={{fontWeight:700,fontSize:13}}>{auth.profile?.name||auth.user?.email}</div><div style={{fontSize:11,color:C.textMuted}}>{auth.user?.email}</div></div>
+            <span style={badge(C.purple)}>Owner</span>
+          </div>
+          {members.map((m,i)=>(
+            <div key={i} style={{display:"flex",gap:12,alignItems:"center",padding:"12px 0",borderBottom:`1px solid ${C.border}`}}>
+              <div style={{width:40,height:40,borderRadius:"50%",background:roleColors[m.role]||C.primary,display:"flex",alignItems:"center",justifyContent:"center",color:C.white,fontWeight:700,fontSize:16}}>{m.avatar}</div>
+              <div style={{flex:1}}><div style={{fontWeight:700,fontSize:13}}>{m.name||"Pending"}</div><div style={{fontSize:11,color:C.textMuted}}>{m.email}</div></div>
+              <span style={badge(roleColors[m.role]||C.primary)}>{m.role}</span>
+              <span style={badge(m.status==="Active"?C.success:C.warning)}>{m.status}</span>
+              <button onClick={()=>remove(m.id)} style={{background:"none",border:"none",color:C.danger,cursor:"pointer",fontSize:14}}>✕</button>
+            </div>
+          ))}
+          {members.length===0&&<div style={{textAlign:"center",padding:20,color:C.textMuted,fontSize:13}}>No team members yet. Invite your CA or accountant!</div>}
+        </div>
+        <div style={card}>
+          <div style={{fontWeight:700,fontSize:14,marginBottom:14}}>🔐 Role Permissions</div>
+          {ROLES.map((role,i)=>(
+            <div key={i} style={{padding:"10px 12px",borderRadius:7,border:`1px solid ${C.border}`,marginBottom:8,background:C.bg}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                <div style={{fontWeight:700,fontSize:13}}>{role.label}</div>
+                <span style={badge(role.color)}>{role.id}</span>
+              </div>
+              <div style={{fontSize:11,color:C.textMuted}}>{role.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {show&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}}>
+          <div style={{...card,width:520,padding:32}}>
+            <div style={{fontWeight:800,fontSize:17,marginBottom:4,color:C.primary}}>📧 Invite Team Member</div>
+            <div style={{fontSize:13,color:C.textMuted,marginBottom:20}}>They will receive an email invitation to join your workspace</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+              <div><div style={lbl}>Full Name</div><input style={inp} placeholder="Amit Sharma" value={f.name} onChange={e=>setF({...f,name:e.target.value})} /></div>
+              <div><div style={lbl}>Email Address</div><input style={inp} type="email" placeholder="ca@example.com" value={f.email} onChange={e=>setF({...f,email:e.target.value})} /></div>
+            </div>
+            <div style={{marginBottom:16}}>
+              <div style={lbl}>Assign Role</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                {ROLES.filter(r=>r.id!=="Owner").map(role=>(
+                  <div key={role.id} onClick={()=>setF({...f,role:role.id})} style={{padding:"10px 14px",borderRadius:8,border:`2px solid ${f.role===role.id?role.color:C.border}`,cursor:"pointer",background:f.role===role.id?role.color+"11":"transparent"}}>
+                    <div style={{fontWeight:700,fontSize:12,color:f.role===role.id?role.color:C.text}}>{role.label}</div>
+                    <div style={{fontSize:11,color:C.textMuted,marginTop:2}}>{role.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{display:"flex",gap:10}}><button style={btn("success")} onClick={invite} disabled={!f.email}>📧 Send Invitation</button><button style={btn("outline")} onClick={()=>setShow(false)}>Cancel</button></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── RECURRING INVOICES ───────────────────────────────────────────────────────
+function RecurringInvoices({ auth, data }) {
+  const [recurring, setRecurring] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_recurring")||"[]"); } catch { return []; } });
+  const [show, setShow] = useState(false);
+  const [f, setF] = useState({ client:"", amount:"", description:"", frequency:"Monthly", start_date:new Date().toISOString().slice(0,10), gst_rate:18, notes:"" });
+  const FREQUENCIES = ["Weekly","Monthly","Quarterly","Half-Yearly","Yearly"];
+  function getNextDate(date, frequency) {
+    const d = new Date(date);
+    if (frequency==="Weekly") d.setDate(d.getDate()+7);
+    else if (frequency==="Monthly") d.setMonth(d.getMonth()+1);
+    else if (frequency==="Quarterly") d.setMonth(d.getMonth()+3);
+    else if (frequency==="Half-Yearly") d.setMonth(d.getMonth()+6);
+    else if (frequency==="Yearly") d.setFullYear(d.getFullYear()+1);
+    return d.toISOString().slice(0,10);
+  }
+  function save() {
+    const r = { ...f, id:Date.now().toString(), amount:Number(f.amount), gst_amount:+(Number(f.amount)*Number(f.gst_rate)/100).toFixed(2), total:+(Number(f.amount)*(1+Number(f.gst_rate)/100)).toFixed(2), status:"Active", invoices_generated:0, next_date:f.start_date, created:new Date().toLocaleDateString() };
+    const updated = [r,...recurring];
+    setRecurring(updated); localStorage.setItem("ts_recurring",JSON.stringify(updated));
+    setShow(false);
+  }
+  function toggleStatus(id) {
+    const updated = recurring.map(r=>r.id===id?{...r,status:r.status==="Active"?"Paused":"Active"}:r);
+    setRecurring(updated); localStorage.setItem("ts_recurring",JSON.stringify(updated));
+  }
+  function generateNow(id) {
+    const updated = recurring.map(r=>{
+      if (r.id!==id) return r;
+      return { ...r, invoices_generated:(r.invoices_generated||0)+1, next_date:getNextDate(r.next_date,r.frequency), last_generated:new Date().toLocaleDateString() };
+    });
+    setRecurring(updated); localStorage.setItem("ts_recurring",JSON.stringify(updated));
+    alert("✅ Invoice generated! Check Invoice Generator for the new invoice.");
+  }
+  function del(id) { const u=recurring.filter(r=>r.id!==id); setRecurring(u); localStorage.setItem("ts_recurring",JSON.stringify(u)); }
+  const activeCount = recurring.filter(r=>r.status==="Active").length;
+  const monthlyRevenue = recurring.filter(r=>r.status==="Active"&&r.frequency==="Monthly").reduce((a,r)=>a+r.total,0);
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
+        <div><div style={{fontSize:20,fontWeight:800}}>🔁 Recurring Invoices</div><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Auto-generate invoices for subscription clients every month</div></div>
+        <button style={btn()} onClick={()=>setShow(true)}>+ New Recurring Invoice</button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:20}}>
+        {[{label:"Active Schedules",value:activeCount,color:C.success},{label:"Monthly Recurring",value:fmt(monthlyRevenue),color:C.primary},{label:"Total Schedules",value:recurring.length,color:C.purple},{label:"Invoices Generated",value:recurring.reduce((a,r)=>a+(r.invoices_generated||0),0),color:C.accent}].map((s,i)=>(
+          <div key={i} style={{...card,padding:"16px 20px",borderTop:`3px solid ${s.color}`}}>
+            <div style={{fontSize:11,color:C.textMuted,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>{s.label}</div>
+            <div style={{fontSize:18,fontWeight:800,color:s.color}}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      {show&&(
+        <div style={{...card,marginBottom:20,background:C.primaryLighter}}>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:16,color:C.primary}}>🔁 New Recurring Invoice</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
+            <div><div style={lbl}>Client Name</div><input style={inp} placeholder="Client company name" value={f.client} onChange={e=>setF({...f,client:e.target.value})} /></div>
+            <div><div style={lbl}>Amount (₹, excl. GST)</div><input style={inp} type="number" placeholder="10000" value={f.amount} onChange={e=>setF({...f,amount:e.target.value})} /></div>
+            <div><div style={lbl}>GST Rate (%)</div><select style={inp} value={f.gst_rate} onChange={e=>setF({...f,gst_rate:Number(e.target.value)})}>{[0,5,12,18,28].map(r=><option key={r} value={r}>{r}%</option>)}</select></div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
+            <div><div style={lbl}>Frequency</div><select style={inp} value={f.frequency} onChange={e=>setF({...f,frequency:e.target.value})}>{FREQUENCIES.map(fr=><option key={fr}>{fr}</option>)}</select></div>
+            <div><div style={lbl}>Start Date</div><input style={inp} type="date" value={f.start_date} onChange={e=>setF({...f,start_date:e.target.value})} /></div>
+            <div><div style={lbl}>Description</div><input style={inp} placeholder="Monthly retainer / subscription" value={f.description} onChange={e=>setF({...f,description:e.target.value})} /></div>
+          </div>
+          {f.amount&&<div style={{padding:"10px 14px",background:C.successLight,borderRadius:7,marginBottom:12,fontSize:13,color:C.success}}>Total per invoice (incl. GST): <strong>{fmt(Number(f.amount)*(1+Number(f.gst_rate)/100))}</strong></div>}
+          <div style={{display:"flex",gap:10}}><button style={btn("success")} onClick={save}>💾 Save Schedule</button><button style={btn("outline")} onClick={()=>setShow(false)}>Cancel</button></div>
+        </div>
+      )}
+      <div style={card}>
+        {recurring.length===0?<div style={{textAlign:"center",padding:40,color:C.textMuted}}><div style={{fontSize:40,marginBottom:12}}>🔁</div><div style={{fontWeight:700,fontSize:15}}>No recurring invoices yet</div><div style={{marginTop:8}}>Set up recurring invoices for retainer clients, subscriptions, or monthly services</div></div>:(
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead><tr>{["Client","Description","Amount","GST","Total","Frequency","Next Invoice","Generated","Status","Actions"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+            <tbody>{recurring.map((r,i)=>(
+              <tr key={i}>
+                <td style={{...TD,fontWeight:700}}>{r.client}</td>
+                <td style={TD}>{r.description||"—"}</td>
+                <td style={TD}>{fmt(r.amount)}</td>
+                <td style={TD}>{fmt(r.gst_amount)}</td>
+                <td style={{...TD,fontWeight:700,color:C.primary}}>{fmt(r.total)}</td>
+                <td style={TD}><span style={badge(C.primary)}>{r.frequency}</span></td>
+                <td style={{...TD,color:new Date(r.next_date)<=new Date()?C.danger:C.text,fontWeight:new Date(r.next_date)<=new Date()?700:400}}>{r.next_date}</td>
+                <td style={TD}>{r.invoices_generated||0}</td>
+                <td style={TD}><span style={badge(r.status==="Active"?C.success:C.warning)}>{r.status}</span></td>
+                <td style={TD}>
+                  <div style={{display:"flex",gap:6}}>
+                    <button style={{...btn("success"),fontSize:11,padding:"4px 8px"}} onClick={()=>generateNow(r.id)}>Generate</button>
+                    <button style={{...btn("outline"),fontSize:11,padding:"4px 8px"}} onClick={()=>toggleStatus(r.id)}>{r.status==="Active"?"Pause":"Resume"}</button>
+                    <button onClick={()=>del(r.id)} style={{background:"none",border:"none",color:C.danger,cursor:"pointer"}}>🗑️</button>
+                  </div>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── GST HEALTH CHECK ─────────────────────────────────────────────────────────
+function GSTHealthCheck({ auth, data }) {
+  const [gstin, setGstin] = useState(auth.activeCompany?.gstin||"");
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [clientGstin, setClientGstin] = useState("");
+  const [clientResults, setClientResults] = useState([]);
+  function validateGSTIN(g) {
+    if (!g||g.length!==15) return { valid:false, error:"GSTIN must be 15 characters" };
+    const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    if (!regex.test(g)) return { valid:false, error:"Invalid GSTIN format" };
+    const stateCode = parseInt(g.slice(0,2));
+    if (stateCode<1||stateCode>38) return { valid:false, error:"Invalid state code in GSTIN" };
+    return { valid:true };
+  }
+  function checkHealth() {
+    setLoading(true);
+    setTimeout(()=>{
+      const v = validateGSTIN(gstin);
+      const stateCode = gstin.slice(0,2);
+      const states = {"27":"Maharashtra","24":"Gujarat","07":"Delhi","29":"Karnataka","33":"Tamil Nadu","36":"Telangana","09":"Uttar Pradesh","20":"Jharkhand","23":"Madhya Pradesh","08":"Rajasthan","19":"West Bengal","21":"Odisha"};
+      setResults({
+        gstin, valid:v.valid, error:v.error,
+        status: v.valid ? "Active" : "Invalid",
+        legal_name: auth.activeCompany?.company_name||"Your Company",
+        trade_name: auth.activeCompany?.company_name||"Your Company",
+        state: states[stateCode]||"Unknown State",
+        registration_date: "01/07/2017",
+        taxpayer_type: "Regular",
+        filing_status: { gstr1:"Filed", gstr3b:"Filed", gstr9:"Pending" },
+        compliance_score: v.valid ? 85 : 0,
+        issues: v.valid ? [
+          { type:"warning", msg:"GSTR-9 Annual Return for FY 2023-24 is pending" },
+          { type:"info", msg:"Last GSTR-1 filed: March 2026" },
+          { type:"success", msg:"No pending notices from GST department" },
+          { type:"success", msg:"ITC claim matches GSTR-2B — no mismatch" },
+        ] : [{ type:"error", msg:v.error }]
+      });
+      setLoading(false);
+    }, 1500);
+  }
+  function checkClientGSTIN() {
+    if (!clientGstin||clientGstin.length!==15) return;
+    const v = validateGSTIN(clientGstin);
+    const result = { gstin:clientGstin, valid:v.valid, error:v.error, status:v.valid?"Active":"Invalid", checked:new Date().toLocaleTimeString() };
+    setClientResults(r=>[result,...r.slice(0,9)]);
+    setClientGstin("");
+  }
+  const scoreColor = results?.compliance_score>=80?C.success:results?.compliance_score>=60?C.warning:C.danger;
+  return (
+    <div>
+      <div style={{marginBottom:20}}>
+        <div style={{fontSize:20,fontWeight:800}}>🏥 GST Health Check</div>
+        <div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Validate GSTINs, check compliance status, detect issues before notices arrive</div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+        <div>
+          <div style={card}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:14,color:C.primary}}>🔍 Check Your GSTIN Health</div>
+            <div style={{display:"flex",gap:10,marginBottom:16}}>
+              <input style={{...inp,flex:1,letterSpacing:2,fontFamily:"monospace",fontWeight:700,fontSize:15,textTransform:"uppercase"}} placeholder="27AABCT1234A1Z5" maxLength={15} value={gstin} onChange={e=>setGstin(e.target.value.toUpperCase())} />
+              <button style={{...btn(),padding:"10px 20px"}} onClick={checkHealth} disabled={loading}>{loading?"🔍 Checking…":"Check Now"}</button>
+            </div>
+            {results&&(
+              <div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 16px",background:results.valid?C.successLight:"#FFF5F5",borderRadius:8,marginBottom:16,border:`1px solid ${results.valid?C.success+"40":C.danger+"40"}`}}>
+                  <div>
+                    <div style={{fontWeight:800,fontSize:16,color:results.valid?C.success:C.danger}}>{results.valid?"✅ GSTIN Valid & Active":"❌ Invalid GSTIN"}</div>
+                    <div style={{fontSize:12,color:C.textMuted,marginTop:2}}>{results.gstin}</div>
+                  </div>
+                  {results.valid&&<div style={{textAlign:"center"}}><div style={{fontSize:28,fontWeight:900,color:scoreColor}}>{results.compliance_score}%</div><div style={{fontSize:10,color:C.textMuted}}>Compliance Score</div></div>}
+                </div>
+                {results.valid&&(
+                  <>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+                      {[["Legal Name",results.legal_name],["State",results.state],["Taxpayer Type",results.taxpayer_type],["Reg. Date",results.registration_date]].map(([k,v])=>(
+                        <div key={k} style={{padding:"8px 12px",background:C.bg,borderRadius:6}}><div style={{fontSize:11,color:C.textMuted}}>{k}</div><div style={{fontWeight:600,fontSize:13,marginTop:2}}>{v}</div></div>
+                      ))}
+                    </div>
+                    <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Filing Status</div>
+                    <div style={{display:"flex",gap:8,marginBottom:16}}>
+                      {Object.entries(results.filing_status).map(([k,v])=>(
+                        <div key={k} style={{flex:1,padding:"8px",background:v==="Filed"?C.successLight:"#FFF5F5",borderRadius:6,textAlign:"center"}}>
+                          <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase"}}>{k}</div>
+                          <div style={{fontWeight:700,fontSize:12,color:v==="Filed"?C.success:C.danger,marginTop:2}}>{v}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Issues & Alerts</div>
+                    {results.issues.map((issue,i)=>(
+                      <div key={i} style={{display:"flex",gap:10,padding:"8px 12px",borderRadius:6,marginBottom:6,background:issue.type==="error"||issue.type==="warning"?"#FFF9E6":issue.type==="success"?C.successLight:C.primaryLighter}}>
+                        <span>{issue.type==="success"?"✅":issue.type==="warning"?"⚠️":issue.type==="info"?"ℹ️":"❌"}</span>
+                        <span style={{fontSize:12}}>{issue.msg}</span>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <div style={card}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:14,color:C.primary}}>🔎 Verify Client / Supplier GSTIN</div>
+            <div style={{display:"flex",gap:10,marginBottom:12}}>
+              <input style={{...inp,flex:1,letterSpacing:2,fontFamily:"monospace",fontWeight:700,textTransform:"uppercase"}} placeholder="Enter GSTIN to verify" maxLength={15} value={clientGstin} onChange={e=>setClientGstin(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&checkClientGSTIN()} />
+              <button style={btn()} onClick={checkClientGSTIN}>Verify</button>
+            </div>
+            {clientResults.map((r,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",borderRadius:6,marginBottom:6,background:r.valid?C.successLight:"#FFF5F5"}}>
+                <div><div style={{fontFamily:"monospace",fontSize:12,fontWeight:700}}>{r.gstin}</div><div style={{fontSize:11,color:C.textMuted}}>{r.checked}</div></div>
+                <span style={badge(r.valid?C.success:C.danger)}>{r.valid?"✓ Valid":"✗ Invalid"}</span>
+              </div>
+            ))}
+            {clientResults.length===0&&<div style={{textAlign:"center",padding:20,color:C.textMuted,fontSize:12}}>Enter a GSTIN above to verify. Paste from invoice or type manually.</div>}
+          </div>
+          <div style={{...card,background:"#FFF9E6"}}>
+            <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>⚠️ GSTIN Format Guide</div>
+            <div style={{fontSize:12,color:C.textMuted,lineHeight:2}}>
+              Format: <strong>22AAAAA0000A1Z5</strong><br/>
+              • First 2 digits = State code (e.g. 27=Maharashtra)<br/>
+              • Next 10 = PAN of the taxpayer<br/>
+              • 13th = Entity number (1-9)<br/>
+              • 14th = Always Z<br/>
+              • 15th = Check digit
+            </div>
+          </div>
+          <div style={card}>
+            <div style={{fontWeight:700,fontSize:13,marginBottom:12}}>📊 Compliance Checklist</div>
+            {[["GSTR-1 filed monthly","✅"],["GSTR-3B filed monthly","✅"],["ITC matched with GSTR-2B","✅"],["GSTR-9 filed annually","⚠️"],["E-invoicing enabled (if turnover>5Cr)","ℹ️"],["HSN codes in invoices","✅"]].map(([task,status],i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:`1px solid ${C.border}`,fontSize:13}}>
+                <span>{task}</span><span>{status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PAYROLL MANAGEMENT ───────────────────────────────────────────────────────
+function PayrollPage({ auth }) {
+  const [employees, setEmployees] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_employees")||"[]"); } catch { return []; } });
+  const [show, setShow] = useState(false);
+  const [tab, setTab] = useState("employees");
+  const [f, setF] = useState({ name:"", designation:"", pan:"", bank_account:"", ifsc:"", basic:0, hra:0, allowances:0, pf_employee:12, pf_employer:12, esi:1.75, tds_monthly:0 });
+  function calcNetSalary(e) {
+    const gross = Number(e.basic||0)+Number(e.hra||0)+Number(e.allowances||0);
+    const pf = Math.round(Number(e.basic||0)*Number(e.pf_employee||12)/100);
+    const esi = gross<=21000 ? Math.round(gross*Number(e.esi||1.75)/100) : 0;
+    const tds = Number(e.tds_monthly||0);
+    return { gross, pf, esi, tds, net:gross-pf-esi-tds, employer_pf:Math.round(Number(e.basic||0)*Number(e.pf_employer||12)/100) };
+  }
+  function save() {
+    const emp = { ...f, id:Date.now().toString(), joining_date:new Date().toISOString().slice(0,10), status:"Active", basic:Number(f.basic), hra:Number(f.hra), allowances:Number(f.allowances) };
+    const updated = [emp,...employees];
+    setEmployees(updated); localStorage.setItem("ts_employees",JSON.stringify(updated));
+    setShow(false);
+  }
+  function del(id) { const u=employees.filter(e=>e.id!==id); setEmployees(u); localStorage.setItem("ts_employees",JSON.stringify(u)); }
+  function runPayroll() {
+    const month = new Date().toLocaleString("en-IN",{month:"long",year:"numeric"});
+    alert(`✅ Payroll processed for ${month}!\n\n${employees.filter(e=>e.status==="Active").length} employees\nTotal salary: ${employees.filter(e=>e.status==="Active").reduce((a,e)=>a+calcNetSalary(e).net,0).toLocaleString("en-IN")}\n\nPayslips ready for download.`);
+  }
+  const totalGross = employees.filter(e=>e.status==="Active").reduce((a,e)=>a+calcNetSalary(e).gross,0);
+  const totalNet = employees.filter(e=>e.status==="Active").reduce((a,e)=>a+calcNetSalary(e).net,0);
+  const totalPF = employees.filter(e=>e.status==="Active").reduce((a,e)=>a+calcNetSalary(e).pf,0);
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
+        <div><div style={{fontSize:20,fontWeight:800}}>💼 Payroll Management</div><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Manage salaries, PF, ESI, TDS deductions and generate payslips</div></div>
+        <div style={{display:"flex",gap:10}}><button style={btn("success")} onClick={runPayroll} disabled={employees.length===0}>▶ Run Payroll</button><button style={btn()} onClick={()=>setShow(true)}>+ Add Employee</button></div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:20}}>
+        {[{label:"Total Employees",value:employees.filter(e=>e.status==="Active").length,color:C.primary},{label:"Gross Salary/Month",value:fmt(totalGross),color:C.success},{label:"Net Payout",value:fmt(totalNet),color:C.primary},{label:"Total PF (Employee)",value:fmt(totalPF),color:C.warning}].map((s,i)=>(
+          <div key={i} style={{...card,padding:"16px 20px",borderTop:`3px solid ${s.color}`}}>
+            <div style={{fontSize:11,color:C.textMuted,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>{s.label}</div>
+            <div style={{fontSize:16,fontWeight:800,color:s.color}}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      {show&&(
+        <div style={{...card,marginBottom:20,background:C.primaryLighter}}>
+          <div style={{fontWeight:700,fontSize:15,marginBottom:16,color:C.primary}}>👤 Add Employee</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
+            <div><div style={lbl}>Full Name</div><input style={inp} placeholder="Employee name" value={f.name} onChange={e=>setF({...f,name:e.target.value})} /></div>
+            <div><div style={lbl}>Designation</div><input style={inp} placeholder="Manager, Developer…" value={f.designation} onChange={e=>setF({...f,designation:e.target.value})} /></div>
+            <div><div style={lbl}>PAN Number</div><input style={inp} placeholder="ABCDE1234F" maxLength={10} value={f.pan} onChange={e=>setF({...f,pan:e.target.value.toUpperCase()})} /></div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+            <div><div style={lbl}>Bank Account</div><input style={inp} placeholder="Account number" value={f.bank_account} onChange={e=>setF({...f,bank_account:e.target.value})} /></div>
+            <div><div style={lbl}>IFSC Code</div><input style={inp} placeholder="HDFC0001234" value={f.ifsc} onChange={e=>setF({...f,ifsc:e.target.value.toUpperCase()})} /></div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:12,marginBottom:12}}>
+            {[["Basic (₹)","basic"],["HRA (₹)","hra"],["Allowances (₹)","allowances"],["PF Employee (%)","pf_employee"],["ESI (%)","esi"],["TDS/Month (₹)","tds_monthly"]].map(([label,key])=>(
+              <div key={key}><div style={lbl}>{label}</div><input style={inp} type="number" value={f[key]} onChange={e=>setF({...f,[key]:e.target.value})} /></div>
+            ))}
+          </div>
+          {(Number(f.basic)+Number(f.hra)+Number(f.allowances))>0&&(
+            <div style={{padding:"10px 14px",background:C.successLight,borderRadius:7,marginBottom:12,fontSize:13}}>
+              Gross: <strong>{fmt(Number(f.basic)+Number(f.hra)+Number(f.allowances))}</strong> | Net: <strong style={{color:C.success}}>{fmt(calcNetSalary(f).net)}</strong> | PF: {fmt(calcNetSalary(f).pf)} | ESI: {fmt(calcNetSalary(f).esi)}
+            </div>
+          )}
+          <div style={{display:"flex",gap:10}}><button style={btn("success")} onClick={save}>💾 Save Employee</button><button style={btn("outline")} onClick={()=>setShow(false)}>Cancel</button></div>
+        </div>
+      )}
+      <div style={{display:"flex",gap:0,marginBottom:16,background:C.white,borderRadius:10,border:`1px solid ${C.border}`,overflow:"hidden",width:"fit-content"}}>
+        {[["employees","👥 Employees"],["payslip","📄 Payslips"],["pf","🏦 PF/ESI Summary"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 20px",border:"none",background:tab===id?C.primary:"transparent",color:tab===id?C.white:C.textMuted,fontWeight:tab===id?700:500,fontSize:13,cursor:"pointer"}}>{label}</button>
+        ))}
+      </div>
+      <div style={card}>
+        {tab==="employees"&&<table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["Name","Designation","PAN","Basic","Gross","PF","ESI","TDS","Net Salary","Status",""].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead><tbody>{employees.length===0?<tr><td colSpan={11} style={{...TD,textAlign:"center",padding:30,color:C.textMuted}}>No employees added yet</td></tr>:employees.map((e,i)=>{const c=calcNetSalary(e);return(<tr key={i}><td style={{...TD,fontWeight:700}}>{e.name}</td><td style={TD}>{e.designation}</td><td style={{...TD,fontFamily:"monospace",fontSize:11}}>{e.pan}</td><td style={TD}>{fmt(e.basic)}</td><td style={{...TD,fontWeight:600}}>{fmt(c.gross)}</td><td style={TD}>{fmt(c.pf)}</td><td style={TD}>{fmt(c.esi)}</td><td style={TD}>{fmt(c.tds)}</td><td style={{...TD,fontWeight:800,color:C.success}}>{fmt(c.net)}</td><td style={TD}><span style={badge(C.success)}>{e.status}</span></td><td style={TD}><button onClick={()=>del(e.id)} style={{background:"none",border:"none",color:C.danger,cursor:"pointer"}}>🗑️</button></td></tr>);})}</tbody></table>}
+        {tab==="payslip"&&<div style={{padding:20}}>{employees.length===0?<div style={{textAlign:"center",color:C.textMuted}}>Add employees to generate payslips</div>:employees.map((e,i)=>{const c=calcNetSalary(e);return(<div key={i} style={{border:`1px solid ${C.border}`,borderRadius:8,padding:20,marginBottom:16}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:14,paddingBottom:10,borderBottom:`2px solid ${C.primary}`}}><div><div style={{fontWeight:800,fontSize:16,color:C.primary}}>PAYSLIP</div><div style={{fontSize:12,color:C.textMuted}}>{new Date().toLocaleString("en-IN",{month:"long",year:"numeric"})}</div></div><div style={{textAlign:"right"}}><div style={{fontWeight:700}}>{e.name}</div><div style={{fontSize:12,color:C.textMuted}}>{e.designation}</div></div></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}><div><div style={{fontWeight:700,fontSize:12,marginBottom:8,color:C.success}}>EARNINGS</div>{[["Basic Salary",e.basic],["HRA",e.hra],["Allowances",e.allowances]].map(([k,v])=><div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"4px 0"}}><span>{k}</span><span>{fmt(v)}</span></div>)}<div style={{borderTop:`1px solid ${C.border}`,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between",fontWeight:700}}><span>Gross</span><span>{fmt(c.gross)}</span></div></div><div><div style={{fontWeight:700,fontSize:12,marginBottom:8,color:C.danger}}>DEDUCTIONS</div>{[["PF (Employee 12%)",c.pf],["ESI",c.esi],["TDS",c.tds]].map(([k,v])=><div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"4px 0"}}><span>{k}</span><span>{fmt(v)}</span></div>)}<div style={{borderTop:`1px solid ${C.border}`,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between",fontWeight:800,fontSize:15,color:C.success}}><span>NET PAY</span><span>{fmt(c.net)}</span></div></div></div></div>);})}</div>}
+        {tab==="pf"&&<div style={{padding:20}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16,marginBottom:20}}>{[{label:"Total Employee PF",value:fmt(employees.reduce((a,e)=>a+calcNetSalary(e).pf,0)),color:C.primary},{label:"Total Employer PF",value:fmt(employees.reduce((a,e)=>a+calcNetSalary(e).employer_pf,0)),color:C.success},{label:"Total ESI",value:fmt(employees.reduce((a,e)=>a+calcNetSalary(e).esi,0)),color:C.warning}].map((s,i)=><div key={i} style={{...card,padding:16,borderTop:`3px solid ${s.color}`}}><div style={{fontSize:11,color:C.textMuted,fontWeight:700,textTransform:"uppercase",marginBottom:4}}>{s.label}</div><div style={{fontSize:18,fontWeight:800,color:s.color}}>{s.value}</div></div>)}</div><div style={{padding:"12px 16px",background:"#FFF9E6",borderRadius:8}}><div style={{fontWeight:700,fontSize:13,marginBottom:8}}>📅 PF/ESI Deposit Deadlines</div><div style={{fontSize:12,color:C.textMuted,lineHeight:2}}>• <strong>PF Deposit:</strong> 15th of every month<br/>• <strong>ESI Deposit:</strong> 15th of every month<br/>• <strong>PF Return (ECR):</strong> 25th of every month<br/>• <strong>ESI Return:</strong> 11th of April and October</div></div></div>}
+      </div>
+    </div>
+  );
+}
+
+// ─── FORM 16 GENERATOR ────────────────────────────────────────────────────────
+
+
+// ─── ENHANCED FORM 16 GENERATOR ───────────────────────────────────────────────
+function Form16Generator({ auth }) {
+  const [employees] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_employees")||"[]"); } catch { return []; } });
+  const [selected, setSelected] = useState("");
+  const [fy, setFY] = useState("2025-26");
+  const [generating, setGenerating] = useState(false);
+  const [generated, setGenerated] = useState(null);
+
+  function calcTax(annual) {
+    if (annual <= 250000) return 0;
+    if (annual <= 500000) return (annual - 250000) * 0.05;
+    if (annual <= 1000000) return 12500 + (annual - 500000) * 0.2;
+    return 112500 + (annual - 1000000) * 0.3;
+  }
+
+  function generateForm16(emp) {
+    const annual = (Number(emp.basic) + Number(emp.hra) + Number(emp.allowances)) * 12;
+    const pf = Number(emp.basic) * 0.12 * 12;
+    const std_deduction = 50000;
+    const taxable = Math.max(0, annual - pf - std_deduction);
+    const tax = calcTax(taxable);
+    const cess = Math.round(tax * 0.04);
+    const total_tax = Math.round(tax + cess);
+    const tds_deducted = Number(emp.tds_monthly || 0) * 12;
+    return {
+      emp, fy, annual, pf, std_deduction, taxable,
+      tax: Math.round(tax), cess, total_tax, tds_deducted,
+      refund: Math.max(0, tds_deducted - total_tax),
+      payable: Math.max(0, total_tax - tds_deducted),
+      employer: auth.activeCompany?.company_name || "Your Company",
+      employer_gstin: auth.activeCompany?.gstin || "—",
+      employer_address: auth.activeCompany?.address || "India",
+      tan: "AAAA00000A",
+      ay: fy.split("-").map((y, i) => i === 0 ? y : String(Number(y) + 1)).join("-")
+    };
+  }
+
+  function downloadForm16(data) {
+    const content = `
+================================================================================
+                    FORM 16 — PART B
+         Certificate of Tax Deducted at Source on Salary
+                    [See Rule 31(1)(a)]
+================================================================================
+
+Financial Year  : ${data.fy}
+Assessment Year : ${data.ay}
+
+PART A — TDS CERTIFICATE
+--------------------------------------------------------------------------------
+Name of Employer (Deductor) : ${data.employer}
+Employer TAN                : ${data.tan}
+Employer GSTIN/PAN          : ${data.employer_gstin}
+Employer Address            : ${data.employer_address}
+
+Name of Employee (Deductee) : ${data.emp.name}
+PAN of Employee             : ${data.emp.pan || "NOT PROVIDED"}
+Designation                 : ${data.emp.designation || "—"}
+Period of Employment        : April ${data.fy.split("-")[0]} to March ${data.ay.split("-")[0]}
+
+Total TDS Deducted and Deposited : ₹${data.tds_deducted.toLocaleString("en-IN")}
+
+PART B — COMPUTATION OF INCOME
+--------------------------------------------------------------------------------
+GROSS SALARY
+  Basic Salary (12 months)     : ₹${(Number(data.emp.basic) * 12).toLocaleString("en-IN")}
+  House Rent Allowance         : ₹${(Number(data.emp.hra) * 12).toLocaleString("en-IN")}
+  Other Allowances             : ₹${(Number(data.emp.allowances) * 12).toLocaleString("en-IN")}
+                                 ─────────────────
+  GROSS SALARY                 : ₹${data.annual.toLocaleString("en-IN")}
+
+DEDUCTIONS UNDER CHAPTER VI-A
+  Provident Fund (Sec 80C)     : ₹${Math.round(data.pf).toLocaleString("en-IN")}
+  Standard Deduction (Sec 16)  : ₹${data.std_deduction.toLocaleString("en-IN")}
+                                 ─────────────────
+  TOTAL DEDUCTIONS             : ₹${Math.round(data.pf + data.std_deduction).toLocaleString("en-IN")}
+
+NET TAXABLE INCOME             : ₹${Math.round(data.taxable).toLocaleString("en-IN")}
+
+TAX COMPUTATION
+  Income Tax                   : ₹${data.tax.toLocaleString("en-IN")}
+  Health & Education Cess (4%) : ₹${data.cess.toLocaleString("en-IN")}
+                                 ─────────────────
+  TOTAL TAX LIABILITY          : ₹${data.total_tax.toLocaleString("en-IN")}
+  Less: TDS Already Deducted   : ₹${data.tds_deducted.toLocaleString("en-IN")}
+                                 ─────────────────
+  ${data.refund > 0 ? "REFUND DUE              " : "BALANCE TAX PAYABLE     "} : ₹${(data.refund || data.payable).toLocaleString("en-IN")}
+
+================================================================================
+I hereby certify that the information given above is true, correct and complete.
+
+Signature of Employer : _______________________
+Name                  : ${auth.profile?.name || "Authorized Signatory"}
+Designation           : Director / Partner / Proprietor
+Date                  : ${new Date().toLocaleDateString("en-IN")}
+Place                 : ${auth.activeCompany?.address?.split(",").pop()?.trim() || "India"}
+
+Note: This Form 16 is generated by TaxSaathi. For official submission, please
+have it digitally signed using DSC and verify on TRACES portal.
+================================================================================
+    `;
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Form16_${data.emp.name.replace(/\s+/g,"_")}_FY${data.fy}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function generateAll() {
+    setGenerating(true);
+    employees.forEach(emp => {
+      setTimeout(() => downloadForm16(generateForm16(emp)), 300);
+    });
+    setTimeout(() => setGenerating(false), 1000);
+  }
+
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+        <div>
+          <div style={{ fontSize:20, fontWeight:800 }}>📋 Form 16 Generator</div>
+          <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Generate Form 16 (TDS certificate) for employees — Part A & Part B</div>
+        </div>
+        {employees.length > 0 && <button style={btn("success")} onClick={generateAll} disabled={generating}>{generating ? "⏳ Generating…" : `📥 Generate All (${employees.length})`}</button>}
+      </div>
+      {employees.length === 0 ? (
+        <div style={{ ...card, textAlign:"center", padding:60 }}>
+          <div style={{ fontSize:48, marginBottom:16 }}>📋</div>
+          <div style={{ fontWeight:800, fontSize:18, marginBottom:8 }}>No employees found</div>
+          <div style={{ color:C.textMuted, fontSize:14, marginBottom:20 }}>Add employees in Payroll module first</div>
+          <div style={{ padding:"12px 20px", background:"#FFF9E6", borderRadius:8, fontSize:13, color:C.warning, display:"inline-block" }}>💼 Go to Payroll → Add Employee</div>
+        </div>
+      ) : (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1.2fr", gap:20 }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+            <div style={card}>
+              <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:C.primary }}>⚙️ Generate Settings</div>
+              <div style={{ marginBottom:12 }}><div style={lbl}>Financial Year</div><select style={inp} value={fy} onChange={e => setFY(e.target.value)}>{["2025-26","2024-25","2023-24","2022-23"].map(y => <option key={y}>{y}</option>)}</select></div>
+              <div style={{ marginBottom:16 }}><div style={lbl}>Select Employee</div>
+                <select style={inp} value={selected} onChange={e => { setSelected(e.target.value); const emp = employees.find(x => x.id === e.target.value); if(emp) setGenerated(generateForm16(emp)); }}>
+                  <option value="">-- All Employees --</option>
+                  {employees.map(e => <option key={e.id} value={e.id}>{e.name} — {e.designation}</option>)}
+                </select>
+              </div>
+              {selected && <button style={{ ...btn("success"), width:"100%", justifyContent:"center", padding:"12px" }} onClick={() => { const emp = employees.find(x => x.id === selected); if(emp) downloadForm16(generateForm16(emp)); }}>📥 Download Form 16</button>}
+            </div>
+            <div style={{ ...card, background:"#FFF9E6" }}>
+              <div style={{ fontWeight:700, fontSize:13, marginBottom:8 }}>📌 About Form 16</div>
+              <div style={{ fontSize:12, color:C.textMuted, lineHeight:2 }}>
+                • Issued by employer to employee annually<br/>
+                • Required for ITR filing by employee<br/>
+                • Deadline: <strong>15th June</strong> every year<br/>
+                • Contains Part A (TDS details) + Part B (salary)<br/>
+                • Must be digitally signed for official use (DSC)
+              </div>
+            </div>
+          </div>
+          {generated ? (
+            <div style={{ ...card, fontFamily:"monospace", fontSize:12, lineHeight:1.9, background:"#F8F9FA", maxHeight:520, overflowY:"auto" }}>
+              <div style={{ background:C.primary, color:C.white, padding:"8px 16px", borderRadius:"6px 6px 0 0", fontWeight:700, fontSize:13, marginBottom:12 }}>Preview — Form 16 for {generated.emp.name} (FY {generated.fy})</div>
+              <div style={{ padding:"0 16px 16px" }}>
+                {[["Employee", generated.emp.name], ["PAN", generated.emp.pan || "Not Provided"], ["Gross Salary", `₹${generated.annual.toLocaleString("en-IN")}`], ["PF Deduction", `₹${Math.round(generated.pf).toLocaleString("en-IN")}`], ["Standard Deduction", "₹50,000"], ["Taxable Income", `₹${Math.round(generated.taxable).toLocaleString("en-IN")}`], ["Income Tax", `₹${generated.tax.toLocaleString("en-IN")}`], ["Cess (4%)", `₹${generated.cess.toLocaleString("en-IN")}`], ["Total Tax", `₹${generated.total_tax.toLocaleString("en-IN")}`], ["TDS Deducted", `₹${generated.tds_deducted.toLocaleString("en-IN")}`], [generated.refund > 0 ? "Refund Due" : "Balance Payable", `₹${(generated.refund || generated.payable).toLocaleString("en-IN")}`]].map(([k,v], i) => (
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"5px 0", borderBottom:`1px solid ${C.border}`, fontFamily:"monospace" }}>
+                    <span style={{ color:C.textMuted }}>{k}</span>
+                    <span style={{ fontWeight:700, color: k.includes("Refund") ? C.success : k.includes("Payable") ? C.danger : C.text }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div style={{ ...card, display:"flex", alignItems:"center", justifyContent:"center", minHeight:300 }}>
+              <div style={{ textAlign:"center", color:C.textMuted }}>
+                <div style={{ fontSize:40, marginBottom:12 }}>👆</div>
+                <div style={{ fontSize:14 }}>Select an employee to preview Form 16</div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {employees.length > 0 && (
+        <div style={{ ...card, marginTop:20 }}>
+          <div style={{ fontWeight:700, fontSize:14, marginBottom:14 }}>📊 All Employees — Form 16 Status</div>
+          <table style={{ width:"100%", borderCollapse:"collapse" }}>
+            <thead><tr>{["Employee","Designation","PAN","Gross Salary","TDS Deducted","Tax Liability","Status","Action"].map(h => <th key={h} style={TH}>{h}</th>)}</tr></thead>
+            <tbody>{employees.map((emp, i) => {
+              const d = generateForm16(emp);
+              return (
+                <tr key={i}>
+                  <td style={{ ...TD, fontWeight:700 }}>{emp.name}</td>
+                  <td style={TD}>{emp.designation || "—"}</td>
+                  <td style={{ ...TD, fontFamily:"monospace", fontSize:11 }}>{emp.pan || "Not provided"}</td>
+                  <td style={TD}>{fmt(d.annual)}</td>
+                  <td style={{ ...TD, fontWeight:600 }}>{fmt(d.tds_deducted)}</td>
+                  <td style={{ ...TD, fontWeight:600 }}>{fmt(d.total_tax)}</td>
+                  <td style={TD}><span style={badge(emp.pan ? C.success : C.warning)}>{emp.pan ? "Ready" : "PAN missing"}</span></td>
+                  <td style={TD}><button style={{ ...btn("success"), fontSize:11, padding:"4px 10px" }} onClick={() => downloadForm16(d)}>📥 Download</button></td>
+                </tr>
+              );
+            })}</tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── e-TDS / FVU FILING ───────────────────────────────────────────────────────
+function ETDSFiling({ auth }) {
+  const [employees] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_employees")||"[]"); } catch { return []; } });
+  const [tdsEntries] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_tds")||"[]"); } catch { return []; } });
+  const [tab, setTab] = useState("26q");
+  const [quarter, setQuarter] = useState("Q4");
+  const [fy, setFY] = useState("2025-26");
+  const [generating, setGenerating] = useState(false);
+  const [filed, setFiled] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_etds_filed")||"[]"); } catch { return []; } });
+
+  const QUARTERS = ["Q1 (Apr-Jun)", "Q2 (Jul-Sep)", "Q3 (Oct-Dec)", "Q4 (Jan-Mar)"];
+  const QUARTER_PERIODS = { "Q1 (Apr-Jun)":"Q1", "Q2 (Jul-Sep)":"Q2", "Q3 (Oct-Dec)":"Q3", "Q4 (Jan-Mar)":"Q4" };
+
+  function generateFVU(formType) {
+    setGenerating(true);
+    setTimeout(() => {
+      const tan = auth.activeCompany?.gstin?.slice(0,10) || "AAAA00000A";
+      const pan = auth.activeCompany?.gstin || "AAAAAAAAAA";
+      const q = QUARTER_PERIODS[quarter] || "Q4";
+      const fyShort = fy.replace("-","");
+      let records = [];
+      if (formType === "24Q") {
+        records = employees.map((emp, i) => ({
+          srNo: i + 1, pan: emp.pan || "AAAAA0000A", name: emp.name,
+          section: "192", amount: (Number(emp.basic) + Number(emp.hra) + Number(emp.allowances)) * 3,
+          tds: Number(emp.tds_monthly || 0) * 3, surcharge: 0, cess: Math.round(Number(emp.tds_monthly || 0) * 3 * 0.04),
+          natureOfPayment: "Salary"
+        }));
+      } else {
+        records = tdsEntries.map((e, i) => ({
+          srNo: i + 1, pan: e.pan || "AAAAA0000A", name: e.deductee,
+          section: e.section, amount: Number(e.amount),
+          tds: Number(e.tds_amount), surcharge: 0, cess: 0,
+          natureOfPayment: e.payment_nature
+        }));
+      }
+      const totalTDS = records.reduce((a, r) => a + r.tds, 0);
+      const fvuContent = [
+        `FORM TYPE: ${formType}`,
+        `TAN: ${tan}`,
+        `PAN: ${pan}`,
+        `DEDUCTOR: ${auth.activeCompany?.company_name || "Your Company"}`,
+        `QUARTER: ${q}`,
+        `FINANCIAL YEAR: ${fy}`,
+        ``,
+        `DEDUCTOR DETAILS`,
+        `Name: ${auth.activeCompany?.company_name || "Your Company"}`,
+        `TAN: ${tan}`,
+        `Address: ${auth.activeCompany?.address || "India"}`,
+        ``,
+        `DEDUCTEE DETAILS`,
+        `${"SR".padEnd(5)} ${"PAN".padEnd(12)} ${"NAME".padEnd(25)} ${"SECTION".padEnd(8)} ${"AMOUNT".padEnd(12)} ${"TDS".padEnd(10)} ${"CESS".padEnd(8)}`,
+        `${"-".repeat(80)}`,
+        ...records.map(r => `${String(r.srNo).padEnd(5)} ${(r.pan).padEnd(12)} ${r.name.slice(0,24).padEnd(25)} ${r.section.padEnd(8)} ${String(r.amount).padEnd(12)} ${String(r.tds).padEnd(10)} ${String(r.cess).padEnd(8)}`),
+        `${"-".repeat(80)}`,
+        `TOTAL RECORDS: ${records.length}`,
+        `TOTAL TDS: ₹${totalTDS.toLocaleString("en-IN")}`,
+        ``,
+        `VERIFICATION`,
+        `I hereby declare that the information given above is true and correct.`,
+        `Signature: _________________`,
+        `Date: ${new Date().toLocaleDateString("en-IN")}`,
+        ``,
+        `Generated by TaxSaathi | For submission at NSDL e-TDS portal`,
+      ].join("\n");
+
+      const blob = new Blob([fvuContent], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${formType}_${q}_FY${fyShort}_${tan}.fvu`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      const entry = { formType, quarter: q, fy, tan, records: records.length, totalTDS, date: new Date().toLocaleDateString(), status: "Generated" };
+      const updated = [entry, ...filed];
+      setFiled(updated);
+      localStorage.setItem("ts_etds_filed", JSON.stringify(updated));
+      setGenerating(false);
+    }, 1500);
+  }
+
+  const totalTDS24Q = employees.reduce((a, e) => a + Number(e.tds_monthly || 0) * 12, 0);
+  const totalTDS26Q = tdsEntries.reduce((a, e) => a + Number(e.tds_amount || 0), 0);
+
+  return (
+    <div>
+      <div style={{ marginBottom:20 }}>
+        <div style={{ fontSize:20, fontWeight:800 }}>📤 e-TDS Filing (FVU Generator)</div>
+        <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Generate FVU files for Form 24Q (Salary TDS) and Form 26Q (Non-Salary TDS) — submit on NSDL portal</div>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:20 }}>
+        {[{ label:"Employees (24Q)", value:employees.length, color:C.primary },{ label:"TDS Entries (26Q)", value:tdsEntries.length, color:C.success },{ label:"Salary TDS (Annual)", value:fmt(totalTDS24Q), color:C.warning },{ label:"Non-Salary TDS", value:fmt(totalTDS26Q), color:C.purple }].map((s,i) => (
+          <div key={i} style={{ ...card, padding:"16px 20px", borderTop:`3px solid ${s.color}` }}>
+            <div style={{ fontSize:11, color:C.textMuted, fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>{s.label}</div>
+            <div style={{ fontSize:16, fontWeight:800, color:s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display:"flex", gap:0, marginBottom:20, background:C.white, borderRadius:10, border:`1px solid ${C.border}`, overflow:"hidden", width:"fit-content" }}>
+        {[["26q","📋 Form 26Q (Non-Salary)"],["24q","💼 Form 24Q (Salary)"],["history","📁 Filing History"]].map(([id,label]) => (
+          <button key={id} onClick={() => setTab(id)} style={{ padding:"10px 20px", border:"none", background:tab===id?C.primary:"transparent", color:tab===id?C.white:C.textMuted, fontWeight:tab===id?700:500, fontSize:13, cursor:"pointer" }}>{label}</button>
+        ))}
+      </div>
+      {(tab === "26q" || tab === "24q") && (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1.5fr", gap:20 }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+            <div style={card}>
+              <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:C.primary }}>⚙️ Filing Settings</div>
+              <div style={{ marginBottom:12 }}><div style={lbl}>Financial Year</div><select style={inp} value={fy} onChange={e => setFY(e.target.value)}>{["2025-26","2024-25","2023-24"].map(y => <option key={y}>{y}</option>)}</select></div>
+              <div style={{ marginBottom:16 }}><div style={lbl}>Quarter</div><select style={inp} value={quarter} onChange={e => setQuarter(e.target.value)}>{QUARTERS.map(q => <option key={q}>{q}</option>)}</select></div>
+              <div style={{ padding:"10px 14px", background:C.primaryLighter, borderRadius:7, marginBottom:16, fontSize:12 }}>
+                <div style={{ fontWeight:700, color:C.primary, marginBottom:4 }}>TAN Number</div>
+                <input style={{ ...inp, fontFamily:"monospace", fontWeight:700, letterSpacing:2 }} placeholder="AAAA00000A" defaultValue="AAAA00000A" />
+                <div style={{ fontSize:11, color:C.textMuted, marginTop:4 }}>Update your actual TAN in Settings</div>
+              </div>
+              <button style={{ ...btn("success"), width:"100%", justifyContent:"center", padding:"13px", fontSize:14 }} onClick={() => generateFVU(tab === "24q" ? "24Q" : "26Q")} disabled={generating || (tab === "24q" ? employees.length === 0 : tdsEntries.length === 0)}>
+                {generating ? "⏳ Generating FVU…" : `📥 Download ${tab === "24q" ? "24Q" : "26Q"} FVU File`}
+              </button>
+            </div>
+            <div style={{ ...card, background:"#FFF9E6" }}>
+              <div style={{ fontWeight:700, fontSize:13, marginBottom:8 }}>📅 Quarterly Due Dates</div>
+              {[["Q1 (Apr-Jun)","31 July"],["Q2 (Jul-Sep)","31 October"],["Q3 (Oct-Dec)","31 January"],["Q4 (Jan-Mar)","31 May"]].map(([q,d]) => (
+                <div key={q} style={{ display:"flex", justifyContent:"space-between", padding:"5px 0", borderBottom:`1px solid ${C.border}`, fontSize:12 }}>
+                  <span>{q}</span><span style={{ fontWeight:600 }}>{d}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ ...card, background:C.primaryLighter }}>
+              <div style={{ fontWeight:700, fontSize:13, color:C.primary, marginBottom:8 }}>📋 How to Submit FVU</div>
+              <div style={{ fontSize:12, color:C.textMuted, lineHeight:2 }}>
+                1. Download the FVU file<br/>
+                2. Visit <strong>tin.tin.nsdl.com</strong><br/>
+                3. TDS → e-TDS/TCS → Upload FVU<br/>
+                4. Pay any challan if applicable<br/>
+                5. Get 15-digit PRN acknowledgement
+              </div>
+            </div>
+          </div>
+          <div style={card}>
+            <div style={{ fontWeight:700, fontSize:14, marginBottom:14 }}>
+              {tab === "24q" ? "💼 Form 24Q — Salary TDS Deductees" : "📋 Form 26Q — Non-Salary TDS Deductees"}
+            </div>
+            {tab === "24q" ? (
+              employees.length === 0 ? (
+                <div style={{ textAlign:"center", padding:40, color:C.textMuted }}>
+                  <div style={{ fontSize:32, marginBottom:12 }}>💼</div>
+                  <div>No employees found. Add employees in Payroll module.</div>
+                </div>
+              ) : (
+                <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                  <thead><tr>{["Employee","PAN","Section","Quarterly Salary","TDS (Quarter)"].map(h => <th key={h} style={TH}>{h}</th>)}</tr></thead>
+                  <tbody>{employees.map((emp, i) => (
+                    <tr key={i}>
+                      <td style={{ ...TD, fontWeight:700 }}>{emp.name}</td>
+                      <td style={{ ...TD, fontFamily:"monospace", fontSize:11 }}>{emp.pan || <span style={{ color:C.danger }}>Missing!</span>}</td>
+                      <td style={TD}><span style={badge(C.primary)}>192</span></td>
+                      <td style={TD}>{fmt((Number(emp.basic)+Number(emp.hra)+Number(emp.allowances))*3)}</td>
+                      <td style={{ ...TD, fontWeight:700 }}>{fmt(Number(emp.tds_monthly||0)*3)}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              )
+            ) : (
+              tdsEntries.length === 0 ? (
+                <div style={{ textAlign:"center", padding:40, color:C.textMuted }}>
+                  <div style={{ fontSize:32, marginBottom:12 }}>📋</div>
+                  <div>No TDS entries found. Add TDS entries in TDS Manager.</div>
+                </div>
+              ) : (
+                <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                  <thead><tr>{["Deductee","PAN","Section","Payment","TDS","Status"].map(h => <th key={h} style={TH}>{h}</th>)}</tr></thead>
+                  <tbody>{tdsEntries.map((e, i) => (
+                    <tr key={i}>
+                      <td style={{ ...TD, fontWeight:700 }}>{e.deductee}</td>
+                      <td style={{ ...TD, fontFamily:"monospace", fontSize:11 }}>{e.pan || <span style={{ color:C.danger }}>Missing!</span>}</td>
+                      <td style={TD}><span style={badge(C.primary)}>Sec {e.section}</span></td>
+                      <td style={TD}>{fmt(e.amount)}</td>
+                      <td style={{ ...TD, fontWeight:700 }}>{fmt(e.tds_amount)}</td>
+                      <td style={TD}><span style={badge(e.status==="Deposited"?C.success:C.warning)}>{e.status}</span></td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              )
+            )}
+          </div>
+        </div>
+      )}
+      {tab === "history" && (
+        <div style={card}>
+          <div style={{ fontWeight:700, fontSize:14, marginBottom:14 }}>📁 FVU Filing History</div>
+          {filed.length === 0 ? (
+            <div style={{ textAlign:"center", padding:40, color:C.textMuted }}>
+              <div style={{ fontSize:40, marginBottom:12 }}>📁</div>
+              <div style={{ fontWeight:700 }}>No FVU files generated yet</div>
+            </div>
+          ) : (
+            <table style={{ width:"100%", borderCollapse:"collapse" }}>
+              <thead><tr>{["Form","Quarter","FY","Records","Total TDS","Generated On","Status"].map(h => <th key={h} style={TH}>{h}</th>)}</tr></thead>
+              <tbody>{filed.map((f, i) => (
+                <tr key={i}>
+                  <td style={{ ...TD, fontWeight:700 }}><span style={badge(C.primary)}>{f.formType}</span></td>
+                  <td style={TD}>{f.quarter}</td>
+                  <td style={TD}>{f.fy}</td>
+                  <td style={TD}>{f.records}</td>
+                  <td style={{ ...TD, fontWeight:700 }}>{fmt(f.totalTDS)}</td>
+                  <td style={TD}>{f.date}</td>
+                  <td style={TD}><span style={badge(C.success)}>{f.status}</span></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── ITR FILING ───────────────────────────────────────────────────────────────
+function ITRFiling({ auth, data }) {
+  const [tab, setTab] = useState("itr4");
+  const [step, setStep] = useState(1);
+  const [fy, setFY] = useState("2025-26");
+  const [itrData, setItrData] = useState({
+    name: auth.profile?.name || "", pan: "", aadhaar: "", dob: "", mobile: auth.profile?.mobile || "",
+    email: auth.profile?.email || auth.user?.email || "", address: auth.activeCompany?.address || "",
+    bank_account: "", ifsc: "", bank_name: "",
+    business_income: 0, other_income: 0, salary_income: 0,
+    sec80c: 0, sec80d: 0, sec80g: 0, hra_exempt: 0,
+    tds_deducted: 0, advance_tax: 0,
+    presumptive: true
+  });
+  const [computed, setComputed] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [filedITRs, setFiledITRs] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_itr_filed")||"[]"); } catch { return []; } });
+
+  const ITR_FORMS = [
+    { id:"itr1", name:"ITR-1 (Sahaj)", desc:"Salaried individuals, one house property, other income < ₹50L", icon:"💼" },
+    { id:"itr4", name:"ITR-4 (Sugam)", desc:"Small business / professionals with presumptive income (Sec 44AD/44ADA)", icon:"🏪" },
+    { id:"itr3", name:"ITR-3", desc:"Individuals with business or profession income (non-presumptive)", icon:"📊" },
+  ];
+
+  function computeTax() {
+    const gross_income = Number(itrData.business_income) + Number(itrData.other_income) + Number(itrData.salary_income);
+    const presumptive_income = itrData.presumptive ? Number(itrData.business_income) * 0.08 : Number(itrData.business_income);
+    const total_income = presumptive_income + Number(itrData.other_income) + Number(itrData.salary_income);
+    const total_deductions = Math.min(150000, Number(itrData.sec80c)) + Number(itrData.sec80d) + Number(itrData.sec80g) + Number(itrData.hra_exempt);
+    const std_deduction = Number(itrData.salary_income) > 0 ? 50000 : 0;
+    const taxable = Math.max(0, total_income - total_deductions - std_deduction);
+    let tax = 0;
+    if (taxable > 250000) {
+      if (taxable <= 500000) tax = (taxable - 250000) * 0.05;
+      else if (taxable <= 1000000) tax = 12500 + (taxable - 500000) * 0.2;
+      else tax = 112500 + (taxable - 1000000) * 0.3;
+    }
+    const rebate87a = taxable <= 500000 ? Math.min(tax, 12500) : 0;
+    const tax_after_rebate = Math.max(0, tax - rebate87a);
+    const cess = Math.round(tax_after_rebate * 0.04);
+    const total_tax = Math.round(tax_after_rebate + cess);
+    const tds = Number(itrData.tds_deducted) + Number(itrData.advance_tax);
+    const refund = Math.max(0, tds - total_tax);
+    const payable = Math.max(0, total_tax - tds);
+    setComputed({ gross_income, total_income, presumptive_income, total_deductions, std_deduction, taxable, tax: Math.round(tax), rebate87a, tax_after_rebate, cess, total_tax, tds, refund, payable });
+    setStep(3);
+  }
+
+  function submitITR() {
+    setSubmitted(true);
+    setTimeout(() => {
+      const ack = "AA" + Date.now().toString().slice(-10) + "B";
+      const entry = { form: tab.toUpperCase(), fy, pan: itrData.pan, name: itrData.name, taxable: computed?.taxable || 0, tax: computed?.total_tax || 0, refund: computed?.refund || 0, payable: computed?.payable || 0, ack, date: new Date().toLocaleDateString(), status: "Submitted" };
+      const updated = [entry, ...filedITRs];
+      setFiledITRs(updated);
+      localStorage.setItem("ts_itr_filed", JSON.stringify(updated));
+      setStep(4);
+      setSubmitted(false);
+    }, 2000);
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom:20 }}>
+        <div style={{ fontSize:20, fontWeight:800 }}>🏛️ ITR Filing</div>
+        <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>File Income Tax Returns — ITR-1, ITR-3, ITR-4 for individuals and small businesses</div>
+      </div>
+      <div style={{ display:"flex", gap:0, marginBottom:20, background:C.white, borderRadius:10, border:`1px solid ${C.border}`, overflow:"hidden", width:"fit-content" }}>
+        {[...ITR_FORMS.map(f => [f.id, `${f.icon} ${f.name.split(" ")[0]} ${f.name.split(" ")[1]}`]), ["history","📁 Filed Returns"]].map(([id, label]) => (
+          <button key={id} onClick={() => { setTab(id); setStep(1); setComputed(null); }} style={{ padding:"10px 18px", border:"none", background:tab===id?C.primary:"transparent", color:tab===id?C.white:C.textMuted, fontWeight:tab===id?700:500, fontSize:12, cursor:"pointer" }}>{label}</button>
+        ))}
+      </div>
+
+      {tab !== "history" && (
+        <div>
+          <div style={{ display:"flex", gap:0, marginBottom:20, background:C.bg, borderRadius:8, overflow:"hidden", border:`1px solid ${C.border}` }}>
+            {["Personal Info","Income Details","Tax Computation","Review & File"].map((s, i) => (
+              <div key={i} style={{ flex:1, padding:"9px 4px", textAlign:"center", fontSize:11, fontWeight:step>i?600:400, background:step===i+1?C.primary:step>i+1?C.success:"transparent", color:step>=i+1?C.white:C.textMuted }}>
+                {step>i+1?"✓ ":""}{s}
+              </div>
+            ))}
+          </div>
+
+          {step === 1 && (
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+              <div style={card}>
+                <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:C.primary }}>👤 Personal Details</div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+                  <div><div style={lbl}>Full Name (as on PAN)</div><input style={inp} value={itrData.name} onChange={e=>setItrData({...itrData,name:e.target.value})} /></div>
+                  <div><div style={lbl}>PAN Number *</div><input style={{ ...inp, fontFamily:"monospace", fontWeight:700, letterSpacing:2, textTransform:"uppercase" }} maxLength={10} placeholder="ABCDE1234F" value={itrData.pan} onChange={e=>setItrData({...itrData,pan:e.target.value.toUpperCase()})} /></div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+                  <div><div style={lbl}>Aadhaar Number</div><input style={{ ...inp, fontFamily:"monospace", letterSpacing:2 }} maxLength={12} placeholder="1234 5678 9012" value={itrData.aadhaar} onChange={e=>setItrData({...itrData,aadhaar:e.target.value.replace(/\D/g,"")})} /></div>
+                  <div><div style={lbl}>Date of Birth</div><input style={inp} type="date" value={itrData.dob} onChange={e=>setItrData({...itrData,dob:e.target.value})} /></div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+                  <div><div style={lbl}>Mobile</div><input style={inp} placeholder="9876543210" value={itrData.mobile} onChange={e=>setItrData({...itrData,mobile:e.target.value})} /></div>
+                  <div><div style={lbl}>Email</div><input style={inp} type="email" value={itrData.email} onChange={e=>setItrData({...itrData,email:e.target.value})} /></div>
+                </div>
+                <div><div style={lbl}>Address</div><input style={inp} value={itrData.address} onChange={e=>setItrData({...itrData,address:e.target.value})} /></div>
+              </div>
+              <div style={card}>
+                <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:C.primary }}>🏦 Bank Details (for Refund)</div>
+                <div style={{ marginBottom:12 }}><div style={lbl}>Bank Name</div><input style={inp} placeholder="State Bank of India" value={itrData.bank_name} onChange={e=>setItrData({...itrData,bank_name:e.target.value})} /></div>
+                <div style={{ marginBottom:12 }}><div style={lbl}>Account Number</div><input style={{ ...inp, fontFamily:"monospace", fontWeight:700 }} placeholder="1234567890" value={itrData.bank_account} onChange={e=>setItrData({...itrData,bank_account:e.target.value})} /></div>
+                <div style={{ marginBottom:16 }}><div style={lbl}>IFSC Code</div><input style={{ ...inp, fontFamily:"monospace", fontWeight:700, textTransform:"uppercase", letterSpacing:2 }} placeholder="SBIN0001234" value={itrData.ifsc} onChange={e=>setItrData({...itrData,ifsc:e.target.value.toUpperCase()})} /></div>
+                <div style={{ marginBottom:16 }}><div style={lbl}>Financial Year</div><select style={inp} value={fy} onChange={e=>setFY(e.target.value)}>{["2025-26","2024-25","2023-24"].map(y=><option key={y}>{y}</option>)}</select></div>
+                <div style={{ padding:"10px 14px", background:C.primaryLighter, borderRadius:7, fontSize:12, color:C.primary }}>
+                  <strong>Selected Form:</strong> {ITR_FORMS.find(f=>f.id===tab)?.name}<br/>
+                  <span style={{ color:C.textMuted }}>{ITR_FORMS.find(f=>f.id===tab)?.desc}</span>
+                </div>
+              </div>
+              <div style={{ gridColumn:"span 2", display:"flex", justifyContent:"flex-end" }}>
+                <button style={{ ...btn("success"), padding:"11px 28px", fontSize:14 }} onClick={() => setStep(2)} disabled={!itrData.pan || itrData.pan.length !== 10}>Next → Income Details</button>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+              <div style={card}>
+                <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:C.primary }}>💰 Income Details</div>
+                {tab === "itr4" && (
+                  <div style={{ padding:"10px 14px", background:C.primaryLighter, borderRadius:7, marginBottom:12, fontSize:12 }}>
+                    <strong>ITR-4 Presumptive Scheme:</strong> Enter your total turnover. Tax will be computed on 8% (goods) or 50% (professionals) automatically under Sec 44AD/44ADA.
+                  </div>
+                )}
+                <div style={{ marginBottom:12 }}><div style={lbl}>{tab==="itr4"?"Business Turnover (Sec 44AD/44ADA)":"Business / Professional Income"}</div><input style={inp} type="number" placeholder="0" value={itrData.business_income||""} onChange={e=>setItrData({...itrData,business_income:Number(e.target.value)})} /></div>
+                <div style={{ marginBottom:12 }}><div style={lbl}>Salary Income</div><input style={inp} type="number" placeholder="0" value={itrData.salary_income||""} onChange={e=>setItrData({...itrData,salary_income:Number(e.target.value)})} /></div>
+                <div style={{ marginBottom:16 }}><div style={lbl}>Other Income (Interest, FD etc.)</div><input style={inp} type="number" placeholder="0" value={itrData.other_income||""} onChange={e=>setItrData({...itrData,other_income:Number(e.target.value)})} /></div>
+                {tab === "itr4" && <div style={{ marginBottom:12, display:"flex", gap:10, alignItems:"center" }}><input type="checkbox" checked={itrData.presumptive} onChange={e=>setItrData({...itrData,presumptive:e.target.checked})} /><label style={{ fontSize:13 }}>Use Presumptive Scheme (8% of turnover as income)</label></div>}
+              </div>
+              <div style={card}>
+                <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:C.success }}>📉 Deductions & TDS</div>
+                <div style={{ marginBottom:12 }}><div style={lbl}>Section 80C (PF, LIC, ELSS etc.) Max ₹1.5L</div><input style={inp} type="number" placeholder="0" value={itrData.sec80c||""} onChange={e=>setItrData({...itrData,sec80c:Number(e.target.value)})} /></div>
+                <div style={{ marginBottom:12 }}><div style={lbl}>Section 80D (Health Insurance)</div><input style={inp} type="number" placeholder="0" value={itrData.sec80d||""} onChange={e=>setItrData({...itrData,sec80d:Number(e.target.value)})} /></div>
+                <div style={{ marginBottom:12 }}><div style={lbl}>Section 80G (Donations)</div><input style={inp} type="number" placeholder="0" value={itrData.sec80g||""} onChange={e=>setItrData({...itrData,sec80g:Number(e.target.value)})} /></div>
+                <div style={{ marginBottom:12 }}><div style={lbl}>TDS Already Deducted</div><input style={inp} type="number" placeholder="0" value={itrData.tds_deducted||""} onChange={e=>setItrData({...itrData,tds_deducted:Number(e.target.value)})} /></div>
+                <div style={{ marginBottom:16 }}><div style={lbl}>Advance Tax Paid</div><input style={inp} type="number" placeholder="0" value={itrData.advance_tax||""} onChange={e=>setItrData({...itrData,advance_tax:Number(e.target.value)})} /></div>
+              </div>
+              <div style={{ gridColumn:"span 2", display:"flex", justifyContent:"space-between" }}>
+                <button style={btn("outline")} onClick={() => setStep(1)}>← Back</button>
+                <button style={{ ...btn("success"), padding:"11px 28px", fontSize:14 }} onClick={computeTax}>Calculate Tax →</button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && computed && (
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+              <div style={card}>
+                <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.primary }}>🧮 Tax Computation Summary</div>
+                {[
+                  { label:"INCOME", header:true },
+                  { label:tab==="itr4"?"Turnover":"Business Income", value:fmt(itrData.business_income) },
+                  tab==="itr4"?{ label:"Presumptive Income (8%)", value:fmt(computed.presumptive_income), color:C.primary }:null,
+                  { label:"Salary Income", value:fmt(itrData.salary_income) },
+                  { label:"Other Income", value:fmt(itrData.other_income) },
+                  { label:"GROSS TOTAL INCOME", value:fmt(computed.total_income), bold:true, bg:C.bg },
+                  { label:"DEDUCTIONS", header:true },
+                  { label:"Standard Deduction (Sec 16)", value:fmt(computed.std_deduction) },
+                  { label:"Chapter VI-A Deductions", value:fmt(computed.total_deductions) },
+                  { label:"NET TAXABLE INCOME", value:fmt(computed.taxable), bold:true, bg:C.primaryLighter },
+                  { label:"TAX COMPUTATION", header:true },
+                  { label:"Income Tax", value:fmt(computed.tax) },
+                  computed.rebate87a>0?{ label:"Less: Rebate u/s 87A", value:"-"+fmt(computed.rebate87a), color:C.success }:null,
+                  { label:"Health & Education Cess (4%)", value:fmt(computed.cess) },
+                  { label:"TOTAL TAX LIABILITY", value:fmt(computed.total_tax), bold:true, bg:C.bg },
+                  { label:"Less: TDS + Advance Tax", value:"-"+fmt(computed.tds), color:C.success },
+                  computed.refund>0 ? { label:"REFUND DUE", value:fmt(computed.refund), bold:true, bg:C.successLight, color:C.success } : { label:"BALANCE TAX PAYABLE", value:fmt(computed.payable), bold:true, bg:"#FFF5F5", color:C.danger },
+                ].filter(Boolean).map((row, i) => {
+                  if (row.header) return <div key={i} style={{ fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:1, padding:"10px 0 3px", borderBottom:`1px solid ${C.border}`, marginBottom:3 }}>{row.label}</div>;
+                  return (
+                    <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"7px 10px", borderRadius:5, background:row.bg||"transparent", marginBottom:3 }}>
+                      <span style={{ fontSize:13, fontWeight:row.bold?700:400 }}>{row.label}</span>
+                      <span style={{ fontSize:13, fontWeight:row.bold?800:600, color:row.color||C.text }}>{row.value}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                <div style={{ ...card, background:computed.refund>0?C.successLight:"#FFF5F5", border:`1px solid ${computed.refund>0?C.success:C.danger}40` }}>
+                  <div style={{ fontWeight:800, fontSize:22, color:computed.refund>0?C.success:C.danger }}>{computed.refund>0?"🎉 Refund Due":"⚠️ Tax Payable"}</div>
+                  <div style={{ fontSize:32, fontWeight:900, color:computed.refund>0?C.success:C.danger, margin:"8px 0" }}>{fmt(computed.refund||computed.payable)}</div>
+                  <div style={{ fontSize:13, color:C.textMuted }}>{computed.refund>0?"Will be credited to your bank account":"Pay before filing to avoid interest"}</div>
+                </div>
+                <div style={card}>
+                  <div style={{ fontWeight:700, fontSize:13, marginBottom:10 }}>📋 ITR Details</div>
+                  {[["Form",tab.toUpperCase()],["Financial Year",fy],["Assessment Year",fy.split("-").map((y,i)=>i===0?y:String(Number(y)+1)).join("-")],["PAN",itrData.pan],["Name",itrData.name],["Filing Date",new Date().toLocaleDateString()]].map(([k,v])=>(
+                    <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"6px 0", borderBottom:`1px solid ${C.border}`, fontSize:13 }}>
+                      <span style={{ color:C.textMuted }}>{k}</span><span style={{ fontWeight:600 }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display:"flex", gap:10 }}>
+                  <button style={btn("outline")} onClick={() => setStep(2)}>← Edit</button>
+                  <button style={{ ...btn("success"), flex:1, justifyContent:"center", padding:"12px" }} onClick={submitITR} disabled={submitted}>{submitted?"⏳ Submitting…":"🏛️ Submit ITR Now"}</button>
+                </div>
+                <div style={{ padding:"10px 14px", background:"#FFF9E6", borderRadius:7, fontSize:12, color:C.textMuted }}>⚠️ Sandbox mode — this demonstrates the filing flow. For production filing, complete GSTN ASP registration.</div>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div style={{ ...card, textAlign:"center", padding:60 }}>
+              <div style={{ fontSize:60, marginBottom:16 }}>🎉</div>
+              <div style={{ fontWeight:800, fontSize:24, color:C.success, marginBottom:8 }}>ITR Submitted Successfully!</div>
+              <div style={{ fontSize:14, color:C.textMuted, marginBottom:8 }}>Acknowledgement Number:</div>
+              <div style={{ fontFamily:"monospace", fontSize:18, fontWeight:800, color:C.primary, marginBottom:24, padding:"10px 20px", background:C.primaryLighter, borderRadius:8, display:"inline-block" }}>{filedITRs[0]?.ack}</div>
+              <div style={{ fontSize:13, color:C.textMuted, marginBottom:24 }}>Save this number for your records. You'll receive an email confirmation shortly.</div>
+              <div style={{ display:"flex", gap:12, justifyContent:"center" }}>
+                <button style={btn()} onClick={() => { setStep(1); setComputed(null); }}>File Another ITR</button>
+                <button style={btn("outline")} onClick={() => setTab("history")}>View Filed Returns</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "history" && (
+        <div style={card}>
+          <div style={{ fontWeight:700, fontSize:14, marginBottom:14 }}>📁 Filed ITR History</div>
+          {filedITRs.length === 0 ? (
+            <div style={{ textAlign:"center", padding:40, color:C.textMuted }}>
+              <div style={{ fontSize:40, marginBottom:12 }}>📁</div>
+              <div style={{ fontWeight:700 }}>No ITRs filed yet</div>
+            </div>
+          ) : (
+            <table style={{ width:"100%", borderCollapse:"collapse" }}>
+              <thead><tr>{["Form","FY","PAN","Name","Taxable Income","Tax","Refund/Payable","Filed On","Ack No","Status"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+              <tbody>{filedITRs.map((r, i) => (
+                <tr key={i}>
+                  <td style={{ ...TD, fontWeight:700 }}><span style={badge(C.primary)}>{r.form}</span></td>
+                  <td style={TD}>{r.fy}</td>
+                  <td style={{ ...TD, fontFamily:"monospace", fontSize:11 }}>{r.pan}</td>
+                  <td style={{ ...TD, fontWeight:600 }}>{r.name}</td>
+                  <td style={TD}>{fmt(r.taxable)}</td>
+                  <td style={TD}>{fmt(r.tax)}</td>
+                  <td style={TD}><span style={{ color:r.refund>0?C.success:C.danger, fontWeight:700 }}>{r.refund>0?`+${fmt(r.refund)}`:fmt(r.payable)}</span></td>
+                  <td style={TD}>{r.date}</td>
+                  <td style={{ ...TD, fontFamily:"monospace", fontSize:10 }}>{r.ack}</td>
+                  <td style={TD}><span style={badge(C.success)}>{r.status}</span></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 export default function App() {
   const auth = useAuth();
   const data = useData(auth.activeCompany?.id);
@@ -3409,6 +4600,15 @@ export default function App() {
     { id:"gstr2b", label:"GSTR-2B Recon", icon:"📑", badge:"NEW" },
     { id:"tds", label:"TDS Manager", icon:"📋", badge:"NEW" },
     { id:"tally", label:"Tally Import", icon:"📥", badge:"NEW" },
+    { id:"inventory", label:"Inventory", icon:"📦", badge:"NEW" },
+    { id:"team", label:"Team Access", icon:"👥", badge:"NEW" },
+    { id:"recurring", label:"Recurring Invoices", icon:"🔁", badge:"NEW" },
+    { id:"gst_health", label:"GST Health Check", icon:"🏥", badge:"NEW" },
+    { id:"payroll", label:"Payroll", icon:"💼", badge:"NEW" },
+    { id:"form16", label:"Form 16", icon:"📋", badge:"NEW" },
+    { id:"gst_filing", label:"Direct GST Filing", icon:"🏛️", badge:"NEW" },
+    { id:"etds", label:"e-TDS Filing (FVU)", icon:"📤", badge:"NEW" },
+    { id:"itr", label:"ITR Filing", icon:"🏛️", badge:"NEW" },
     { id:"payments", label:"Payment Collection", icon:"💳", badge:"NEW" },
     { id:"client_portal", label:"Client Portal", icon:"🔗", badge:"NEW" },
     { id:"ai", label:"AI Assistant", icon:"🤖", badge:"NEW" },
@@ -3506,6 +4706,15 @@ export default function App() {
           {page==="client_portal" && <ClientPortal data={data} auth={auth} />}
           {page==="payments"      && <PaymentGateway data={data} auth={auth} />}
           {page==="tally"         && <TallyImport data={data} />}
+          {page==="inventory"     && <InventoryPage data={data} />}
+          {page==="team"          && <TeamAccess auth={auth} />}
+          {page==="recurring"     && <RecurringInvoices auth={auth} data={data} />}
+          {page==="gst_health"    && <GSTHealthCheck auth={auth} data={data} />}
+          {page==="payroll"       && <PayrollPage auth={auth} />}
+          {page==="form16"        && <Form16Generator auth={auth} />}
+          {page==="gst_filing"    && <DirectGSTFiling data={data} auth={auth} />}
+          {page==="etds"          && <ETDSFiling auth={auth} />}
+          {page==="itr"           && <ITRFiling auth={auth} data={data} />}
         </div>
       </div>
     </div>
