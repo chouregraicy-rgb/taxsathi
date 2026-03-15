@@ -2421,6 +2421,951 @@ function SettingsPage({ auth }) {
   );
 }
 
+// ─── EXPENSE TRACKING ─────────────────────────────────────────────────────────
+function ExpensePage({ data, auth }) {
+  const [expenses, setExpenses] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("ts_expenses")||"[]"); } catch { return []; }
+  });
+  const [show, setShow] = useState(false);
+  const [f, setF] = useState({ date: new Date().toISOString().slice(0,10), category:"Office", description:"", amount:"", gst_rate:18, vendor:"", receipt:"" });
+  const CATEGORIES = ["Office","Travel","Meals","Software","Marketing","Utilities","Rent","Salary","Equipment","Miscellaneous"];
+  function save() {
+    const e = { ...f, id: Date.now().toString(), amount: Number(f.amount), gst_amount: +(Number(f.amount)*Number(f.gst_rate)/100).toFixed(2) };
+    const updated = [e, ...expenses];
+    setExpenses(updated);
+    localStorage.setItem("ts_expenses", JSON.stringify(updated));
+    setShow(false);
+    setF({ date: new Date().toISOString().slice(0,10), category:"Office", description:"", amount:"", gst_rate:18, vendor:"", receipt:"" });
+  }
+  function del(id) {
+    const updated = expenses.filter(e=>e.id!==id);
+    setExpenses(updated);
+    localStorage.setItem("ts_expenses", JSON.stringify(updated));
+  }
+  const total = expenses.reduce((a,e)=>a+Number(e.amount||0),0);
+  const totalGST = expenses.reduce((a,e)=>a+Number(e.gst_amount||0),0);
+  const byCategory = CATEGORIES.map(c=>({ c, amt: expenses.filter(e=>e.category===c).reduce((a,e)=>a+Number(e.amount||0),0) })).filter(x=>x.amt>0).sort((a,b)=>b.amt-a.amt);
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+        <div><div style={{ fontSize:20, fontWeight:800 }}>💸 Expense Tracking</div><div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Track all business expenses with GST input credit</div></div>
+        <button style={btn()} onClick={()=>setShow(true)}>+ Add Expense</button>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:24 }}>
+        {[{ label:"Total Expenses", value:fmt(total), color:C.danger, icon:"💸" },{ label:"GST Input Credit", value:fmt(totalGST), color:C.success, icon:"💰" },{ label:"This Month", value:fmt(expenses.filter(e=>e.date?.slice(0,7)===new Date().toISOString().slice(0,7)).reduce((a,e)=>a+Number(e.amount||0),0)), color:C.primary, icon:"📅" },{ label:"Total Records", value:expenses.length, color:C.purple, icon:"📋" }].map((s,i)=>(
+          <div key={i} style={{ ...card, padding:"16px 20px", borderTop:`3px solid ${s.color}` }}>
+            <div style={{ fontSize:11, color:C.textMuted, fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>{s.label}</div>
+            <div style={{ fontSize:20, fontWeight:800, color:s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      {show && (
+        <div style={{ ...card, marginBottom:20, background:C.primaryLighter, border:`1.5px solid ${C.primaryLight}40` }}>
+          <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.primary }}>📝 New Expense</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:12 }}>
+            <div><div style={lbl}>Date</div><input style={inp} type="date" value={f.date} onChange={e=>setF({...f,date:e.target.value})} /></div>
+            <div><div style={lbl}>Category</div><select style={inp} value={f.category} onChange={e=>setF({...f,category:e.target.value})}>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></div>
+            <div><div style={lbl}>Vendor Name</div><input style={inp} placeholder="Vendor / Shop name" value={f.vendor} onChange={e=>setF({...f,vendor:e.target.value})} /></div>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr", gap:12, marginBottom:16 }}>
+            <div><div style={lbl}>Description</div><input style={inp} placeholder="What was this expense for?" value={f.description} onChange={e=>setF({...f,description:e.target.value})} /></div>
+            <div><div style={lbl}>Amount (₹)</div><input style={inp} type="number" placeholder="0" value={f.amount} onChange={e=>setF({...f,amount:e.target.value})} /></div>
+            <div><div style={lbl}>GST Rate (%)</div><select style={inp} value={f.gst_rate} onChange={e=>setF({...f,gst_rate:Number(e.target.value)})}>{[0,5,12,18,28].map(r=><option key={r} value={r}>{r}%</option>)}</select></div>
+          </div>
+          <div style={{ display:"flex", gap:10 }}>
+            <button style={btn()} onClick={save}>💾 Save Expense</button>
+            <button style={btn("outline")} onClick={()=>setShow(false)}>Cancel</button>
+            {f.amount && <div style={{ padding:"9px 16px", background:C.successLight, borderRadius:7, fontSize:13, color:C.success, fontWeight:600 }}>GST Credit: {fmt(Number(f.amount)*Number(f.gst_rate)/100)}</div>}
+          </div>
+        </div>
+      )}
+      <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:20 }}>
+        <div style={card}>
+          <div style={{ fontWeight:700, fontSize:14, marginBottom:14 }}>📋 All Expenses</div>
+          {expenses.length === 0 ? <div style={{ textAlign:"center", padding:40, color:C.textMuted }}>No expenses recorded yet. Add your first expense!</div> : (
+            <table style={{ width:"100%", borderCollapse:"collapse" }}>
+              <thead><tr>{["Date","Category","Description","Vendor","Amount","GST","Action"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+              <tbody>{expenses.map((e,i)=>(
+                <tr key={i}>
+                  <td style={TD}>{e.date}</td>
+                  <td style={TD}><span style={badge(C.primary)}>{e.category}</span></td>
+                  <td style={TD}>{e.description||"—"}</td>
+                  <td style={TD}>{e.vendor||"—"}</td>
+                  <td style={{...TD, fontWeight:700, color:C.danger}}>{fmt(e.amount)}</td>
+                  <td style={{...TD, color:C.success}}>{fmt(e.gst_amount)}</td>
+                  <td style={TD}><button onClick={()=>del(e.id)} style={{ background:"none", border:"none", color:C.danger, cursor:"pointer", fontSize:16 }}>🗑️</button></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          )}
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          <div style={card}>
+            <div style={{ fontWeight:700, fontSize:14, marginBottom:12 }}>📊 By Category</div>
+            {byCategory.length === 0 ? <div style={{ color:C.textMuted, fontSize:13 }}>No data yet</div> : byCategory.map((x,i)=>(
+              <div key={i} style={{ marginBottom:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:4 }}><span>{x.c}</span><span style={{ fontWeight:700 }}>{fmt(x.amt)}</span></div>
+                <div style={{ height:6, background:C.bg, borderRadius:3 }}><div style={{ height:6, background:C.primary, borderRadius:3, width:`${Math.min(100,(x.amt/total)*100)}%` }} /></div>
+              </div>
+            ))}
+          </div>
+          <div style={{ ...card, background:"#FFF9E6" }}>
+            <div style={{ fontWeight:700, fontSize:13, marginBottom:8 }}>💡 GST Tip</div>
+            <div style={{ fontSize:12, color:C.textMuted, lineHeight:1.8 }}>All expenses with GST can be claimed as <strong>Input Tax Credit (ITC)</strong> in your GSTR-3B filing. Total claimable: <strong style={{ color:C.success }}>{fmt(totalGST)}</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PURCHASE ORDERS ──────────────────────────────────────────────────────────
+function PurchaseOrders({ auth, data }) {
+  const [orders, setOrders] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_po")||"[]"); } catch { return []; } });
+  const [show, setShow] = useState(false);
+  const [view, setView] = useState(null);
+  const [f, setF] = useState({ po_number:"PO-"+Date.now().toString().slice(-4), date:new Date().toISOString().slice(0,10), vendor:"", vendor_gstin:"", delivery_date:"", items:[{ description:"", qty:1, rate:0, gst_rate:18 }] });
+  function addLine() { setF({...f, items:[...f.items,{ description:"", qty:1, rate:0, gst_rate:18 }]}); }
+  function updateLine(i,k,v) { const items=[...f.items]; items[i]={...items[i],[k]:v}; setF({...f,items}); }
+  function removeLine(i) { setF({...f, items:f.items.filter((_,idx)=>idx!==i)}); }
+  const poTotals = (items) => items.reduce((a,l)=>{ const taxable=Number(l.qty||0)*Number(l.rate||0); const gst=taxable*Number(l.gst_rate||0)/100; return { taxable:a.taxable+taxable, gst:a.gst+gst, total:a.total+taxable+gst }; },{ taxable:0,gst:0,total:0 });
+  function savePO() {
+    const po = { ...f, id:Date.now().toString(), status:"Pending", totals:poTotals(f.items) };
+    const updated = [po, ...orders];
+    setOrders(updated);
+    localStorage.setItem("ts_po", JSON.stringify(updated));
+    setShow(false);
+  }
+  function updateStatus(id, status) {
+    const updated = orders.map(o=>o.id===id?{...o,status}:o);
+    setOrders(updated);
+    localStorage.setItem("ts_po", JSON.stringify(updated));
+  }
+  const statusColor = { Pending:C.warning, Approved:C.success, Received:C.primary, Cancelled:C.danger };
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+        <div><div style={{ fontSize:20, fontWeight:800 }}>📦 Purchase Orders</div><div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Manage vendor purchase orders end-to-end</div></div>
+        <button style={btn()} onClick={()=>{ setShow(true); setView(null); }}>+ New Purchase Order</button>
+      </div>
+      {show && (
+        <div style={{ ...card, marginBottom:20 }}>
+          <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.primary }}>📋 New Purchase Order</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:12, marginBottom:16 }}>
+            <div><div style={lbl}>PO Number</div><input style={inp} value={f.po_number} onChange={e=>setF({...f,po_number:e.target.value})} /></div>
+            <div><div style={lbl}>Date</div><input style={inp} type="date" value={f.date} onChange={e=>setF({...f,date:e.target.value})} /></div>
+            <div><div style={lbl}>Vendor Name</div><input style={inp} placeholder="Supplier name" value={f.vendor} onChange={e=>setF({...f,vendor:e.target.value})} /></div>
+            <div><div style={lbl}>Expected Delivery</div><input style={inp} type="date" value={f.delivery_date} onChange={e=>setF({...f,delivery_date:e.target.value})} /></div>
+          </div>
+          <div style={{ marginBottom:12 }}><div style={lbl}>Vendor GSTIN</div><input style={{ ...inp, width:300 }} placeholder="22AAAAA0000A1Z5" value={f.vendor_gstin} onChange={e=>setF({...f,vendor_gstin:e.target.value.toUpperCase()})} /></div>
+          <table style={{ width:"100%", borderCollapse:"collapse", marginBottom:12 }}>
+            <thead><tr>{["Description","Qty","Rate (₹)","GST %","Amount",""].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+            <tbody>{f.items.map((l,i)=>(
+              <tr key={i}>
+                <td style={TD}><input style={{...inp,padding:"6px 10px"}} placeholder="Item description" value={l.description} onChange={e=>updateLine(i,"description",e.target.value)} /></td>
+                <td style={TD}><input style={{...inp,padding:"6px 10px",width:70}} type="number" value={l.qty} onChange={e=>updateLine(i,"qty",Number(e.target.value))} /></td>
+                <td style={TD}><input style={{...inp,padding:"6px 10px",width:110}} type="number" value={l.rate} onChange={e=>updateLine(i,"rate",Number(e.target.value))} /></td>
+                <td style={TD}><select style={{...inp,padding:"6px 10px",width:80}} value={l.gst_rate} onChange={e=>updateLine(i,"gst_rate",Number(e.target.value))}>{[0,5,12,18,28].map(r=><option key={r} value={r}>{r}%</option>)}</select></td>
+                <td style={{...TD,fontWeight:700}}>{fmt(Number(l.qty||0)*Number(l.rate||0))}</td>
+                <td style={TD}><button onClick={()=>removeLine(i)} style={{ background:"none",border:"none",color:C.danger,cursor:"pointer" }}>✕</button></td>
+              </tr>
+            ))}</tbody>
+          </table>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <button style={btn("outline")} onClick={addLine}>+ Add Line</button>
+            <div style={{ textAlign:"right", fontSize:14 }}>
+              <div>Taxable: <strong>{fmt(poTotals(f.items).taxable)}</strong></div>
+              <div>GST: <strong>{fmt(poTotals(f.items).gst)}</strong></div>
+              <div style={{ fontSize:16, fontWeight:800, color:C.primary }}>Total: {fmt(poTotals(f.items).total)}</div>
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:10, marginTop:16 }}>
+            <button style={btn("success")} onClick={savePO}>💾 Save PO</button>
+            <button style={btn("outline")} onClick={()=>setShow(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+      {view && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, padding:20 }}>
+          <div style={{ ...card, width:640, maxHeight:"85vh", overflowY:"auto" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:16 }}>
+              <div style={{ fontWeight:800, fontSize:17 }}>PO: {view.po_number}</div>
+              <button onClick={()=>setView(null)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer" }}>✕</button>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+              {[["Vendor",view.vendor],["Date",view.date],["Delivery",view.delivery_date||"—"],["GSTIN",view.vendor_gstin||"—"]].map(([k,v])=>(<div key={k}><div style={{ fontSize:11, color:C.textMuted, fontWeight:700 }}>{k}</div><div style={{ fontWeight:600 }}>{v}</div></div>))}
+            </div>
+            <table style={{ width:"100%", borderCollapse:"collapse", marginBottom:16 }}>
+              <thead><tr>{["Description","Qty","Rate","GST%","Amount"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+              <tbody>{view.items.map((l,i)=><tr key={i}><td style={TD}>{l.description}</td><td style={TD}>{l.qty}</td><td style={TD}>{fmt(l.rate)}</td><td style={TD}>{l.gst_rate}%</td><td style={{...TD,fontWeight:700}}>{fmt(Number(l.qty)*Number(l.rate))}</td></tr>)}</tbody>
+            </table>
+            <div style={{ textAlign:"right", fontSize:14, marginBottom:16 }}>Total: <strong style={{ fontSize:18, color:C.primary }}>{fmt(view.totals?.total||0)}</strong></div>
+            <div style={{ display:"flex", gap:8 }}>
+              {["Approved","Received","Cancelled"].map(s=><button key={s} style={btn(s==="Approved"?"success":s==="Cancelled"?"danger":"primary")} onClick={()=>{ updateStatus(view.id,s); setView({...view,status:s}); }}>{s}</button>)}
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={card}>
+        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+          <thead><tr>{["PO Number","Vendor","Date","Delivery","Total","Status","Action"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <tbody>{orders.length===0?<tr><td colSpan={7} style={{...TD,textAlign:"center",padding:30,color:C.textMuted}}>No purchase orders yet</td></tr>:orders.map((o,i)=>(
+            <tr key={i}>
+              <td style={{...TD,color:C.primary,fontWeight:700,cursor:"pointer"}} onClick={()=>setView(o)}>{o.po_number}</td>
+              <td style={TD}>{o.vendor}</td>
+              <td style={TD}>{o.date}</td>
+              <td style={TD}>{o.delivery_date||"—"}</td>
+              <td style={{...TD,fontWeight:700}}>{fmt(o.totals?.total||0)}</td>
+              <td style={TD}><span style={badge(statusColor[o.status]||C.textMuted)}>{o.status}</span></td>
+              <td style={TD}><button style={btn("outline")} onClick={()=>setView(o)}>View</button></td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── BANK RECONCILIATION ──────────────────────────────────────────────────────
+function BankReconciliation({ data }) {
+  const [bankTxns, setBankTxns] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_bank")||"[]"); } catch { return []; } });
+  const [matched, setMatched] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_bank_matched")||"{}"); } catch { return {}; } });
+  const [tab, setTab] = useState("upload");
+  const [uploading, setUploading] = useState(false);
+  async function handleCSV(file) {
+    setUploading(true);
+    try {
+      const text = await file.text();
+      const lines = text.split("\n").filter(l=>l.trim());
+      const headers = lines[0].split(",").map(h=>h.trim().toLowerCase().replace(/"/g,""));
+      const txns = lines.slice(1).map((line,i) => {
+        const cols = line.split(",").map(c=>c.trim().replace(/"/g,""));
+        const obj = {};
+        headers.forEach((h,idx)=>{ obj[h]=cols[idx]||""; });
+        return { id:"bank_"+i, date:obj.date||obj["transaction date"]||"", description:obj.description||obj.narration||obj.particulars||"", debit:Number((obj.debit||obj.withdrawal||"0").replace(/[^0-9.]/g,"")||0), credit:Number((obj.credit||obj.deposit||"0").replace(/[^0-9.]/g,"")||0), balance:obj.balance||"" };
+      }).filter(t=>t.date);
+      setBankTxns(txns);
+      localStorage.setItem("ts_bank", JSON.stringify(txns));
+      setTab("reconcile");
+    } catch(e) { alert("Error parsing CSV: "+e.message); }
+    setUploading(false);
+  }
+  function toggleMatch(bankId, invoiceId) {
+    const updated = { ...matched };
+    if (updated[bankId]===invoiceId) { delete updated[bankId]; }
+    else { updated[bankId]=invoiceId; }
+    setMatched(updated);
+    localStorage.setItem("ts_bank_matched", JSON.stringify(updated));
+  }
+  const allInvoices = [...(data.sales||[]).map(s=>({...s,_type:"sale",_amount:s.total_value,_date:s.invoice_date,_ref:s.invoice_number,_party:s.customer_name})), ...(data.purchases||[]).map(p=>({...p,_type:"purchase",_amount:p.total_value,_date:p.bill_date,_ref:p.bill_number,_party:p.supplier_name}))];
+  const matchedCount = Object.keys(matched).length;
+  const unmatchedBank = bankTxns.filter(t=>!matched[t.id]);
+  return (
+    <div>
+      <div style={{ marginBottom:20 }}>
+        <div style={{ fontSize:20, fontWeight:800 }}>🏦 Bank Reconciliation</div>
+        <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Upload bank statement and match with your invoices</div>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:20 }}>
+        {[{ label:"Bank Transactions", value:bankTxns.length, color:C.primary },{ label:"Matched", value:matchedCount, color:C.success },{ label:"Unmatched", value:unmatchedBank.length, color:C.danger },{ label:"Match Rate", value:bankTxns.length?Math.round(matchedCount/bankTxns.length*100)+"%":"0%", color:C.accent }].map((s,i)=>(
+          <div key={i} style={{ ...card, padding:"16px 20px", borderTop:`3px solid ${s.color}` }}>
+            <div style={{ fontSize:11, color:C.textMuted, fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>{s.label}</div>
+            <div style={{ fontSize:22, fontWeight:800, color:s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display:"flex", gap:0, marginBottom:20, background:C.white, borderRadius:10, border:`1px solid ${C.border}`, overflow:"hidden", width:"fit-content" }}>
+        {[["upload","📤 Upload Statement"],["reconcile","🔗 Reconcile"],["matched","✅ Matched"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setTab(id)} style={{ padding:"10px 20px", border:"none", background:tab===id?C.primary:"transparent", color:tab===id?C.white:C.textMuted, fontWeight:tab===id?700:500, fontSize:13, cursor:"pointer" }}>{label}</button>
+        ))}
+      </div>
+      {tab==="upload" && (
+        <div style={card}>
+          <div style={{ fontWeight:700, fontSize:15, marginBottom:16 }}>📂 Upload Bank Statement (CSV)</div>
+          <div style={{ border:`2px dashed ${C.border}`, borderRadius:10, padding:"40px 20px", textAlign:"center", background:C.bg }}>
+            <div style={{ fontSize:40, marginBottom:12 }}>🏦</div>
+            <div style={{ fontWeight:700, fontSize:15, marginBottom:8 }}>Upload CSV from your bank</div>
+            <div style={{ color:C.textMuted, fontSize:13, marginBottom:20 }}>Supports SBI, HDFC, ICICI, Axis, Kotak, Yes Bank exports</div>
+            <label style={{ ...btn(), display:"inline-flex", cursor:"pointer", padding:"11px 24px" }}>
+              {uploading?"⏳ Processing…":"📁 Choose CSV File"}
+              <input type="file" accept=".csv" style={{ display:"none" }} onChange={e=>e.target.files[0]&&handleCSV(e.target.files[0])} />
+            </label>
+          </div>
+          <div style={{ marginTop:16, padding:"12px 16px", background:"#FFF9E6", borderRadius:8 }}>
+            <div style={{ fontWeight:700, fontSize:13, marginBottom:6 }}>💡 How to export from your bank:</div>
+            <div style={{ fontSize:12, color:C.textMuted, lineHeight:1.9 }}>• <strong>SBI:</strong> NetBanking → Account Summary → Download → CSV<br/>• <strong>HDFC:</strong> NetBanking → My Accounts → Account Statement → Download CSV<br/>• <strong>ICICI:</strong> iMobile/NetBanking → Accounts → Statement → CSV format</div>
+          </div>
+        </div>
+      )}
+      {tab==="reconcile" && (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+          <div style={card}>
+            <div style={{ fontWeight:700, fontSize:14, marginBottom:14 }}>🏦 Bank Transactions ({unmatchedBank.length} unmatched)</div>
+            <div style={{ maxHeight:500, overflowY:"auto" }}>
+              {unmatchedBank.length===0?<div style={{ textAlign:"center",padding:30,color:C.success }}>🎉 All transactions matched!</div>:unmatchedBank.map((t,i)=>(
+                <div key={i} style={{ padding:"10px 12px", border:`1px solid ${C.border}`, borderRadius:7, marginBottom:8, background:C.bg }}>
+                  <div style={{ display:"flex", justifyContent:"space-between" }}>
+                    <div style={{ fontSize:12, color:C.textMuted }}>{t.date}</div>
+                    <div style={{ fontWeight:700, color:t.credit>0?C.success:C.danger }}>{t.credit>0?"+"+fmt(t.credit):"-"+fmt(t.debit)}</div>
+                  </div>
+                  <div style={{ fontSize:13, marginTop:4, fontWeight:500 }}>{t.description.slice(0,50)}</div>
+                  <div style={{ marginTop:8 }}>
+                    <select style={{...inp,padding:"5px 8px",fontSize:12}} onChange={e=>e.target.value&&toggleMatch(t.id,e.target.value)}>
+                      <option value="">-- Match with invoice --</option>
+                      {allInvoices.map((inv,j)=><option key={j} value={inv.id}>{inv._ref} | {inv._party} | {fmt(inv._amount)}</option>)}
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={card}>
+            <div style={{ fontWeight:700, fontSize:14, marginBottom:14 }}>✅ Matched ({matchedCount})</div>
+            <div style={{ maxHeight:500, overflowY:"auto" }}>
+              {Object.keys(matched).length===0?<div style={{ textAlign:"center",padding:30,color:C.textMuted }}>No matches yet</div>:Object.entries(matched).map(([bankId,invId],i)=>{
+                const bank=bankTxns.find(t=>t.id===bankId);
+                const inv=allInvoices.find(inv=>inv.id===invId);
+                if(!bank||!inv) return null;
+                return (
+                  <div key={i} style={{ padding:"10px 12px", border:`1px solid ${C.success}40`, borderRadius:7, marginBottom:8, background:C.successLight }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:12 }}>
+                      <span style={{ color:C.success, fontWeight:700 }}>✓ Matched</span>
+                      <button onClick={()=>toggleMatch(bankId,invId)} style={{ background:"none",border:"none",color:C.danger,cursor:"pointer",fontSize:12 }}>Unmatch</button>
+                    </div>
+                    <div style={{ fontSize:12, marginTop:4 }}>{bank.description.slice(0,40)} ↔ {inv._ref} ({inv._party})</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+      {tab==="matched" && (
+        <div style={card}>
+          <table style={{ width:"100%", borderCollapse:"collapse" }}>
+            <thead><tr>{["Bank Date","Bank Description","Amount","Invoice/Bill","Party","Status"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+            <tbody>{bankTxns.map((t,i)=>{
+              const inv=matched[t.id]?allInvoices.find(inv=>inv.id===matched[t.id]):null;
+              return (
+                <tr key={i}>
+                  <td style={TD}>{t.date}</td>
+                  <td style={TD}>{t.description.slice(0,40)}</td>
+                  <td style={{...TD,fontWeight:700,color:t.credit>0?C.success:C.danger}}>{t.credit>0?"+"+fmt(t.credit):"-"+fmt(t.debit)}</td>
+                  <td style={TD}>{inv?inv._ref:"—"}</td>
+                  <td style={TD}>{inv?inv._party:"—"}</td>
+                  <td style={TD}><span style={badge(inv?C.success:C.warning)}>{inv?"Matched":"Unmatched"}</span></td>
+                </tr>
+              );
+            })}</tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── GSTR-2B RECONCILIATION ───────────────────────────────────────────────────
+function GSTR2BReconciliation({ data }) {
+  const [gstr2b, setGstr2b] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_gstr2b")||"[]"); } catch { return []; } });
+  const [tab, setTab] = useState("upload");
+  async function handleJSON(file) {
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const records = json?.data?.docdata?.b2b?.flatMap(s=>s.inv?.map(inv=>({
+        supplier: s.ctin, invoice: inv.inum, date: inv.dt, taxable: inv.val, igst: inv.itms?.[0]?.itm_det?.iamt||0, cgst: inv.itms?.[0]?.itm_det?.camt||0, sgst: inv.itms?.[0]?.itm_det?.samt||0
+      }))||[]) || [];
+      if (records.length===0) {
+        const manual = [{ supplier:"22AAAAA0000A1Z5", invoice:"INV-DEMO", date:"01/03/2026", taxable:50000, igst:0, cgst:4500, sgst:4500 }];
+        setGstr2b(manual);
+        localStorage.setItem("ts_gstr2b", JSON.stringify(manual));
+        alert("Demo data loaded! Upload real GSTR-2B JSON from GST portal.");
+      } else {
+        setGstr2b(records);
+        localStorage.setItem("ts_gstr2b", JSON.stringify(records));
+      }
+      setTab("reconcile");
+    } catch(e) { alert("Invalid JSON file. Please download GSTR-2B from GST portal."); }
+  }
+  const purchases = data.purchases || [];
+  const matchedPairs = gstr2b.map(g=>{
+    const match = purchases.find(p=>p.gstin===g.supplier && Math.abs(Number(p.total_value||0)-Number(g.taxable||0))<100);
+    return { ...g, matched:!!match, matchedBill:match };
+  });
+  const matchedCount = matchedPairs.filter(x=>x.matched).length;
+  const missingITC = matchedPairs.filter(x=>!x.matched).reduce((a,g)=>a+Number(g.cgst||0)+Number(g.sgst||0)+Number(g.igst||0),0);
+  return (
+    <div>
+      <div style={{ marginBottom:20 }}>
+        <div style={{ fontSize:20, fontWeight:800 }}>📑 GSTR-2B Reconciliation</div>
+        <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Match GSTR-2B data with your purchase records to maximise ITC</div>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:20 }}>
+        {[{ label:"GSTR-2B Entries", value:gstr2b.length, color:C.primary },{ label:"Matched", value:matchedCount, color:C.success },{ label:"Mismatches", value:gstr2b.length-matchedCount, color:C.danger },{ label:"Unclaimed ITC", value:fmt(missingITC), color:C.warning }].map((s,i)=>(
+          <div key={i} style={{ ...card, padding:"16px 20px", borderTop:`3px solid ${s.color}` }}>
+            <div style={{ fontSize:11, color:C.textMuted, fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>{s.label}</div>
+            <div style={{ fontSize:s.label==="Unclaimed ITC"?16:22, fontWeight:800, color:s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display:"flex", gap:0, marginBottom:20, background:C.white, borderRadius:10, border:`1px solid ${C.border}`, overflow:"hidden", width:"fit-content" }}>
+        {[["upload","📤 Upload GSTR-2B"],["reconcile","🔗 Reconcile"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setTab(id)} style={{ padding:"10px 20px", border:"none", background:tab===id?C.primary:"transparent", color:tab===id?C.white:C.textMuted, fontWeight:tab===id?700:500, fontSize:13, cursor:"pointer" }}>{label}</button>
+        ))}
+      </div>
+      {tab==="upload" && (
+        <div style={card}>
+          <div style={{ border:`2px dashed ${C.border}`, borderRadius:10, padding:"40px 20px", textAlign:"center", background:C.bg, marginBottom:20 }}>
+            <div style={{ fontSize:40, marginBottom:12 }}>📑</div>
+            <div style={{ fontWeight:700, fontSize:15, marginBottom:8 }}>Upload GSTR-2B JSON File</div>
+            <div style={{ color:C.textMuted, fontSize:13, marginBottom:20 }}>Download from GST Portal → Returns → GSTR-2B → Download JSON</div>
+            <label style={{ ...btn(), display:"inline-flex", cursor:"pointer" }}>
+              📁 Upload GSTR-2B JSON
+              <input type="file" accept=".json" style={{ display:"none" }} onChange={e=>e.target.files[0]&&handleJSON(e.target.files[0])} />
+            </label>
+          </div>
+          <div style={{ padding:"12px 16px", background:"#EBF5FB", borderRadius:8 }}>
+            <div style={{ fontWeight:700, fontSize:13, color:C.primary, marginBottom:6 }}>📍 How to download GSTR-2B:</div>
+            <div style={{ fontSize:12, color:C.textMuted, lineHeight:2 }}>1. Login to <strong>gst.gov.in</strong><br/>2. Services → Returns → GSTR-2B<br/>3. Select month → Click "Download"<br/>4. Upload the JSON file here</div>
+          </div>
+        </div>
+      )}
+      {tab==="reconcile" && (
+        <div style={card}>
+          <table style={{ width:"100%", borderCollapse:"collapse" }}>
+            <thead><tr>{["Supplier GSTIN","Invoice","Date","Taxable","CGST","SGST","IGST","In Books?","Status"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+            <tbody>{matchedPairs.length===0?<tr><td colSpan={9} style={{...TD,textAlign:"center",padding:30,color:C.textMuted}}>Upload GSTR-2B to begin reconciliation</td></tr>:matchedPairs.map((g,i)=>(
+              <tr key={i} style={{ background:g.matched?"transparent":"#FFF5F5" }}>
+                <td style={{...TD,fontFamily:"monospace",fontSize:11}}>{g.supplier}</td>
+                <td style={{...TD,fontWeight:600}}>{g.invoice}</td>
+                <td style={TD}>{g.date}</td>
+                <td style={TD}>{fmt(g.taxable)}</td>
+                <td style={TD}>{fmt(g.cgst)}</td>
+                <td style={TD}>{fmt(g.sgst)}</td>
+                <td style={TD}>{fmt(g.igst)}</td>
+                <td style={TD}>{g.matched?<span style={{ color:C.success }}>✅ {g.matchedBill?.bill_number}</span>:<span style={{ color:C.danger }}>❌ Not found</span>}</td>
+                <td style={TD}><span style={badge(g.matched?C.success:C.danger)}>{g.matched?"Matched":"Missing"}</span></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── TDS MANAGER ──────────────────────────────────────────────────────────────
+function TDSManager({ auth }) {
+  const [entries, setEntries] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_tds")||"[]"); } catch { return []; } });
+  const [show, setShow] = useState(false);
+  const [f, setF] = useState({ date: new Date().toISOString().slice(0,10), deductee:"", pan:"", section:"194C", payment_nature:"Contractor", amount:"", tds_rate:1 });
+  const SECTIONS = [{ code:"192", nature:"Salary", rate:0 },{ code:"194A", nature:"Interest (Bank)", rate:10 },{ code:"194B", nature:"Lottery/Prize", rate:30 },{ code:"194C", nature:"Contractor", rate:1 },{ code:"194D", nature:"Insurance", rate:5 },{ code:"194H", nature:"Commission", rate:5 },{ code:"194I", nature:"Rent", rate:10 },{ code:"194J", nature:"Professional Fees", rate:10 },{ code:"194Q", nature:"Purchase of Goods", rate:0.1 }];
+  function save() {
+    const tds_amount = +(Number(f.amount)*Number(f.tds_rate)/100).toFixed(2);
+    const e = { ...f, id:Date.now().toString(), tds_amount, net_amount:Number(f.amount)-tds_amount, status:"Pending" };
+    const updated = [e, ...entries];
+    setEntries(updated);
+    localStorage.setItem("ts_tds", JSON.stringify(updated));
+    setShow(false);
+  }
+  function updateStatus(id, status) {
+    const updated = entries.map(e=>e.id===id?{...e,status}:e);
+    setEntries(updated); localStorage.setItem("ts_tds", JSON.stringify(updated));
+  }
+  const totalTDS = entries.reduce((a,e)=>a+Number(e.tds_amount||0),0);
+  const pendingTDS = entries.filter(e=>e.status==="Pending").reduce((a,e)=>a+Number(e.tds_amount||0),0);
+  const depositedTDS = entries.filter(e=>e.status==="Deposited").reduce((a,e)=>a+Number(e.tds_amount||0),0);
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+        <div><div style={{ fontSize:20, fontWeight:800 }}>📋 TDS Manager</div><div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Track TDS deductions, deposits and Form 26AS</div></div>
+        <button style={btn()} onClick={()=>setShow(true)}>+ Add TDS Entry</button>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:24 }}>
+        {[{ label:"Total TDS Deducted", value:fmt(totalTDS), color:C.primary },{ label:"Pending Deposit", value:fmt(pendingTDS), color:C.danger },{ label:"Deposited", value:fmt(depositedTDS), color:C.success },{ label:"Total Entries", value:entries.length, color:C.purple }].map((s,i)=>(
+          <div key={i} style={{ ...card, padding:"16px 20px", borderTop:`3px solid ${s.color}` }}>
+            <div style={{ fontSize:11, color:C.textMuted, fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>{s.label}</div>
+            <div style={{ fontSize:18, fontWeight:800, color:s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      {show && (
+        <div style={{ ...card, marginBottom:20, background:C.primaryLighter }}>
+          <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.primary }}>📋 New TDS Entry</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:12 }}>
+            <div><div style={lbl}>Date</div><input style={inp} type="date" value={f.date} onChange={e=>setF({...f,date:e.target.value})} /></div>
+            <div><div style={lbl}>Deductee Name</div><input style={inp} placeholder="Party name" value={f.deductee} onChange={e=>setF({...f,deductee:e.target.value})} /></div>
+            <div><div style={lbl}>PAN</div><input style={inp} placeholder="ABCDE1234F" value={f.pan} onChange={e=>setF({...f,pan:e.target.value.toUpperCase()})} maxLength={10} /></div>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:12, marginBottom:16 }}>
+            <div><div style={lbl}>Section</div><select style={inp} value={f.section} onChange={e=>{ const s=SECTIONS.find(x=>x.code===e.target.value); setF({...f,section:e.target.value,payment_nature:s?.nature||"",tds_rate:s?.rate||0}); }}>{SECTIONS.map(s=><option key={s.code} value={s.code}>Sec {s.code} — {s.nature}</option>)}</select></div>
+            <div><div style={lbl}>Payment Amount (₹)</div><input style={inp} type="number" value={f.amount} onChange={e=>setF({...f,amount:e.target.value})} /></div>
+            <div><div style={lbl}>TDS Rate (%)</div><input style={inp} type="number" step="0.1" value={f.tds_rate} onChange={e=>setF({...f,tds_rate:Number(e.target.value)})} /></div>
+            <div style={{ display:"flex", alignItems:"flex-end" }}><div style={{ padding:"12px 16px", background:C.successLight, borderRadius:7, width:"100%", textAlign:"center" }}><div style={{ fontSize:11, color:C.textMuted }}>TDS Amount</div><div style={{ fontSize:18, fontWeight:800, color:C.success }}>{fmt(Number(f.amount||0)*Number(f.tds_rate||0)/100)}</div></div></div>
+          </div>
+          <div style={{ display:"flex", gap:10 }}>
+            <button style={btn()} onClick={save}>💾 Save</button>
+            <button style={btn("outline")} onClick={()=>setShow(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+      <div style={card}>
+        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+          <thead><tr>{["Date","Deductee","PAN","Section","Payment","TDS Amount","Net Paid","Status","Action"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <tbody>{entries.length===0?<tr><td colSpan={9} style={{...TD,textAlign:"center",padding:30,color:C.textMuted}}>No TDS entries yet</td></tr>:entries.map((e,i)=>(
+            <tr key={i}>
+              <td style={TD}>{e.date}</td>
+              <td style={{...TD,fontWeight:600}}>{e.deductee}</td>
+              <td style={{...TD,fontFamily:"monospace",fontSize:11}}>{e.pan}</td>
+              <td style={TD}><span style={badge(C.primary)}>Sec {e.section}</span></td>
+              <td style={TD}>{fmt(e.amount)}</td>
+              <td style={{...TD,fontWeight:700,color:C.danger}}>{fmt(e.tds_amount)}</td>
+              <td style={TD}>{fmt(e.net_amount)}</td>
+              <td style={TD}><span style={badge(e.status==="Deposited"?C.success:C.warning)}>{e.status}</span></td>
+              <td style={TD}>{e.status==="Pending"&&<button style={{ ...btn("success"), fontSize:11, padding:"4px 10px" }} onClick={()=>updateStatus(e.id,"Deposited")}>Mark Deposited</button>}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── P&L AND BALANCE SHEET ────────────────────────────────────────────────────
+function FinancialReports({ data, auth }) {
+  const [tab, setTab] = useState("pl");
+  const sales = data.sales || [];
+  const purchases = data.purchases || [];
+  const expenses = (() => { try { return JSON.parse(localStorage.getItem("ts_expenses")||"[]"); } catch { return []; } })();
+  const totalRevenue = sales.reduce((a,s)=>a+Number(s.total_value||0),0);
+  const totalCOGS = purchases.reduce((a,p)=>a+Number(p.taxable_value||0),0);
+  const grossProfit = totalRevenue - totalCOGS;
+  const totalExpenses = expenses.reduce((a,e)=>a+Number(e.amount||0),0);
+  const totalGST = sales.reduce((a,s)=>a+Number(s.cgst||0)+Number(s.sgst||0)+Number(s.igst||0),0);
+  const itc = purchases.reduce((a,p)=>a+Number(p.cgst||0)+Number(p.sgst||0)+Number(p.igst||0),0);
+  const netGST = totalGST - itc;
+  const netProfit = grossProfit - totalExpenses - netGST;
+  const expByCategory = {};
+  expenses.forEach(e=>{ expByCategory[e.category]=(expByCategory[e.category]||0)+Number(e.amount||0); });
+  return (
+    <div>
+      <div style={{ marginBottom:20 }}>
+        <div style={{ fontSize:20, fontWeight:800 }}>📊 Financial Reports</div>
+        <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>P&L Statement, Balance Sheet & Tax Summary — FY {new Date().getMonth()>=3?new Date().getFullYear():new Date().getFullYear()-1}-{(new Date().getMonth()>=3?new Date().getFullYear()+1:new Date().getFullYear()).toString().slice(2)}</div>
+      </div>
+      <div style={{ display:"flex", gap:0, marginBottom:20, background:C.white, borderRadius:10, border:`1px solid ${C.border}`, overflow:"hidden", width:"fit-content" }}>
+        {[["pl","📈 P&L Statement"],["balance","⚖️ Balance Sheet"],["tax","🧾 Tax Summary"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setTab(id)} style={{ padding:"10px 20px", border:"none", background:tab===id?C.primary:"transparent", color:tab===id?C.white:C.textMuted, fontWeight:tab===id?700:500, fontSize:13, cursor:"pointer" }}>{label}</button>
+        ))}
+      </div>
+      {tab==="pl" && (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+          <div style={card}>
+            <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.primary }}>📈 Profit & Loss Statement</div>
+            {[
+              { label:"INCOME", items:[], isHeader:true },
+              { label:"Sales Revenue", value:totalRevenue, color:C.success },
+              { label:"TOTAL INCOME", value:totalRevenue, bold:true, bg:C.successLight },
+              { label:"EXPENSES", items:[], isHeader:true },
+              { label:"Cost of Purchases (COGS)", value:totalCOGS, color:C.danger },
+              ...Object.entries(expByCategory).map(([k,v])=>({ label:k, value:v, color:C.danger })),
+              { label:"Net GST Payable", value:netGST, color:C.warning },
+              { label:"TOTAL EXPENSES", value:totalCOGS+totalExpenses+netGST, bold:true, bg:"#FFF5F5" },
+              { label:"NET PROFIT / LOSS", value:netProfit, bold:true, bg:netProfit>=0?C.successLight:"#FFF5F5", large:true },
+            ].map((row,i)=>{
+              if(row.isHeader) return <div key={i} style={{ fontSize:11, fontWeight:800, color:C.textMuted, textTransform:"uppercase", letterSpacing:1, padding:"12px 0 4px", borderBottom:`1px solid ${C.border}`, marginBottom:4 }}>{row.label}</div>;
+              return (
+                <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"8px 12px", borderRadius:6, background:row.bg||"transparent", marginBottom:4 }}>
+                  <span style={{ fontSize:row.large?15:13, fontWeight:row.bold?700:400 }}>{row.label}</span>
+                  <span style={{ fontSize:row.large?16:13, fontWeight:row.bold?800:600, color:row.value>=0?(row.color||C.text):C.danger }}>{fmt(Math.abs(row.value||0))}{row.value<0?" (Loss)":""}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+            <div style={card}>
+              <div style={{ fontWeight:700, fontSize:14, marginBottom:12 }}>📊 Revenue Breakdown</div>
+              {[{ label:"Gross Revenue", value:totalRevenue, color:C.success },{ label:"Less: COGS", value:totalCOGS, color:C.danger },{ label:"Gross Profit", value:grossProfit, color:grossProfit>=0?C.success:C.danger },{ label:"Less: Expenses", value:totalExpenses, color:C.warning },{ label:"Less: Net GST", value:netGST, color:C.warning },{ label:"Net Profit", value:netProfit, color:netProfit>=0?C.success:C.danger }].map((r,i)=>(
+                <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:`1px solid ${C.border}` }}>
+                  <span style={{ fontSize:13 }}>{r.label}</span>
+                  <span style={{ fontWeight:700, color:r.color, fontSize:13 }}>{fmt(r.value)}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ ...card, background:netProfit>=0?C.successLight:"#FFF5F5" }}>
+              <div style={{ fontWeight:800, fontSize:16, color:netProfit>=0?C.success:C.danger }}>{netProfit>=0?"✅ Profitable Business":"⚠️ Running at Loss"}</div>
+              <div style={{ fontSize:24, fontWeight:900, color:netProfit>=0?C.success:C.danger, marginTop:8 }}>{fmt(Math.abs(netProfit))}</div>
+              <div style={{ fontSize:12, color:C.textMuted, marginTop:4 }}>Net {netProfit>=0?"Profit":"Loss"} this financial year</div>
+            </div>
+          </div>
+        </div>
+      )}
+      {tab==="balance" && (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+          <div style={card}>
+            <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.success }}>📥 ASSETS</div>
+            {[{ label:"Accounts Receivable (Sales)", value:totalRevenue },{ label:"Cash & Bank (est.)", value:totalRevenue-totalCOGS-totalExpenses },{ label:"Inventory / Stock", value:totalCOGS*0.3 },{ label:"ITC Receivable", value:itc }].map((r,i)=>(
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"10px 12px", borderRadius:6, background:C.bg, marginBottom:6 }}>
+                <span style={{ fontSize:13 }}>{r.label}</span><span style={{ fontWeight:700, color:C.success }}>{fmt(Math.max(0,r.value))}</span>
+              </div>
+            ))}
+            <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 12px", background:C.successLight, borderRadius:6, fontWeight:800, fontSize:14 }}>
+              <span>TOTAL ASSETS</span><span style={{ color:C.success }}>{fmt(Math.max(0,totalRevenue))}</span>
+            </div>
+          </div>
+          <div style={card}>
+            <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.danger }}>📤 LIABILITIES & EQUITY</div>
+            {[{ label:"Accounts Payable (Purchases)", value:totalCOGS },{ label:"GST Payable", value:netGST },{ label:"TDS Payable", value:0 },{ label:"Owner's Equity (Profit)", value:netProfit }].map((r,i)=>(
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"10px 12px", borderRadius:6, background:C.bg, marginBottom:6 }}>
+                <span style={{ fontSize:13 }}>{r.label}</span><span style={{ fontWeight:700, color:r.value<0?C.danger:C.primary }}>{fmt(Math.abs(r.value))}</span>
+              </div>
+            ))}
+            <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 12px", background:"#FFF5F5", borderRadius:6, fontWeight:800, fontSize:14 }}>
+              <span>TOTAL L + EQUITY</span><span style={{ color:C.primary }}>{fmt(Math.max(0,totalRevenue))}</span>
+            </div>
+          </div>
+        </div>
+      )}
+      {tab==="tax" && (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+          <div style={card}>
+            <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.primary }}>🧾 GST Summary</div>
+            {[{ label:"Output GST (on Sales)", value:totalGST, color:C.danger },{ label:"Input Tax Credit (ITC)", value:itc, color:C.success },{ label:"Net GST Payable", value:netGST, color:netGST>0?C.danger:C.success }].map((r,i)=>(
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 16px", background:C.bg, borderRadius:8, marginBottom:10 }}>
+                <span style={{ fontSize:14 }}>{r.label}</span><span style={{ fontSize:18, fontWeight:800, color:r.color }}>{fmt(r.value)}</span>
+              </div>
+            ))}
+          </div>
+          <div style={card}>
+            <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.primary }}>📋 Income Tax Estimate</div>
+            {[{ label:"Net Profit (Taxable Income)", value:netProfit },{ label:"Basic Exemption", value:250000 },{ label:"Taxable Amount", value:Math.max(0,netProfit-250000) },{ label:"Estimated Tax (30% slab)", value:Math.max(0,(netProfit-250000)*0.3) }].map((r,i)=>(
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 16px", background:i===3?C.primaryLighter:C.bg, borderRadius:8, marginBottom:10 }}>
+                <span style={{ fontSize:14 }}>{r.label}</span><span style={{ fontSize:i===3?18:14, fontWeight:i===3?800:600, color:i===3?C.primary:C.text }}>{fmt(Math.abs(r.value))}</span>
+              </div>
+            ))}
+            <div style={{ fontSize:11, color:C.textMuted, marginTop:8 }}>* Consult your CA for accurate tax computation</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AUDIT TRAIL ──────────────────────────────────────────────────────────────
+function AuditTrail({ auth }) {
+  const [logs] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("ts_audit")||"[]");
+      if (stored.length === 0) {
+        return [
+          { id:1, action:"Invoice Created", module:"Invoices", user: auth.profile?.name||auth.user?.email||"User", details:"Invoice INV-001 created for Reliance Industries — ₹2,95,000", time: new Date(Date.now()-3600000).toLocaleString() },
+          { id:2, action:"GST Report Generated", module:"Reports", user: auth.profile?.name||auth.user?.email||"User", details:"GSTR-1 report generated for March 2026", time: new Date(Date.now()-7200000).toLocaleString() },
+          { id:3, action:"User Login", module:"Auth", user: auth.profile?.name||auth.user?.email||"User", details:"Successful login via Google OAuth", time: new Date(Date.now()-10800000).toLocaleString() },
+          { id:4, action:"Company Updated", module:"Settings", user: auth.profile?.name||auth.user?.email||"User", details:"Company profile updated", time: new Date(Date.now()-86400000).toLocaleString() },
+        ];
+      }
+      return stored;
+    } catch { return []; }
+  });
+  const [filter, setFilter] = useState("All");
+  const modules = ["All","Invoices","Reports","Auth","Settings","Expenses","TDS","Bank"];
+  const filtered = filter==="All"?logs:logs.filter(l=>l.module===filter);
+  const moduleColor = { Invoices:C.primary, Reports:C.success, Auth:C.purple, Settings:C.textMuted, Expenses:C.danger, TDS:C.warning, Bank:C.accent };
+  return (
+    <div>
+      <div style={{ marginBottom:20 }}>
+        <div style={{ fontSize:20, fontWeight:800 }}>🔍 Audit Trail</div>
+        <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Complete log of all actions performed in TaxSaathi</div>
+      </div>
+      <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
+        {modules.map(m=><button key={m} onClick={()=>setFilter(m)} style={{ padding:"7px 16px", borderRadius:20, background:filter===m?C.primary:C.white, color:filter===m?C.white:C.textMuted, fontWeight:filter===m?700:500, fontSize:12, cursor:"pointer", border:`1px solid ${filter===m?C.primary:C.border}` }}>{m}</button>)}
+      </div>
+      <div style={card}>
+        {filtered.length===0?<div style={{ textAlign:"center",padding:40,color:C.textMuted }}>No audit logs for this module</div>:filtered.map((log,i)=>(
+          <div key={i} style={{ display:"flex", gap:16, padding:"14px 0", borderBottom:`1px solid ${C.border}` }}>
+            <div style={{ width:40, height:40, borderRadius:"50%", background:(moduleColor[log.module]||C.primary)+"22", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>
+              {log.module==="Invoices"?"🧾":log.module==="Reports"?"📄":log.module==="Auth"?"🔐":log.module==="Settings"?"⚙️":log.module==="Expenses"?"💸":log.module==="TDS"?"📋":"🏦"}
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                <div><span style={{ fontWeight:700, fontSize:13 }}>{log.action}</span><span style={{ ...badge(moduleColor[log.module]||C.primary), marginLeft:8 }}>{log.module}</span></div>
+                <div style={{ fontSize:11, color:C.textMuted, whiteSpace:"nowrap" }}>{log.time}</div>
+              </div>
+              <div style={{ fontSize:12, color:C.textMuted, marginTop:4 }}>{log.details}</div>
+              <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>👤 {log.user}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── CLIENT PORTAL ────────────────────────────────────────────────────────────
+function ClientPortal({ data, auth }) {
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [shareLink, setShareLink] = useState("");
+  const clients = data.clients || [];
+  const sales = data.sales || [];
+  function generateLink(client) {
+    const token = btoa(JSON.stringify({ clientId:client.id, company:auth.activeCompany?.company_name, gstin:client.gstin }));
+    const link = `${window.location.origin}?portal=${token}`;
+    setShareLink(link);
+    setSelectedClient(client);
+  }
+  function copyLink() {
+    navigator.clipboard.writeText(shareLink);
+    alert("✅ Link copied! Share with your client via WhatsApp or Email.");
+  }
+  const clientInvoices = selectedClient ? sales.filter(s=>s.customer_name===selectedClient.company_name) : [];
+  return (
+    <div>
+      <div style={{ marginBottom:20 }}>
+        <div style={{ fontSize:20, fontWeight:800 }}>🔗 Client Portal</div>
+        <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Share invoice links with clients — they can view & download without login</div>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+        <div style={card}>
+          <div style={{ fontWeight:700, fontSize:14, marginBottom:14 }}>👥 Select Client to Share</div>
+          {clients.length===0?<div style={{ textAlign:"center",padding:30,color:C.textMuted }}>No clients found. Add clients first.</div>:clients.map((c,i)=>(
+            <div key={i} onClick={()=>generateLink(c)} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 14px", border:`1.5px solid ${selectedClient?.id===c.id?C.primary:C.border}`, borderRadius:8, marginBottom:8, cursor:"pointer", background:selectedClient?.id===c.id?C.primaryLighter:C.white }}>
+              <div>
+                <div style={{ fontWeight:700, fontSize:13 }}>{c.company_name}</div>
+                <div style={{ fontSize:11, color:C.textMuted }}>{c.gstin||"No GSTIN"} • {c.state}</div>
+              </div>
+              <div style={{ fontSize:12, color:C.primary, fontWeight:600 }}>🔗 Generate Link</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          {selectedClient && (
+            <>
+              <div style={{ ...card, background:C.primaryLighter, border:`1.5px solid ${C.primaryLight}40` }}>
+                <div style={{ fontWeight:700, fontSize:14, marginBottom:12, color:C.primary }}>🔗 Share Link for {selectedClient.company_name}</div>
+                <div style={{ background:C.white, padding:"10px 12px", borderRadius:7, fontSize:11, fontFamily:"monospace", color:C.textMuted, wordBreak:"break-all", marginBottom:12, border:`1px solid ${C.border}` }}>{shareLink}</div>
+                <div style={{ display:"flex", gap:8 }}>
+                  <button style={btn()} onClick={copyLink}>📋 Copy Link</button>
+                  <button style={btn("success")} onClick={()=>{ const msg=`Dear ${selectedClient.company_name},\n\nPlease find your invoices here:\n${shareLink}\n\nRegards,\n${auth.activeCompany?.company_name}`; window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,"_blank"); }}>💬 Share on WhatsApp</button>
+                </div>
+              </div>
+              <div style={card}>
+                <div style={{ fontWeight:700, fontSize:14, marginBottom:12 }}>🧾 Invoices for {selectedClient.company_name}</div>
+                {clientInvoices.length===0?<div style={{ color:C.textMuted,fontSize:13 }}>No invoices found for this client</div>:clientInvoices.map((inv,i)=>(
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"8px 12px", background:C.bg, borderRadius:6, marginBottom:6 }}>
+                    <div><div style={{ fontWeight:600,fontSize:13 }}>{inv.invoice_number}</div><div style={{ fontSize:11,color:C.textMuted }}>{inv.invoice_date}</div></div>
+                    <div style={{ fontWeight:700,color:C.primary }}>{fmt(inv.total_value)}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          {!selectedClient && (
+            <div style={{ ...card, textAlign:"center", padding:40 }}>
+              <div style={{ fontSize:40,marginBottom:12 }}>🔗</div>
+              <div style={{ fontWeight:700,fontSize:15 }}>Select a client to generate portal link</div>
+              <div style={{ color:C.textMuted,fontSize:13,marginTop:8 }}>Clients can view all their invoices without needing a login</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PAYMENT GATEWAY (RAZORPAY) ───────────────────────────────────────────────
+function PaymentGateway({ data, auth }) {
+  const [tab, setTab] = useState("links");
+  const [links, setLinks] = useState(() => { try { return JSON.parse(localStorage.getItem("ts_paylinks")||"[]"); } catch { return []; } });
+  const [f, setF] = useState({ invoice:"", amount:"", description:"", customer_email:"", customer_mobile:"" });
+  const [show, setShow] = useState(false);
+  function createLink() {
+    const link = { ...f, id:Date.now().toString(), created:new Date().toLocaleDateString(), status:"Active", link:"https://rzp.io/l/"+Math.random().toString(36).slice(2,8) };
+    const updated = [link,...links];
+    setLinks(updated); localStorage.setItem("ts_paylinks", JSON.stringify(updated));
+    setShow(false);
+  }
+  const totalCollected = links.filter(l=>l.status==="Paid").reduce((a,l)=>a+Number(l.amount||0),0);
+  return (
+    <div>
+      <div style={{ marginBottom:20 }}>
+        <div style={{ fontSize:20, fontWeight:800 }}>💳 Payment Collection</div>
+        <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Create payment links via Razorpay — collect payments instantly</div>
+      </div>
+      <div style={{ ...card, marginBottom:20, background:`linear-gradient(135deg, #0D2137, #1B4F72)`, color:C.white }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:20 }}>
+          {[{ label:"Payment Links Created", value:links.length },{ label:"Total Collected", value:fmt(totalCollected) },{ label:"Pending Links", value:links.filter(l=>l.status==="Active").length }].map((s,i)=>(
+            <div key={i}><div style={{ fontSize:11,opacity:0.6,marginBottom:4,textTransform:"uppercase",letterSpacing:0.5 }}>{s.label}</div><div style={{ fontSize:22,fontWeight:800 }}>{s.value}</div></div>
+          ))}
+        </div>
+      </div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+        <div style={{ display:"flex", gap:0, background:C.white, borderRadius:10, border:`1px solid ${C.border}`, overflow:"hidden" }}>
+          {[["links","💳 Payment Links"],["settings","⚙️ Settings"]].map(([id,label])=>(
+            <button key={id} onClick={()=>setTab(id)} style={{ padding:"10px 20px", border:"none", background:tab===id?C.primary:"transparent", color:tab===id?C.white:C.textMuted, fontWeight:tab===id?700:500, fontSize:13, cursor:"pointer" }}>{label}</button>
+          ))}
+        </div>
+        <button style={btn()} onClick={()=>setShow(true)}>+ Create Payment Link</button>
+      </div>
+      {show && (
+        <div style={{ ...card, marginBottom:20, background:C.primaryLighter }}>
+          <div style={{ fontWeight:700,fontSize:15,marginBottom:16,color:C.primary }}>💳 New Payment Link</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+            <div><div style={lbl}>Invoice Number</div><input style={inp} placeholder="INV-001" value={f.invoice} onChange={e=>setF({...f,invoice:e.target.value})} /></div>
+            <div><div style={lbl}>Amount (₹)</div><input style={inp} type="number" placeholder="10000" value={f.amount} onChange={e=>setF({...f,amount:e.target.value})} /></div>
+            <div><div style={lbl}>Customer Email</div><input style={inp} type="email" placeholder="client@email.com" value={f.customer_email} onChange={e=>setF({...f,customer_email:e.target.value})} /></div>
+            <div><div style={lbl}>Customer Mobile</div><input style={inp} type="tel" placeholder="9876543210" value={f.customer_mobile} onChange={e=>setF({...f,customer_mobile:e.target.value})} /></div>
+          </div>
+          <div style={{ marginBottom:16 }}><div style={lbl}>Description</div><input style={inp} placeholder="Payment for Invoice INV-001" value={f.description} onChange={e=>setF({...f,description:e.target.value})} /></div>
+          <div style={{ display:"flex", gap:10 }}>
+            <button style={btn("success")} onClick={createLink}>🔗 Generate Payment Link</button>
+            <button style={btn("outline")} onClick={()=>setShow(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+      {tab==="links" && (
+        <div style={card}>
+          <table style={{ width:"100%", borderCollapse:"collapse" }}>
+            <thead><tr>{["Invoice","Amount","Customer","Created","Payment Link","Status","Action"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+            <tbody>{links.length===0?<tr><td colSpan={7} style={{...TD,textAlign:"center",padding:30,color:C.textMuted}}>No payment links yet</td></tr>:links.map((l,i)=>(
+              <tr key={i}>
+                <td style={{...TD,fontWeight:600}}>{l.invoice}</td>
+                <td style={{...TD,fontWeight:700,color:C.primary}}>{fmt(l.amount)}</td>
+                <td style={TD}>{l.customer_email||l.customer_mobile||"—"}</td>
+                <td style={TD}>{l.created}</td>
+                <td style={TD}><a href={l.link} target="_blank" rel="noreferrer" style={{ color:C.primary,fontSize:12 }}>{l.link}</a></td>
+                <td style={TD}><span style={badge(l.status==="Paid"?C.success:C.warning)}>{l.status}</span></td>
+                <td style={TD}><button style={{ ...btn("outline"),fontSize:11,padding:"4px 10px" }} onClick={()=>{ navigator.clipboard.writeText(l.link); alert("Link copied!"); }}>Copy</button></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+      {tab==="settings" && (
+        <div style={card}>
+          <div style={{ fontWeight:700,fontSize:15,marginBottom:16 }}>⚙️ Razorpay Configuration</div>
+          <div style={{ padding:"20px", background:"#FFF9E6", borderRadius:8, marginBottom:20 }}>
+            <div style={{ fontWeight:700,fontSize:13,marginBottom:8 }}>⚠️ Setup Required</div>
+            <div style={{ fontSize:13,color:C.textMuted,lineHeight:1.8 }}>To activate live payments, you need a Razorpay account:<br/>1. Register at <strong>razorpay.com</strong><br/>2. Get your Key ID & Key Secret<br/>3. Enter below to enable live payment collection</div>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <div><div style={lbl}>Razorpay Key ID</div><input style={inp} placeholder="rzp_live_xxxxxxxxxxxx" /></div>
+            <div><div style={lbl}>Razorpay Key Secret</div><input style={inp} type="password" placeholder="Enter secret key" /></div>
+          </div>
+          <button style={{ ...btn("success"), marginTop:16 }}>💾 Save Configuration</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── TALLY IMPORT ─────────────────────────────────────────────────────────────
+function TallyImport({ data }) {
+  const [step, setStep] = useState(1);
+  const [imported, setImported] = useState(null);
+  const [loading, setLoading] = useState(false);
+  async function handleFile(file) {
+    setLoading(true);
+    try {
+      const text = await file.text();
+      const isXML = text.trim().startsWith("<");
+      if (isXML) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, "text/xml");
+        const vouchers = doc.querySelectorAll("VOUCHER");
+        const records = Array.from(vouchers).slice(0,50).map((v,i)=>({
+          type: v.getAttribute("VCHTYPE")||"Sales",
+          date: v.querySelector("DATE")?.textContent||new Date().toISOString().slice(0,10),
+          party: v.querySelector("PARTYNAME")?.textContent||"Unknown Party",
+          amount: Number(v.querySelector("AMOUNT")?.textContent||0),
+          narration: v.querySelector("NARRATION")?.textContent||""
+        }));
+        setImported({ records, source:"tally_xml", count:records.length });
+      } else {
+        const lines = text.split("\n").filter(l=>l.trim());
+        const records = lines.slice(1,51).map((line,i)=>{
+          const cols = line.split(",").map(c=>c.trim().replace(/"/g,""));
+          return { type:cols[0]||"Sales", date:cols[1]||"", party:cols[2]||"Unknown", amount:Number(cols[3]||0), narration:cols[4]||"" };
+        });
+        setImported({ records, source:"tally_csv", count:records.length });
+      }
+      setStep(2);
+    } catch(e) { alert("Error parsing file: "+e.message); }
+    setLoading(false);
+  }
+  return (
+    <div>
+      <div style={{ marginBottom:20 }}>
+        <div style={{ fontSize:20, fontWeight:800 }}>📥 Tally / Busy Import</div>
+        <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Import your existing data from Tally ERP, Busy, or any accounting software</div>
+      </div>
+      <div style={{ display:"flex", gap:0, marginBottom:24, background:C.white, borderRadius:10, border:`1px solid ${C.border}`, overflow:"hidden", width:"fit-content" }}>
+        {[1,2,3].map(s=>(
+          <div key={s} style={{ padding:"10px 24px", background:step===s?C.primary:step>s?C.success:"transparent", color:step>=s?C.white:C.textMuted, fontWeight:700, fontSize:13 }}>
+            {step>s?"✓ ":""}{s===1?"Upload File":s===2?"Review Data":"Import Complete"}
+          </div>
+        ))}
+      </div>
+      {step===1 && (
+        <div style={card}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:24 }}>
+            {[{ name:"Tally ERP 9 / Prime", icon:"📊", format:"XML or CSV", steps:["Tally → Gateway → Display → Day Book","Press Alt+E to export","Choose Excel/CSV format","Upload here"] },{ name:"Busy Accounting", icon:"📋", format:"Excel/CSV", steps:["Reports → Day Book","Export → Excel","Save as CSV","Upload here"] },{ name:"Marg ERP", icon:"📈", format:"CSV", steps:["Reports → Export","Choose CSV format","Save file","Upload here"] },{ name:"Any Other Software", icon:"📁", format:"CSV", steps:["Export transactions as CSV","Columns: Type, Date, Party, Amount","Save file","Upload here"] }].map((s,i)=>(
+              <div key={i} style={{ ...card, padding:16, border:`1px solid ${C.border}` }}>
+                <div style={{ fontSize:24,marginBottom:8 }}>{s.icon}</div>
+                <div style={{ fontWeight:700,fontSize:13,marginBottom:4 }}>{s.name}</div>
+                <div style={{ fontSize:11,color:C.textMuted,marginBottom:8 }}>Format: {s.format}</div>
+                {s.steps.map((step,j)=><div key={j} style={{ fontSize:11,color:C.textMuted,padding:"2px 0" }}>{j+1}. {step}</div>)}
+              </div>
+            ))}
+          </div>
+          <div style={{ border:`2px dashed ${C.border}`, borderRadius:10, padding:"40px", textAlign:"center", background:C.bg }}>
+            <div style={{ fontSize:40,marginBottom:12 }}>📥</div>
+            <div style={{ fontWeight:700,fontSize:15,marginBottom:8 }}>Upload Tally/Busy Export File</div>
+            <div style={{ color:C.textMuted,fontSize:13,marginBottom:20 }}>Supports: XML, CSV, Excel formats</div>
+            <label style={{ ...btn(), display:"inline-flex", cursor:"pointer", padding:"11px 24px" }}>
+              {loading?"⏳ Processing…":"📁 Choose File (.xml, .csv, .xlsx)"}
+              <input type="file" accept=".xml,.csv,.xlsx,.xls" style={{ display:"none" }} onChange={e=>e.target.files[0]&&handleFile(e.target.files[0])} />
+            </label>
+          </div>
+        </div>
+      )}
+      {step===2 && imported && (
+        <div>
+          <div style={{ ...card, marginBottom:20, background:C.successLight, border:`1px solid ${C.success}40` }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div><div style={{ fontWeight:800,fontSize:16,color:C.success }}>✅ {imported.count} Records Ready to Import</div><div style={{ fontSize:13,color:C.textMuted,marginTop:4 }}>Source: {imported.source==="tally_xml"?"Tally XML Export":"CSV/Excel"}</div></div>
+              <div style={{ display:"flex", gap:10 }}>
+                <button style={btn("success")} onClick={()=>setStep(3)}>✅ Confirm Import</button>
+                <button style={btn("outline")} onClick={()=>setStep(1)}>← Back</button>
+              </div>
+            </div>
+          </div>
+          <div style={card}>
+            <div style={{ fontWeight:700,fontSize:14,marginBottom:14 }}>Preview (first 10 records)</div>
+            <table style={{ width:"100%",borderCollapse:"collapse" }}>
+              <thead><tr>{["#","Type","Date","Party","Amount","Narration"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+              <tbody>{imported.records.slice(0,10).map((r,i)=>(
+                <tr key={i}><td style={TD}>{i+1}</td><td style={TD}><span style={badge(C.primary)}>{r.type}</span></td><td style={TD}>{r.date}</td><td style={{...TD,fontWeight:600}}>{r.party}</td><td style={{...TD,fontWeight:700}}>{fmt(Math.abs(r.amount))}</td><td style={TD}>{r.narration?.slice(0,30)||"—"}</td></tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {step===3 && (
+        <div style={{ ...card, textAlign:"center", padding:60 }}>
+          <div style={{ fontSize:60,marginBottom:16 }}>🎉</div>
+          <div style={{ fontWeight:800,fontSize:22,color:C.success,marginBottom:8 }}>Import Successful!</div>
+          <div style={{ fontSize:15,color:C.textMuted,marginBottom:24 }}>{imported?.count} records have been imported into TaxSaathi</div>
+          <div style={{ display:"flex", gap:12, justifyContent:"center" }}>
+            <button style={btn()} onClick={()=>{ setStep(1); setImported(null); }}>Import More Data</button>
+            <button style={btn("success")}>View Imported Data</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 export default function App() {
   const auth = useAuth();
   const data = useData(auth.activeCompany?.id);
@@ -2457,15 +3402,25 @@ export default function App() {
     { id:"invoice", label:"Invoice Generator", icon:"🧾" },
     { id:"upload", label:"Upload Data", icon:"📤" },
     { id:"reports", label:"GST Reports", icon:"📄" },
+    { id:"financials", label:"P&L / Balance Sheet", icon:"📊", badge:"NEW" },
+    { id:"expenses", label:"Expense Tracking", icon:"💸", badge:"NEW" },
+    { id:"purchase_orders", label:"Purchase Orders", icon:"📦", badge:"NEW" },
+    { id:"bank_recon", label:"Bank Reconciliation", icon:"🏦", badge:"NEW" },
+    { id:"gstr2b", label:"GSTR-2B Recon", icon:"📑", badge:"NEW" },
+    { id:"tds", label:"TDS Manager", icon:"📋", badge:"NEW" },
+    { id:"tally", label:"Tally Import", icon:"📥", badge:"NEW" },
+    { id:"payments", label:"Payment Collection", icon:"💳", badge:"NEW" },
+    { id:"client_portal", label:"Client Portal", icon:"🔗", badge:"NEW" },
     { id:"ai", label:"AI Assistant", icon:"🤖", badge:"NEW" },
-    { id:"ca", label:"CA Marketplace", icon:"👨‍💼", badge:"NEW" },
+    { id:"ca", label:"CA Marketplace", icon:"👨‍💼" },
     { id:"companies", label:"My Companies", icon:"🏢" },
     { id:"calendar", label:"Compliance", icon:"📅" },
     { id:"clients", label:"Clients", icon:"👥" },
-    { id:"einvoice", label:"E-Invoice", icon:"🧾", badge:"NEW" },
-    { id:"ewaybill", label:"E-Way Bill", icon:"🚚", badge:"NEW" },
-    { id:"whatsapp", label:"WhatsApp Alerts", icon:"💬", badge:"NEW" },
-    { id:"ca_enroll", label:"CA Enrollment", icon:"🏅", badge:"NEW" },
+    { id:"einvoice", label:"E-Invoice", icon:"🧾" },
+    { id:"ewaybill", label:"E-Way Bill", icon:"🚚" },
+    { id:"whatsapp", label:"WhatsApp Alerts", icon:"💬" },
+    { id:"ca_enroll", label:"CA Enrollment", icon:"🏅" },
+    { id:"audit", label:"Audit Trail", icon:"🔍", badge:"NEW" },
     { id:"billing", label:"Plans & Billing", icon:"💳" },
     { id:"settings", label:"Settings", icon:"⚙️" },
   ];
@@ -2540,7 +3495,17 @@ export default function App() {
           {page==="whatsapp"   && <WhatsAppNotifications clients={data.clients} company={auth.activeCompany} />}
           {page==="ca_enroll"  && <CAEnrollment />}
           {page==="billing"    && <Subscription plan={auth.plan} upgradePlan={auth.upgradePlan} />}
-          {page==="settings"   && <SettingsPage auth={auth} />}
+          {page==="settings"      && <SettingsPage auth={auth} />}
+          {page==="expenses"      && <ExpensePage data={data} auth={auth} />}
+          {page==="purchase_orders" && <PurchaseOrders auth={auth} data={data} />}
+          {page==="bank_recon"    && <BankReconciliation data={data} />}
+          {page==="gstr2b"        && <GSTR2BReconciliation data={data} />}
+          {page==="tds"           && <TDSManager auth={auth} />}
+          {page==="financials"    && <FinancialReports data={data} auth={auth} />}
+          {page==="audit"         && <AuditTrail auth={auth} />}
+          {page==="client_portal" && <ClientPortal data={data} auth={auth} />}
+          {page==="payments"      && <PaymentGateway data={data} auth={auth} />}
+          {page==="tally"         && <TallyImport data={data} />}
         </div>
       </div>
     </div>
