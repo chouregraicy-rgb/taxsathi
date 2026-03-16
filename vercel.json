@@ -1,18 +1,19 @@
 {
-  "rewrites": [
-    {
-      "source": "/privacy-policy",
-      "destination": "/privacy-policy.html"
-    }
-  ],
   "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
     {
       "src": "/privacy-policy.html",
       "dest": "/privacy-policy.html"
     },
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/privacy-policy",
+      "dest": "/privacy-policy.html"
+    },
+    {
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
