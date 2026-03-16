@@ -52,8 +52,8 @@ const COMPLIANCE = [
 ];
 const PLANS = [
   { id:"free", name:"Free", price:0, color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","Compliance Calendar","5 Clients","Email Support"], limit:"Free forever" },
-  { id:"starter", name:"Starter", price:299, color:"#2E86C1", popular:false, features:["3 GSTINs","Unlimited Invoices","All GST Reports","Excel Upload","50 Clients","AI Assistant (50 queries/mo)","WhatsApp Reminders","Priority Support"], limit:"Per month" },
-  { id:"pro", name:"Pro", price:799, color:"#1B4F72", popular:true, features:["10 GSTINs","Everything in Starter","AI Assistant Unlimited","CA Marketplace Access","E-Invoice Generation","E-Way Bill","Bank Reconciliation","Multi-user (5 seats)","API Access","24/7 Support"], limit:"Per month" },
+  { id:"starter", name:"Starter", price:599, color:"#2E86C1", popular:false, features:["3 GSTINs","Unlimited Invoices","All GST Reports","Excel Upload","50 Clients","AI Assistant (50 queries/mo)","WhatsApp Reminders","Priority Support"], limit:"Per month" },
+  { id:"pro", name:"Pro", price:999, color:"#1B4F72", popular:true, features:["10 GSTINs","Everything in Starter","AI Assistant Unlimited","CA Marketplace Access","E-Invoice Generation","E-Way Bill","Bank Reconciliation","Multi-user (5 seats)","API Access","24/7 Support"], limit:"Per month" },
   { id:"enterprise", name:"Enterprise", price:1999, color:"#7D3C98", popular:false, features:["Unlimited GSTINs","Everything in Pro","Unlimited Users","White-label Option","Dedicated CA Manager","Custom Integrations","Tally/Busy Import","Offline Mode","SLA Guarantee"], limit:"Per month" },
 ];
 
