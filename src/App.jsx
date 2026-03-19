@@ -1323,7 +1323,6 @@ function Subscription({ plan, upgradePlan }) {
       </div>
     </div>
   );
-}
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function Dashboard({ summary, profile, plan }) {
