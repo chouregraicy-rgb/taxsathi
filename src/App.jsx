@@ -1187,7 +1187,7 @@ function Subscription({ plan, upgradePlan }) {
       script.onload = () => {
         const selected = PLANS.find(p=>p.id===planId);
         const options = {
-          key: import.meta.env.VITE_RAZORPAY_KEY || "rzp_test_YourKeyHere",
+          key: import.meta.env.RAZORPAY_KEY || "rzp_test_YourKeyHere",
           amount: selected.price * 100,
           currency: "INR",
           name: "TaxSaathi",
@@ -1638,7 +1638,7 @@ function CAEnrollment() {
       document.body.appendChild(script);
       await new Promise(r => script.onload = r);
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY || "rzp_test_placeholder",
+        key: import.meta.env.RAZORPAY_KEY || "rzp_test_placeholder",
         amount: plan.price * 100,
         currency: "INR",
         name: "TaxSaathi CA Marketplace",
