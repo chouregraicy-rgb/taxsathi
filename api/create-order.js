@@ -5,14 +5,14 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_SECRET,
 });
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   try {
     const { amount, planName } = req.body;
 
     const order = await razorpay.orders.create({
-      amount: amount * 100, // paise mein
+      amount: amount * 100,
       currency: process.env.RAZORPAY_CURRENCY || "INR",
       receipt: `receipt_${Date.now()}`,
       notes: { planName },
@@ -23,4 +23,4 @@ export default async function handler(req, res) {
     console.error("Order creation error:", err);
     res.status(500).json({ error: "Order creation failed" });
   }
-}
+};
