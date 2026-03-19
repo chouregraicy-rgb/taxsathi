@@ -1238,9 +1238,7 @@ function Subscription({ plan, upgradePlan }) {
     alert("Something went wrong. Please try again.");
     setLoading(null);
   }
-}
-        rzp.open();
-      };
+}  
 
   return (
     <div>
