@@ -1241,14 +1241,6 @@ function Subscription({ plan, upgradePlan }) {
 }
         rzp.open();
       };
-    } catch(e) {
-      // Demo mode fallback
-      await upgradePlan(planId);
-      const selected = PLANS.find(p=>p.id===planId);
-      setSuccess(`✅ Demo: Upgraded to ${selected.name} Plan! (Add Razorpay key to .env to enable real payments)`);
-      setLoading(null);
-    }
-  }
 
   return (
     <div>
