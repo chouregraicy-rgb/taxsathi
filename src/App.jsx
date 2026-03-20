@@ -1172,7 +1172,7 @@ function MultiCompany({ companies, activeCompany, setActiveCompany, addCompany, 
 }
 
 // ─── SUBSCRIPTION / BILLING ───────────────────────────────────────────────────
-function Subscription({ plan, upgradePlan }) {
+function Subscription({ plan, upgradePlan, user }) {
   const [loading, setLoading] = useState(null);
   const [success, setSuccess] = useState("");
 
@@ -5170,7 +5170,7 @@ export default function App() {
           {page==="ewaybill"   && <EWayBill company={auth.activeCompany} sales={data.sales} />}
           {page==="whatsapp"   && <WhatsAppNotifications clients={data.clients} company={auth.activeCompany} />}
           {page==="ca_enroll"  && <CAEnrollment />}
-          {page==="billing"    && <Subscription plan={auth.plan} upgradePlan={auth.upgradePlan} />}
+          {page==="billing"    && <Subscription plan={auth.plan} upgradePlan={auth.upgradePlan} user={auth.user} />
           {page==="settings"      && <SettingsPage auth={auth} />}
           {page==="expenses"      && <ExpensePage data={data} auth={auth} />}
           {page==="purchase_orders" && <PurchaseOrders auth={auth} data={data} />}
