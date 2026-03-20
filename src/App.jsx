@@ -1177,7 +1177,7 @@ function Subscription({ plan, upgradePlan, user }) {
   const [success, setSuccess] = useState("");
 
 async function handleUpgrade(planId) {
-  console.log('Razorpay Key:', import.meta.env.VITE_RAZORPAY_KEY);
+  
   if (!user) {
     alert('Please login first');
     return;
