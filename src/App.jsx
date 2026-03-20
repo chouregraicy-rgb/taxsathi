@@ -1176,44 +1176,73 @@ function Subscription({ plan, upgradePlan }) {
   const [loading, setLoading] = useState(null);
   const [success, setSuccess] = useState("");
 
-  async function handleUpgrade(planId) {
-    if (planId === "free" || planId === plan) return;
-    setLoading(planId);
-    // Razorpay integration
-    try {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      document.body.appendChild(script);
-      script.onload = () => {
-        const selected = PLANS.find(p=>p.id===planId);
-        const options = {
-          key: import.meta.env.RAZORPAY_KEY || "rzp_test_YourKeyHere",
-          amount: selected.price * 100,
-          currency: "INR",
-          name: "TaxSaathi",
-          description: `${selected.name} Plan — Monthly Subscription`,
-          image: "https://via.placeholder.com/50x50/1B4F72/FFFFFF?text=TS",
-          handler: async function(response) {
-            await upgradePlan(planId);
-            setSuccess(`🎉 Successfully upgraded to ${selected.name} Plan! Payment ID: ${response.razorpay_payment_id}`);
-            setLoading(null);
-          },
-          prefill: { name:"TaxSaathi User", email:"user@example.com" },
-          theme: { color: "#1B4F72" },
-          modal: { ondismiss: () => setLoading(null) }
-        };
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-      };
-    } catch(e) {
-      // Demo mode fallback
-      await upgradePlan(planId);
-      const selected = PLANS.find(p=>p.id===planId);
-      setSuccess(`✅ Demo: Upgraded to ${selected.name} Plan! (Add Razorpay key to .env to enable real payments)`);
-      setLoading(null);
-    }
+async function handleUpgrade(planId) {
+  if (!user) {
+    alert('Please login first');
+    return;
   }
 
+  const amount = planId === 'pro' ? 99900 : 59900;
+  const planName = planId === 'pro' ? 'Pro' : 'Starter';
+
+  try {
+    const orderRes = await fetch('/api/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount, plan: planId }),
+    });
+
+    const orderData = await orderRes.json();
+
+    if (!orderData.id) {
+      alert('Order creation failed. Please try again.');
+      return;
+    }
+
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY,
+      amount: orderData.amount,
+      currency: 'INR',
+      name: 'TaxSaathi',
+      description: `${planName} Plan Subscription`,
+      order_id: orderData.id,
+      handler: async function (response) {
+        const verifyRes = await fetch('/api/verify-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            userId: user.id,
+            plan: planId,
+          }),
+        });
+
+        const verifyData = await verifyRes.json();
+
+        if (verifyData.success) {
+          setSubscription({ plan: planId, status: 'active' });
+          alert(`🎉 ${planName} Plan activated successfully!`);
+        } else {
+          alert('Payment verification failed. Contact support.');
+        }
+      },
+      prefill: {
+        email: user.email,
+        name: user.user_metadata?.full_name || '',
+      },
+      theme: { color: '#6366f1' },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+
+  } catch (error) {
+    console.error('Payment error:', error);
+    alert('Something went wrong. Please try again.');
+  }
+}
   return (
     <div>
       <div style={{ marginBottom:24 }}>
