@@ -416,7 +416,24 @@ function useAuth() {
   async function fetchProfile(uid) {
     const { data: p } = await supabase.from("users").select("*").eq("id", uid).single();
     const { data: c } = await supabase.from("companies").select("*").eq("user_id", uid);
-    setProfile(p);
+    // If no name in DB, pull from Google/auth metadata
+    if (p && !p.name) {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const metaName = authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || authUser?.email?.split("@")[0] || "";
+      if (metaName) {
+        await supabase.from("users").upsert({ id: uid, name: metaName, email: authUser.email, plan: p?.plan || "free" });
+        p.name = metaName;
+      }
+    }
+    // If no profile row at all, create one from auth metadata
+    if (!p) {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const metaName = authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || authUser?.email?.split("@")[0] || "User";
+      await supabase.from("users").upsert({ id: uid, name: metaName, email: authUser?.email, plan: "free" });
+      setProfile({ id: uid, name: metaName, plan: "free" });
+    } else {
+      setProfile(p);
+    }
     const cos = c || [];
     setCompanies(cos);
     setActiveCompany(cos[0] || null);
@@ -1273,7 +1290,7 @@ function Dashboard({ summary, profile, plan }) {
     <div>
       <div style={{ marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:800 }}>Good Morning, {profile?.name?.split(" ")[0] || "User"} 👋</div>
+          <div style={{ fontSize:22, fontWeight:800 }}>{new Date().getHours()<12?"Good Morning":new Date().getHours()<17?"Good Afternoon":"Good Evening"}, {profile?.name?.split(" ")[0] || auth?.user?.email?.split("@")[0] || "User"} 👋</div>
           <div style={{ fontSize:14, color:C.textMuted, marginTop:4 }}>GST compliance overview for March 2026</div>
         </div>
         <span style={badge(plan==="pro"?C.primary:plan==="starter"?C.primaryLight:plan==="enterprise"?C.purple:C.textMuted)}>
@@ -5040,7 +5057,7 @@ export default function App() {
   return (
     <div style={{ display:"flex", height:"100vh", fontFamily:"'Segoe UI', Arial, sans-serif", background:C.bg, overflow:"hidden" }}>
       {/* Sidebar */}
-      <div id="taxs-sidebar" style={{ width:220, background:C.sidebar, display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto" }}>
+      <div style={{ width:220, background:C.sidebar, display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto" }}>
         <div style={{ padding:"18px 16px 14px", borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
           <div style={{ fontSize:18, fontWeight:900, color:C.white }}>🇮🇳 TaxSaathi</div>
           <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", marginTop:2, letterSpacing:1, textTransform:"uppercase" }}>2.0 — Beyond Zoho</div>
