@@ -12,11 +12,8 @@ html, body, #root {
   max-width: 100% !important;
 }
 
-/* Target the sidebar by its fixed width of 220px */
 @media (max-width: 768px) {
-  /* Hide any div that is exactly 220px wide (the sidebar) */
-  #root > div > div[style*="width:220"] ,
-  #root > div > div[style*="width: 220"] {
+  #taxs-sidebar {
     display: none !important;
-  };
+  }
 }
