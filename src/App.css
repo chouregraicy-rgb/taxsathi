@@ -1,16 +1,10 @@
 * { box-sizing: border-box; }
 
 html, body, #root {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
+  width: 100%; height: 100%;
+  margin: 0; padding: 0; overflow: hidden;
 }
 
-/* Fix: override the inline height:100vh on the root app div
-   100vh on mobile = full height including browser chrome = blank space below
-   This targets the first child of #root and forces it to use dvh instead */
 #root > div {
   height: 100dvh !important;
   max-height: 100dvh !important;
@@ -18,7 +12,27 @@ html, body, #root {
   max-width: 100% !important;
 }
 
-/* Fix scrollbar gap on desktop content area */
-#root > div > div:last-child {
-  min-width: 0;
+/* ── Desktop: sidebar always visible ─────── */
+.app-sidebar {
+  transition: transform 0.25s ease;
+}
+
+/* ── Mobile ───────────────────────────────── */
+@media (max-width: 768px) {
+  .app-sidebar {
+    position: fixed !important;
+    top: 0; left: 0;
+    height: 100dvh !important;
+    z-index: 200;
+    transform: translateX(-100%);
+  }
+  .app-sidebar.open {
+    transform: translateX(0) !important;
+  }
+  .mob-overlay {
+    display: block !important;
+  }
+  .mob-menu-btn {
+    display: flex !important;
+  }
 }
