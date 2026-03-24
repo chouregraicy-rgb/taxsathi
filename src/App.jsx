@@ -32,24 +32,12 @@ const STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisga
 const MOCK_SALES = [];
 const MOCK_PURCHASES = [];
 const MOCK_CLIENTS = [];
-// Dynamic compliance deadlines based on current date
-function getComplianceDeadlines() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const nm = months[(m+1)%12];
-  const ny = m===11 ? y+1 : y;
-  const cm = months[m];
-  return [
-    { task:"GSTR-1 Filing", due:`11 ${nm} ${ny}`, period:`${cm} ${y}`, color:"#2E86C1", type:"GST" },
-    { task:"GSTR-3B Filing", due:`20 ${nm} ${ny}`, period:`${cm} ${y}`, color:"#F39C12", type:"GST" },
-    { task:"TDS Deposit", due:`07 ${nm} ${ny}`, period:`${cm} ${y}`, color:"#E67E22", type:"TDS" },
-    { task:"GSTR-9 Annual Return", due:`31 Dec ${y}`, period:`FY ${y-1}-${String(y).slice(2)}`, color:"#1B4F72", type:"Annual" },
-    { task:"Income Tax Return", due:`31 Jul ${y}`, period:`FY ${y-1}-${String(y).slice(2)}`, color:"#C0392B", type:"ITR" },
-  ];
-}
-const COMPLIANCE = getComplianceDeadlines();
+const COMPLIANCE = [  { task:"GSTR-1 Filing", due:"11 Apr 2026", period:"Mar 2026", color:"#2E86C1", type:"GST" },
+  { task:"GSTR-3B Filing", due:"20 Apr 2026", period:"Mar 2026", color:"#F39C12", type:"GST" },
+  { task:"TDS Deposit", due:"07 May 2026", period:"Apr 2026", color:"#E67E22", type:"TDS" },
+  { task:"Annual Return GSTR-9", due:"31 Dec 2026", period:"FY 2025-26", color:"#1B4F72", type:"Annual" },
+  { task:"Income Tax Return", due:"31 Jul 2026", period:"FY 2025-26", color:"#C0392B", type:"ITR" },
+];
 const PLANS = [
   { id:"free", name:"Free", price:0, color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","Compliance Calendar","5 Clients","Email Support"], limit:"Free forever" },
   { id:"starter", name:"Starter", price:299, color:"#2E86C1", popular:false, features:["3 GSTINs","Unlimited Invoices","All GST Reports","Excel Upload","50 Clients","AI Assistant (50 queries/mo)","WhatsApp Reminders","Priority Support"], limit:"Per month" },
@@ -428,24 +416,17 @@ function useAuth() {
   async function fetchProfile(uid) {
     const { data: p } = await supabase.from("users").select("*").eq("id", uid).single();
     const { data: c } = await supabase.from("companies").select("*").eq("user_id", uid);
-    // If no name in DB, pull from Google/auth metadata
     if (p && !p.name) {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      const metaName = authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || authUser?.email?.split("@")[0] || "";
-      if (metaName) {
-        await supabase.from("users").upsert({ id: uid, name: metaName, email: authUser.email, plan: p?.plan || "free" });
-        p.name = metaName;
-      }
+      const { data: { user: au } } = await supabase.auth.getUser();
+      const n = au?.user_metadata?.full_name || au?.user_metadata?.name || au?.email?.split("@")[0] || "";
+      if (n) { await supabase.from("users").upsert({ id: uid, name: n, email: au.email, plan: p?.plan||"free" }); p.name = n; }
     }
-    // If no profile row at all, create one from auth metadata
     if (!p) {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      const metaName = authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || authUser?.email?.split("@")[0] || "User";
-      await supabase.from("users").upsert({ id: uid, name: metaName, email: authUser?.email, plan: "free" });
-      setProfile({ id: uid, name: metaName, plan: "free" });
-    } else {
-      setProfile(p);
-    }
+      const { data: { user: au } } = await supabase.auth.getUser();
+      const n = au?.user_metadata?.full_name || au?.user_metadata?.name || au?.email?.split("@")[0] || "User";
+      await supabase.from("users").upsert({ id: uid, name: n, email: au?.email, plan: "free" });
+      setProfile({ id: uid, name: n, plan: "free" });
+    } else { setProfile(p); }
     const cos = c || [];
     setCompanies(cos);
     setActiveCompany(cos[0] || null);
@@ -954,15 +935,6 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
           <textarea style={{...inp,height:80,resize:"none"}} value={inv.terms} onChange={e=>setInv({...inv,terms:e.target.value})} />
         </div>
       </div>
-      {/* Bottom Nav - Mobile Only */}
-      <div id="taxs-bottom-nav" style={{ display:"none", position:"fixed", bottom:0, left:0, right:0, height:60, background:"#0D2137", borderTop:"1px solid rgba(255,255,255,0.1)", zIndex:300, justifyContent:"space-around", alignItems:"center" }}>
-        {bottomNavItems.map(n => (
-          <button key={n.id} onClick={()=>setPage(n.id)} style={{ flex:1, background:"none", border:"none", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2, cursor:"pointer", color:page===n.id?"#2E86C1":"rgba(255,255,255,0.5)", fontSize:9, fontWeight:page===n.id?700:400, padding:"6px 2px" }}>
-            <span style={{ fontSize:20, lineHeight:1 }}>{n.icon}</span>
-            {n.label}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
@@ -1312,7 +1284,7 @@ function Dashboard({ summary, profile, plan }) {
       <div style={{ marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
           <div style={{ fontSize:22, fontWeight:800 }}>{new Date().getHours()<12?"Good Morning":new Date().getHours()<17?"Good Afternoon":"Good Evening"}, {profile?.name?.split(" ")[0] || auth?.user?.email?.split("@")[0] || "User"} 👋</div>
-          <div style={{ fontSize:14, color:C.textMuted, marginTop:4 }}>GST compliance overview for {new Date().toLocaleString("en-IN",{month:"long",year:"numeric"})}</div>
+          <div style={{ fontSize:14, color:C.textMuted, marginTop:4 }}>{`GST compliance overview for ${new Date().toLocaleString("en-IN",{month:"long",year:"numeric"})}`}</div>
         </div>
         <span style={badge(plan==="pro"?C.primary:plan==="starter"?C.primaryLight:plan==="enterprise"?C.purple:C.textMuted)}>
           {plan.toUpperCase()} PLAN
@@ -5075,15 +5047,6 @@ export default function App() {
   // Pages are defined as top-level components below
 
 
-  const isMobile = () => window.innerWidth <= 768;
-  const [mobNav, setMobNav] = React.useState(false);
-  const bottomNavItems = [
-    {id:"dashboard", icon:"🏠", label:"Home"},
-    {id:"invoice",   icon:"🧾", label:"Invoice"},
-    {id:"upload",    icon:"📤", label:"Upload"},
-    {id:"ai",        icon:"🤖", label:"AI"},
-    {id:"calendar",  icon:"📅", label:"More"},
-  ];
   return (
     <div style={{ display:"flex", height:"100vh", fontFamily:"'Segoe UI', Arial, sans-serif", background:C.bg, overflow:"hidden" }}>
       {/* Sidebar */}
@@ -5132,11 +5095,11 @@ export default function App() {
           <div style={{ fontWeight:700, fontSize:16 }}>{nav.find(n=>n.id===page)?.icon} {nav.find(n=>n.id===page)?.label}</div>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             {auth.activeCompany && <div style={{ fontSize:12, color:C.textMuted, background:C.bg, padding:"4px 12px", borderRadius:20, border:`1px solid ${C.border}` }}>🏢 {auth.activeCompany.company_name}</div>}
-            <div style={{ fontSize:12, color:C.textMuted, background:C.bg, padding:"4px 12px", borderRadius:20, border:`1px solid ${C.border}` }}>📅 {new Date().toLocaleString("en-IN",{month:"long",year:"numeric"})}</div>
+            <div style={{ fontSize:12, color:C.textMuted, background:C.bg, padding:"4px 12px", borderRadius:20, border:`1px solid ${C.border}` }}>{`📅 ${new Date().toLocaleString("en-IN",{month:"long",year:"numeric"})}`}</div>
             <button onClick={()=>setDark(d=>!d)} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:20, padding:"4px 12px", cursor:"pointer", fontSize:13, color:C.textMuted }}>{dark?"☀️ Light":"🌙 Dark"}</button>
           </div>
         </div>
-        <div id="taxs-content" style={{ flex:1, overflowY:"auto", maxHeight:"100dvh", padding:page==="ai"?16:16 }}>
+        <div style={{ flex:1, overflowY:"auto", maxHeight:"100dvh", padding:page==="ai"?20:24 }}>
           {page==="dashboard"  && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} />}
           {page==="invoice"    && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} />}
           {page==="upload"     && <UploadPage data={data} />}
