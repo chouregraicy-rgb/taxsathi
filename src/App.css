@@ -12,15 +12,11 @@ html, body, #root {
   max-width: 100% !important;
 }
 
-/* Mobile: hide the sidebar (it's the first child of the flex container) */
+/* Target the sidebar by its fixed width of 220px */
 @media (max-width: 768px) {
-  /* Hide sidebar completely on mobile */
-  #root > div > div:first-child {
+  /* Hide any div that is exactly 220px wide (the sidebar) */
+  #root > div > div[style*="width:220"] ,
+  #root > div > div[style*="width: 220"] {
     display: none !important;
-  }
-  /* Make main content full width */
-  #root > div > div:last-child {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
+  };
 }
