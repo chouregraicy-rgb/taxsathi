@@ -5037,13 +5037,10 @@ export default function App() {
   // Pages are defined as top-level components below
 
 
-  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   return (
-    <div style={{ display:"flex", height:"100dvh", fontFamily:"'Segoe UI', Arial, sans-serif", background:C.bg, overflow:"hidden", position:"relative" }}>
-      {/* Mobile overlay */}
-      {mobileMenuOpen && <div onClick={()=>setMobileMenuOpen(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:198, display:"none" }} className="mob-overlay" />}
+    <div style={{ display:"flex", height:"100vh", fontFamily:"'Segoe UI', Arial, sans-serif", background:C.bg, overflow:"hidden" }}>
       {/* Sidebar */}
-      <div className={mobileMenuOpen ? "app-sidebar open" : "app-sidebar"} style={{ width:220, background:C.sidebar, display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto" }}>
+      <div style={{ width:220, background:C.sidebar, display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto" }}>
         <div style={{ padding:"18px 16px 14px", borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
           <div style={{ fontSize:18, fontWeight:900, color:C.white }}>🇮🇳 TaxSaathi</div>
           <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", marginTop:2, letterSpacing:1, textTransform:"uppercase" }}>2.0 — Beyond Zoho</div>
@@ -5060,7 +5057,7 @@ export default function App() {
 
         <nav style={{ padding:"8px 0", flex:1 }}>
           {nav.map(n => (
-            <div key={n.id} onClick={()=>{ setPage(n.id); setMobileMenuOpen(false); }} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", cursor:"pointer", background:page===n.id?"rgba(46,134,193,0.3)":"transparent", color:page===n.id?C.white:"rgba(255,255,255,0.55)", fontSize:13, fontWeight:page===n.id?600:400, borderLeft:`3px solid ${page===n.id?C.primaryLight:"transparent"}`, transition:"all 0.15s", position:"relative" }}>
+            <div key={n.id} onClick={()=>setPage(n.id)} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", cursor:"pointer", background:page===n.id?"rgba(46,134,193,0.3)":"transparent", color:page===n.id?C.white:"rgba(255,255,255,0.55)", fontSize:13, fontWeight:page===n.id?600:400, borderLeft:`3px solid ${page===n.id?C.primaryLight:"transparent"}`, transition:"all 0.15s", position:"relative" }}>
               <span style={{ fontSize:15 }}>{n.icon}</span>
               <span style={{ flex:1 }}>{n.label}</span>
               {n.badge && <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:10, background:n.badge==="NEW"?"#E74C3C":"#F39C12", color:C.white }}>{n.badge}</span>}
@@ -5083,16 +5080,9 @@ export default function App() {
       </div>
 
       {/* Main */}
-      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", height:"100dvh", minWidth:0 }}>
-        <div style={{ background:C.white, borderBottom:`1px solid ${C.border}`, padding:"0 16px", height:54, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <button className="mob-menu-btn" onClick={()=>setMobileMenuOpen(o=>!o)} style={{ background:"none", border:"none", cursor:"pointer", padding:"4px", flexDirection:"column", gap:5 }}>
-              <span style={{ display:"block", width:20, height:2, background:C.textMuted, borderRadius:2 }} />
-              <span style={{ display:"block", width:20, height:2, background:C.textMuted, borderRadius:2 }} />
-              <span style={{ display:"block", width:20, height:2, background:C.textMuted, borderRadius:2 }} />
-            </button>
-            <div style={{ fontWeight:700, fontSize:15 }}>{nav.find(n=>n.id===page)?.icon} {nav.find(n=>n.id===page)?.label}</div>
-          </div>
+      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", height:"100dvh", minHeight:"100dvh" }}>
+        <div style={{ background:C.white, borderBottom:`1px solid ${C.border}`, padding:"0 24px", height:54, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+          <div style={{ fontWeight:700, fontSize:16 }}>{nav.find(n=>n.id===page)?.icon} {nav.find(n=>n.id===page)?.label}</div>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             {auth.activeCompany && <div style={{ fontSize:12, color:C.textMuted, background:C.bg, padding:"4px 12px", borderRadius:20, border:`1px solid ${C.border}` }}>🏢 {auth.activeCompany.company_name}</div>}
             <div style={{ fontSize:12, color:C.textMuted, background:C.bg, padding:"4px 12px", borderRadius:20, border:`1px solid ${C.border}` }}>📅 March 2026</div>
