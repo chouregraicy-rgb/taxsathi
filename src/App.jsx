@@ -29,22 +29,10 @@ const GST_RATES = [0, 0.1, 0.25, 1, 1.5, 3, 5, 6, 7.5, 12, 18, 28];
 const STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Jammu & Kashmir","Ladakh"];
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_SALES = [
-  { id:"s1", company_id:"c1", invoice_number:"INV-001", invoice_date:"2024-03-01", customer_name:"Reliance Industries", gstin:"27AAGCR1234A1Z5", hsn:"996311", taxable_value:250000, gst_rate:18, cgst:22500, sgst:22500, igst:0, total_value:295000 },
-  { id:"s2", company_id:"c1", invoice_number:"INV-002", invoice_date:"2024-03-05", customer_name:"Tata Motors Ltd", gstin:"24AAACT2727Q1ZW", hsn:"871310", taxable_value:180000, gst_rate:28, cgst:0, sgst:0, igst:50400, total_value:230400 },
-  { id:"s3", company_id:"c1", invoice_number:"INV-003", invoice_date:"2024-03-10", customer_name:"Infosys BPM", gstin:"29AABCI1681E1ZM", hsn:"998314", taxable_value:95000, gst_rate:18, cgst:8550, sgst:8550, igst:0, total_value:112100 },
-];
-const MOCK_PURCHASES = [
-  { id:"p1", company_id:"c1", bill_number:"BILL-101", bill_date:"2024-03-02", supplier_name:"Microsoft India", gstin:"36AAACM3025E1Z5", hsn:"998315", taxable_value:85000, gst_rate:18, cgst:7650, sgst:7650, igst:0, total_value:100300 },
-  { id:"p2", company_id:"c1", bill_number:"BILL-102", bill_date:"2024-03-08", supplier_name:"Amazon AWS India", gstin:"29AABCA0301J1Z8", hsn:"998316", taxable_value:42000, gst_rate:18, cgst:3780, sgst:3780, igst:0, total_value:49560 },
-];
-const MOCK_CLIENTS = [
-  { id:"cl1", company_name:"Sharma Traders", gstin:"27ABCDE1234F1Z5", state:"Maharashtra", status:"Active", contact_name:"Amit Sharma", email:"amit@sharma.com", mobile:"9876543210" },
-  { id:"cl2", company_name:"Patel Enterprises", gstin:"24BCDEF2345G1Z6", state:"Gujarat", status:"Active", contact_name:"Rohan Patel", email:"rohan@patel.com", mobile:"9876543211" },
-  { id:"cl3", company_name:"Kumar & Sons", gstin:"07CDEFG3456H1Z7", state:"Delhi", status:"Active", contact_name:"Vijay Kumar", email:"vijay@kumar.com", mobile:"9876543212" },
-];
-const COMPLIANCE = [
-  { task:"GSTR-1 Filing", due:"11 Apr 2024", period:"Mar 2024", color:"#2E86C1", type:"GST" },
+const MOCK_SALES = [];
+const MOCK_PURCHASES = [];
+const MOCK_CLIENTS = [];
+const COMPLIANCE = [  { task:"GSTR-1 Filing", due:"11 Apr 2024", period:"Mar 2024", color:"#2E86C1", type:"GST" },
   { task:"GSTR-3B Filing", due:"20 Apr 2024", period:"Mar 2024", color:"#F39C12", type:"GST" },
   { task:"TDS Deposit", due:"07 May 2024", period:"Apr 2024", color:"#E67E22", type:"TDS" },
   { task:"Annual Return GSTR-9", due:"31 Dec 2024", period:"FY 2023-24", color:"#1B4F72", type:"Annual" },
@@ -52,68 +40,12 @@ const COMPLIANCE = [
 ];
 const PLANS = [
   { id:"free", name:"Free", price:0, color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","Compliance Calendar","5 Clients","Email Support"], limit:"Free forever" },
-  { id:"starter", name:"Starter", price:599, color:"#2E86C1", popular:false, features:["3 GSTINs","Unlimited Invoices","All GST Reports","Excel Upload","50 Clients","AI Assistant (50 queries/mo)","WhatsApp Reminders","Priority Support"], limit:"Per month" },
-  { id:"pro", name:"Pro", price:999, color:"#1B4F72", popular:true, features:["10 GSTINs","Everything in Starter","AI Assistant Unlimited","CA Marketplace Access","E-Invoice Generation","E-Way Bill","Bank Reconciliation","Multi-user (5 seats)","API Access","24/7 Support"], limit:"Per month" },
-  { id:"enterprise", name:"Enterprise", price:1999, color:"#7D3C98", popular:false, features:["Unlimited GSTINs","Everything in Pro","Unlimited Users","White-label Option","Dedicated CA Manager","Custom Integrations","Tally/Busy Import","Offline Mode","SLA Guarantee"], limit:"Per month" },
+  { id:"starter", name:"Starter", price:299, color:"#2E86C1", popular:false, features:["3 GSTINs","Unlimited Invoices","All GST Reports","Excel Upload","50 Clients","AI Assistant (50 queries/mo)","WhatsApp Reminders","Priority Support"], limit:"Per month" },
+  { id:"pro", name:"Pro", price:599, color:"#1B4F72", popular:true, features:["10 GSTINs","Everything in Starter","AI Assistant Unlimited","CA Marketplace Access","E-Invoice Generation","E-Way Bill","Bank Reconciliation","Multi-user (5 seats)","API Access","24/7 Support"], limit:"Per month" },
+  { id:"enterprise", name:"Enterprise", price:799, color:"#7D3C98", popular:false, features:["Unlimited GSTINs","Everything in Pro","Unlimited Users","White-label Option","Dedicated CA Manager","Custom Integrations","Tally/Busy Import","Offline Mode","SLA Guarantee"], limit:"Per month" },
 ];
 
-const CA_PROFESSIONALS = [
-  // Mumbai (400xxx)
-  { id:"ca1",  name:"CA Priya Sharma",     city:"Mumbai",      state:"Maharashtra",    pincode:"400001", area:"Fort",           specialization:"GST Filing, ITR",           experience:8,  rating:4.9, reviews:127, price:2500, verified:true,  languages:["Hindi","English","Marathi"],   mobile:"9876500001", email:"priya@casharma.in" },
-  { id:"ca2",  name:"CA Rohit Mehta",      city:"Mumbai",      state:"Maharashtra",    pincode:"400069", area:"Andheri West",   specialization:"E-commerce, GST, TDS",       experience:6,  rating:4.7, reviews:88,  price:2000, verified:true,  languages:["Hindi","English","Marathi"],   mobile:"9876500002", email:"rohit@camehta.in" },
-  { id:"ca3",  name:"CA Sneha Desai",      city:"Mumbai",      state:"Maharashtra",    pincode:"400080", area:"Powai",          specialization:"Manufacturing, GST Audit",   experience:11, rating:4.8, reviews:145, price:3200, verified:true,  languages:["Hindi","English","Gujarati"],  mobile:"9876500003", email:"sneha@cadesai.in" },
-  // Delhi (110xxx)
-  { id:"ca4",  name:"CA Rajesh Gupta",     city:"Delhi",       state:"Delhi",          pincode:"110001", area:"Connaught Place", specialization:"GST Audit, Litigation",     experience:12, rating:4.8, reviews:89,  price:3500, verified:true,  languages:["Hindi","English"],             mobile:"9876500004", email:"rajesh@cagupta.in" },
-  { id:"ca5",  name:"CA Neha Agarwal",     city:"Delhi",       state:"Delhi",          pincode:"110092", area:"Preet Vihar",    specialization:"ITR, Income Tax, TDS",       experience:7,  rating:4.6, reviews:63,  price:2200, verified:true,  languages:["Hindi","English"],             mobile:"9876500005", email:"neha@caagarwal.in" },
-  { id:"ca6",  name:"CA Amit Saxena",      city:"Delhi",       state:"Delhi",          pincode:"110025", area:"South Extension", specialization:"Startup Compliance, GST",   experience:5,  rating:4.5, reviews:42,  price:1800, verified:false, languages:["Hindi","English"],             mobile:"9876500006", email:"amit@casaxena.in" },
-  // Bangalore (560xxx)
-  { id:"ca7",  name:"CA Meera Nair",       city:"Bangalore",   state:"Karnataka",      pincode:"560001", area:"MG Road",        specialization:"Startup Compliance, GST",    experience:6,  rating:4.7, reviews:64,  price:2000, verified:true,  languages:["English","Kannada","Malayalam"],mobile:"9876500007", email:"meera@canair.in" },
-  { id:"ca8",  name:"CA Kiran Rao",        city:"Bangalore",   state:"Karnataka",      pincode:"560037", area:"Koramangala",    specialization:"IT Sector GST, TDS",         experience:9,  rating:4.8, reviews:112, price:2800, verified:true,  languages:["English","Kannada","Telugu"],  mobile:"9876500008", email:"kiran@carao.in" },
-  // Ahmedabad (380xxx)
-  { id:"ca9",  name:"CA Suresh Patel",     city:"Ahmedabad",   state:"Gujarat",        pincode:"380001", area:"Law Garden",     specialization:"Manufacturing GST",          experience:15, rating:4.9, reviews:203, price:4000, verified:true,  languages:["Hindi","English","Gujarati"],  mobile:"9876500009", email:"suresh@capatel.in" },
-  { id:"ca10", name:"CA Hardik Shah",      city:"Ahmedabad",   state:"Gujarat",        pincode:"380015", area:"Navrangpura",    specialization:"Export, Import, GST",        experience:10, rating:4.7, reviews:98,  price:3000, verified:true,  languages:["Hindi","English","Gujarati"],  mobile:"9876500010", email:"hardik@cashah.in" },
-  // Pune (411xxx)
-  { id:"ca11", name:"CA Anita Joshi",      city:"Pune",        state:"Maharashtra",    pincode:"411001", area:"Shivajinagar",   specialization:"E-commerce, GST",            experience:5,  rating:4.6, reviews:41,  price:1800, verified:false, languages:["Hindi","English","Marathi"],   mobile:"9876500011", email:"anita@cajoshi.in" },
-  { id:"ca12", name:"CA Prasad Kulkarni",  city:"Pune",        state:"Maharashtra",    pincode:"411045", area:"Wakad",          specialization:"Manufacturing, GST Audit",   experience:13, rating:4.9, reviews:178, price:3500, verified:true,  languages:["Hindi","English","Marathi"],   mobile:"9876500012", email:"prasad@cakulkarni.in" },
-  // Jaipur (302xxx)
-  { id:"ca13", name:"CA Vikram Singh",     city:"Jaipur",      state:"Rajasthan",      pincode:"302001", area:"MI Road",        specialization:"Real Estate GST",            experience:10, rating:4.8, reviews:156, price:3000, verified:true,  languages:["Hindi","English"],             mobile:"9876500013", email:"vikram@casingh.in" },
-  { id:"ca14", name:"CA Pooja Sharma",     city:"Jaipur",      state:"Rajasthan",      pincode:"302017", area:"Vaishali Nagar", specialization:"GST Filing, ITR",            experience:4,  rating:4.5, reviews:29,  price:1500, verified:false, languages:["Hindi","English"],             mobile:"9876500014", email:"pooja@casharma2.in" },
-  // Chennai (600xxx)
-  { id:"ca15", name:"CA Ravi Kumar",       city:"Chennai",     state:"Tamil Nadu",     pincode:"600001", area:"Parry's Corner", specialization:"Manufacturing, Export GST",  experience:14, rating:4.9, reviews:221, price:4500, verified:true,  languages:["English","Tamil"],             mobile:"9876500015", email:"ravi@cakumar.in" },
-  { id:"ca16", name:"CA Deepa Iyer",       city:"Chennai",     state:"Tamil Nadu",     pincode:"600096", area:"Velachery",      specialization:"IT Sector, Startup GST",     experience:7,  rating:4.7, reviews:77,  price:2400, verified:true,  languages:["English","Tamil","Telugu"],    mobile:"9876500016", email:"deepa@caiyer.in" },
-  // Hyderabad (500xxx)
-  { id:"ca17", name:"CA Srinivas Reddy",   city:"Hyderabad",   state:"Telangana",      pincode:"500001", area:"Abids",          specialization:"Pharma, GST, TDS",           experience:11, rating:4.8, reviews:134, price:3200, verified:true,  languages:["English","Telugu","Hindi"],    mobile:"9876500017", email:"srinivas@careddy.in" },
-  { id:"ca18", name:"CA Madhavi Rao",      city:"Hyderabad",   state:"Telangana",      pincode:"500081", area:"Gachibowli",     specialization:"E-commerce, GST Filing",     experience:6,  rating:4.6, reviews:55,  price:2100, verified:true,  languages:["English","Telugu"],            mobile:"9876500018", email:"madhavi@carao2.in" },
-  // Kolkata (700xxx)
-  { id:"ca19", name:"CA Subhash Ghosh",    city:"Kolkata",     state:"West Bengal",    pincode:"700001", area:"BBD Bagh",       specialization:"Trading, GST, ITR",          experience:16, rating:4.9, reviews:267, price:5000, verified:true,  languages:["Hindi","English","Bengali"],   mobile:"9876500019", email:"subhash@caghosh.in" },
-  { id:"ca20", name:"CA Ritu Banerjee",    city:"Kolkata",     state:"West Bengal",    pincode:"700107", area:"New Town",       specialization:"Textile, GST Audit",         experience:9,  rating:4.7, reviews:91,  price:2700, verified:true,  languages:["Hindi","English","Bengali"],   mobile:"9876500020", email:"ritu@cabanerjee.in" },
-  // Indore (452xxx)
-  { id:"ca21", name:"CA Manish Choure",    city:"Indore",      state:"Madhya Pradesh", pincode:"452001", area:"Palasia",        specialization:"GST Filing, ITR, TDS",       experience:8,  rating:4.8, reviews:103, price:2200, verified:true,  languages:["Hindi","English"],             mobile:"9876500021", email:"manish@cachoure.in" },
-  { id:"ca22", name:"CA Sunita Verma",     city:"Indore",      state:"Madhya Pradesh", pincode:"452010", area:"Vijay Nagar",    specialization:"Manufacturing GST",          experience:12, rating:4.7, reviews:89,  price:2800, verified:true,  languages:["Hindi","English"],             mobile:"9876500022", email:"sunita@caverma.in" },
-  { id:"ca23", name:"CA Deepak Malviya",   city:"Indore",      state:"Madhya Pradesh", pincode:"452003", area:"MG Road",        specialization:"Real Estate, GST, ITR",      experience:9,  rating:4.6, reviews:74,  price:2400, verified:true,  languages:["Hindi","English"],             mobile:"9876500023", email:"deepak@camalviya.in" },
-  // Lucknow (226xxx)
-  { id:"ca24", name:"CA Arun Mishra",      city:"Lucknow",     state:"Uttar Pradesh",  pincode:"226001", area:"Hazratganj",     specialization:"Real Estate, GST",           experience:10, rating:4.6, reviews:78,  price:2500, verified:true,  languages:["Hindi","English"],             mobile:"9876500024", email:"arun@camishra.in" },
-  { id:"ca25", name:"CA Priti Srivastava", city:"Lucknow",     state:"Uttar Pradesh",  pincode:"226016", area:"Gomti Nagar",    specialization:"ITR, TDS, GST",              experience:6,  rating:4.5, reviews:44,  price:1800, verified:false, languages:["Hindi","English"],             mobile:"9876500025", email:"priti@casrivastava.in" },
-  // Surat (395xxx)
-  { id:"ca26", name:"CA Bhavesh Shah",     city:"Surat",       state:"Gujarat",        pincode:"395001", area:"Ring Road",      specialization:"Textile, Diamond GST",       experience:13, rating:4.9, reviews:189, price:3800, verified:true,  languages:["Hindi","English","Gujarati"],  mobile:"9876500026", email:"bhavesh@cashah2.in" },
-  { id:"ca27", name:"CA Hetal Modi",       city:"Surat",       state:"Gujarat",        pincode:"395007", area:"Adajan",         specialization:"Export, GST Filing",         experience:7,  rating:4.6, reviews:61,  price:2300, verified:true,  languages:["Hindi","English","Gujarati"],  mobile:"9876500027", email:"hetal@camodi.in" },
-  // Nagpur (440xxx)
-  { id:"ca28", name:"CA Vijay Wankhede",   city:"Nagpur",      state:"Maharashtra",    pincode:"440010", area:"Dharampeth",     specialization:"Agriculture, GST",           experience:9,  rating:4.7, reviews:67,  price:2000, verified:true,  languages:["Hindi","English","Marathi"],   mobile:"9876500028", email:"vijay@cawankhede.in" },
-  // Bhopal (462xxx)
-  { id:"ca29", name:"CA Rakesh Tiwari",    city:"Bhopal",      state:"Madhya Pradesh", pincode:"462001", area:"New Market",     specialization:"GST Filing, ITR",            experience:7,  rating:4.6, reviews:52,  price:1900, verified:true,  languages:["Hindi","English"],             mobile:"9876500029", email:"rakesh@catiwari.in" },
-  // Chandigarh (160xxx)
-  { id:"ca30", name:"CA Gurpreet Singh",   city:"Chandigarh",  state:"Punjab",         pincode:"160017", area:"Sector 17",      specialization:"Export, GST, TDS",           experience:11, rating:4.8, reviews:121, price:3000, verified:true,  languages:["Hindi","English","Punjabi"],   mobile:"9876500030", email:"gurpreet@casingh2.in" },
-  // Kochi (682xxx)
-  { id:"ca31", name:"CA Thomas Mathew",    city:"Kochi",       state:"Kerala",         pincode:"682001", area:"MG Road",        specialization:"Tourism, GST, ITR",          experience:8,  rating:4.7, reviews:76,  price:2300, verified:true,  languages:["English","Malayalam"],         mobile:"9876500031", email:"thomas@camathew.in" },
-  // Noida (201xxx)
-  { id:"ca32", name:"CA Deepak Sharma",    city:"Noida",       state:"Uttar Pradesh",  pincode:"201301", area:"Sector 18",      specialization:"IT Sector, Startup GST",     experience:5,  rating:4.5, reviews:36,  price:1900, verified:false, languages:["Hindi","English"],             mobile:"9876500032", email:"deepak@casharma3.in" },
-  // Gurgaon (122xxx)
-  { id:"ca33", name:"CA Radhika Malhotra", city:"Gurgaon",     state:"Haryana",        pincode:"122001", area:"DLF Phase 1",    specialization:"Corporate GST, TDS, ITR",    experience:8,  rating:4.7, reviews:94,  price:3000, verified:true,  languages:["Hindi","English"],             mobile:"9876500033", email:"radhika@camalhotra.in" },
-  // Coimbatore (641xxx)
-  { id:"ca34", name:"CA Venkat Subramani", city:"Coimbatore",  state:"Tamil Nadu",     pincode:"641001", area:"RS Puram",       specialization:"Manufacturing, GST",         experience:10, rating:4.7, reviews:88,  price:2600, verified:true,  languages:["English","Tamil"],             mobile:"9876500034", email:"venkat@casubramani.in" },
-  // Patna (800xxx)
-  { id:"ca35", name:"CA Santosh Kumar",    city:"Patna",       state:"Bihar",          pincode:"800001", area:"Fraser Road",    specialization:"GST Filing, ITR",            experience:6,  rating:4.5, reviews:38,  price:1600, verified:false, languages:["Hindi","English"],             mobile:"9876500035", email:"santosh@cakumar2.in" },
-];
+const CA_PROFESSIONALS = [];
 
 // ─── PIN CODE → CITY MAPPING ──────────────────────────────────────────────────
 // Used to auto-detect city/state from PIN code using India Post API
@@ -993,6 +925,14 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
           <textarea style={{...inp,height:80,resize:"none"}} value={inv.terms} onChange={e=>setInv({...inv,terms:e.target.value})} />
         </div>
       </div>
+      <nav style={{ position:"fixed", bottom:0, left:0, right:0, height:60, background:C.sidebar, borderTop:"1px solid rgba(255,255,255,0.1)", display:"flex", zIndex:100 }}>
+        {botNav.map(n=>(
+          <button key={n.id} onClick={()=>{ setPage(n.id); setSideOpen(false); }} style={{ flex:1, background:"none", border:"none", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2, cursor:"pointer", color:page===n.id?"#2E86C1":"rgba(255,255,255,0.45)", fontSize:9, fontWeight:page===n.id?700:400 }}>
+            <span style={{ fontSize:20 }}>{n.icon}</span>
+            {n.lbl}
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
@@ -1065,7 +1005,7 @@ function AIAssistant({ summary, company }) {
       </div>
 
       {/* Messages */}
-      <div style={{ flex:1, overflowY:"auto", display:"flex", flexDirection:"column", gap:12, padding:"4px 0", marginBottom:16 }}>
+      <div style={{ flex:1, overflowY:"auto", maxHeight:"100dvh", display:"flex", flexDirection:"column", gap:12, padding:"4px 0", marginBottom:16 }}>
         {messages.map((m, i) => (
           <div key={i} style={{ display:"flex", justifyContent:m.role==="user"?"flex-end":"flex-start" }}>
             {m.role==="assistant" && (
@@ -1177,7 +1117,7 @@ function Subscription({ plan, upgradePlan, user }) {
   const [success, setSuccess] = useState("");
 
 async function handleUpgrade(planId) {
-  
+
   if (!user) {
     alert('Please login first');
     return;
@@ -1348,7 +1288,7 @@ function Dashboard({ summary, profile, plan }) {
           {plan.toUpperCase()} PLAN
         </span>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:16, marginBottom:24 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:12, marginBottom:20 }}>
         {stats.map((s,i) => (
           <div key={i} style={{ ...card, padding:"18px 20px", borderTop:`3px solid ${s.color}` }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
@@ -1359,10 +1299,10 @@ function Dashboard({ summary, profile, plan }) {
           </div>
         ))}
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:16 }}>
         <div style={card}>
           <div style={{ fontWeight:700, fontSize:15, marginBottom:16 }}>⚡ Quick Actions</div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:10 }}>
             {[
               {label:"Create Invoice",icon:"🧾",color:C.primary},
               {label:"Upload Sales",icon:"📤",color:C.primaryLight},
@@ -5054,7 +4994,7 @@ export default function App() {
 
   if (auth.loading) {
     return (
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh", background:C.sidebar, color:C.white, flexDirection:"column", gap:16 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100dvh", background:C.sidebar, color:C.white, flexDirection:"column", gap:16 }}>
         <div style={{ fontSize:32, fontWeight:900 }}>🇮🇳 TaxSaathi 2.0</div>
         <div style={{ color:"rgba(255,255,255,0.6)", fontSize:14 }}>Connecting to Supabase…</div>
       </div>
@@ -5105,10 +5045,25 @@ export default function App() {
   // Pages are defined as top-level components below
 
 
+  const [sideOpen, setSideOpen] = React.useState(window.innerWidth >= 769);
+  React.useEffect(() => {
+    const mq = window.matchMedia("(min-width:769px)");
+    const h = e => setSideOpen(e.matches);
+    mq.addEventListener("change", h);
+    return () => mq.removeEventListener("change", h);
+  }, []);
+  const botNav = [
+    {id:"dashboard",icon:"🏠",lbl:"Home"},
+    {id:"invoice",icon:"🧾",lbl:"Invoice"},
+    {id:"reports",icon:"📊",lbl:"Reports"},
+    {id:"ai",icon:"🤖",lbl:"AI"},
+    {id:"calendar",icon:"📅",lbl:"More"},
+  ];
   return (
-    <div style={{ display:"flex", height:"100vh", fontFamily:"'Segoe UI', Arial, sans-serif", background:C.bg, overflow:"hidden" }}>
+    <div style={{ display:"flex", height:"100dvh", width:"100%", fontFamily:"'Segoe UI', Arial, sans-serif", background:C.bg, overflow:"hidden", position:"relative" }}>
+      {sideOpen && window.innerWidth < 769 && <div onClick={()=>setSideOpen(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:199 }} />}
       {/* Sidebar */}
-      <div style={{ width:220, background:C.sidebar, display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto" }}>
+      <div style={{ width:220, background:C.sidebar, display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto", ...(window.innerWidth < 769 ? { position:"fixed", top:0, left:0, height:"100dvh", zIndex:200, transform:sideOpen?"translateX(0)":"translateX(-100%)", transition:"transform 0.25s ease" } : {}) }}>
         <div style={{ padding:"18px 16px 14px", borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
           <div style={{ fontSize:18, fontWeight:900, color:C.white }}>🇮🇳 TaxSaathi</div>
           <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", marginTop:2, letterSpacing:1, textTransform:"uppercase" }}>2.0 — Beyond Zoho</div>
@@ -5125,7 +5080,7 @@ export default function App() {
 
         <nav style={{ padding:"8px 0", flex:1 }}>
           {nav.map(n => (
-            <div key={n.id} onClick={()=>setPage(n.id)} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", cursor:"pointer", background:page===n.id?"rgba(46,134,193,0.3)":"transparent", color:page===n.id?C.white:"rgba(255,255,255,0.55)", fontSize:13, fontWeight:page===n.id?600:400, borderLeft:`3px solid ${page===n.id?C.primaryLight:"transparent"}`, transition:"all 0.15s", position:"relative" }}>
+            <div key={n.id} onClick={()=>{ setPage(n.id); if(window.innerWidth<769) setSideOpen(false); }} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", cursor:"pointer", background:page===n.id?"rgba(46,134,193,0.3)":"transparent", color:page===n.id?C.white:"rgba(255,255,255,0.55)", fontSize:13, fontWeight:page===n.id?600:400, borderLeft:`3px solid ${page===n.id?C.primaryLight:"transparent"}`, transition:"all 0.15s", position:"relative" }}>
               <span style={{ fontSize:15 }}>{n.icon}</span>
               <span style={{ flex:1 }}>{n.label}</span>
               {n.badge && <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:10, background:n.badge==="NEW"?"#E74C3C":"#F39C12", color:C.white }}>{n.badge}</span>}
@@ -5148,16 +5103,21 @@ export default function App() {
       </div>
 
       {/* Main */}
-      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-        <div style={{ background:C.white, borderBottom:`1px solid ${C.border}`, padding:"0 24px", height:54, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
-          <div style={{ fontWeight:700, fontSize:16 }}>{nav.find(n=>n.id===page)?.icon} {nav.find(n=>n.id===page)?.label}</div>
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            {auth.activeCompany && <div style={{ fontSize:12, color:C.textMuted, background:C.bg, padding:"4px 12px", borderRadius:20, border:`1px solid ${C.border}` }}>🏢 {auth.activeCompany.company_name}</div>}
-            <div style={{ fontSize:12, color:C.textMuted, background:C.bg, padding:"4px 12px", borderRadius:20, border:`1px solid ${C.border}` }}>📅 March 2026</div>
-            <button onClick={()=>setDark(d=>!d)} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:20, padding:"4px 12px", cursor:"pointer", fontSize:13, color:C.textMuted }}>{dark?"☀️ Light":"🌙 Dark"}</button>
+      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", height:"100dvh", minWidth:0 }}>
+        <div style={{ background:C.white, borderBottom:`1px solid ${C.border}`, padding:"0 16px", height:54, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <button onClick={()=>setSideOpen(o=>!o)} style={{ background:"none", border:"none", cursor:"pointer", padding:"6px", display:"flex", flexDirection:"column", gap:"5px" }}>
+              <span style={{ display:"block", width:20, height:2, background:C.textMuted, borderRadius:2 }} />
+              <span style={{ display:"block", width:20, height:2, background:C.textMuted, borderRadius:2 }} />
+              <span style={{ display:"block", width:20, height:2, background:C.textMuted, borderRadius:2 }} />
+            </button>
+            <div style={{ fontWeight:700, fontSize:15 }}>{nav.find(n=>n.id===page)?.icon} {nav.find(n=>n.id===page)?.label}</div>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <button onClick={()=>setDark(d=>!d)} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:20, padding:"3px 10px", cursor:"pointer", fontSize:12, color:C.textMuted }}>{dark?"☀️":"🌙"}</button>
           </div>
         </div>
-        <div style={{ flex:1, overflowY:"auto", padding:page==="ai"?20:24 }}>
+        <div style={{ flex:1, overflowY:"auto", padding:16, paddingBottom:70 }}>
           {page==="dashboard"  && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} />}
           {page==="invoice"    && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} />}
           {page==="upload"     && <UploadPage data={data} />}

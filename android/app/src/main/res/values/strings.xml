@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">taxsaathi</string>
-    <string name="title_activity_main">taxsaathi</string>
+    <string name="app_name">TaxSaathi</string>
+    <string name="title_activity_main">TaxSaathi</string>
     <string name="package_name">com.taxsaathi.app</string>
     <string name="custom_url_scheme">com.taxsaathi.app</string>
 </resources>
