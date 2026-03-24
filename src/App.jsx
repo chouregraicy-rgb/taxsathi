@@ -984,10 +984,15 @@ function AIAssistant({ summary, company }) {
         })
       });
       const data = await res.json();
-      const reply = data.content?.[0]?.text || "Sorry, kuch problem ho gayi. Please try again.";
-      setMessages(m => [...m, { role:"assistant", content:reply }]);
+      if (data.error) {
+        const reply = `Error: ${data.error.message || JSON.stringify(data.error)}`;
+        setMessages(m => [...m, { role:"assistant", content:reply }]);
+      } else {
+        const reply = data.content?.[0]?.text || "Sorry, kuch problem ho gayi. Please try again.";
+        setMessages(m => [...m, { role:"assistant", content:reply }]);
+      }
     } catch(e) {
-      setMessages(m => [...m, { role:"assistant", content:"Network error. Please check your connection and try again." }]);
+      setMessages(m => [...m, { role:"assistant", content:`Error: ${e.message}` }]);
     }
     setLoading(false);
   }
