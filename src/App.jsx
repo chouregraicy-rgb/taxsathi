@@ -446,7 +446,10 @@ function useAuth() {
     if (error) throw error;
     return data;
   }
-  async function signOut() { await supabase.auth.signOut(); }
+  async function signOut() { 
+  await supabase.auth.signOut(); 
+  window.location.href = '/landing.html';
+}
   async function resetPassword(email) {
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) throw error;
