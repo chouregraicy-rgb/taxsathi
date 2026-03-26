@@ -10,6 +10,10 @@
       "headers": { "cache-control": "public, max-age=31536000, immutable" }
     },
     { "src": "/(.*\\.(js|css|ico|png|svg|woff|woff2))", "dest": "/$1" },
+    { "src": "/landing.html", "dest": "/landing.html" },
+    { "src": "/app", "dest": "/index.html" },
+    { "src": "/app/(.*)", "dest": "/index.html" },
+    { "src": "/", "dest": "/landing.html" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
