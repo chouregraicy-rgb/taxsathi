@@ -569,12 +569,13 @@ function useData(companyId) {
 
 // ─── AUTH SCREEN ──────────────────────────────────────────────────────────────
 function AuthScreen({ onLogin, onSignup, onReset }) {
-  const [mode, setMode] = useState("login");
-  const [show, setShow] = useState(false);
-  const [err, setErr] = useState("");
-  const [done, setDone] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [f, setF] = useState({ name:"", email:"", mobile:"", company:"", gstin:"", password:"" });
+  const [mode, setMode] = React.useState("login");
+  const [showForm, setShowForm] = React.useState(false);
+  const [err, setErr] = React.useState("");
+  const [done, setDone] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [show, setShow] = React.useState(false);
+  const [f, setF] = React.useState({ name:"", email:"", mobile:"", company:"", gstin:"", password:"" });
   const handle = e => setF({ ...f, [e.target.name]: e.target.value });
 
   async function submit() {
@@ -587,80 +588,180 @@ function AuthScreen({ onLogin, onSignup, onReset }) {
     setBusy(false);
   }
 
+  const featureList = [
+    { icon:"📊", title:"GST Reports & Filing", desc:"Auto-generate GSTR-1, GSTR-3B with one click" },
+    { icon:"🧾", title:"Invoice Generator", desc:"GST-compliant invoices in seconds" },
+    { icon:"🤖", title:"AI Tax Assistant", desc:"Ask anything in Hindi or English" },
+    { icon:"💰", title:"ITC Reconciliation", desc:"Maximize your Input Tax Credit" },
+    { icon:"📱", title:"E-Invoice & E-Way Bill", desc:"Direct GST portal integration" },
+    { icon:"👨‍💼", title:"CA Marketplace", desc:"Find verified CAs in your city" },
+  ];
+
+  const planList = [
+    { name:"Free", price:"₹0", desc:"Forever free", color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","5 Clients"] },
+    { name:"Starter", price:"₹299/mo", desc:"For small business", color:"#2E86C1", features:["3 GSTINs","Excel Upload","50 Clients","AI Assistant"] },
+    { name:"Pro", price:"₹599/mo", desc:"Most Popular ⭐", color:"#1B4F72", popular:true, features:["10 GSTINs","E-Invoice","Bank Recon","Unlimited AI"] },
+    { name:"Enterprise", price:"₹799/mo", desc:"For large orgs", color:"#7D3C98", features:["Unlimited GSTINs","Dedicated CA","Custom Integration","SLA"] },
+  ];
+
   return (
-    <div style={{ minHeight:"100vh", background:`linear-gradient(135deg, ${C.sidebar} 0%, ${C.primary} 100%)`, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-      <div style={{ background:C.white, borderRadius:16, padding:"40px 44px", width:"100%", maxWidth:520, boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
-        <div style={{ textAlign:"center", marginBottom:28 }}>
-          <div style={{ fontSize:34, fontWeight:900, color:C.primary }}>🇮🇳 TaxSaathi 2.0</div>
-          <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>India's Most Advanced GST Compliance Platform</div>
+    <div style={{ fontFamily:"'Segoe UI', Arial, sans-serif", background:"#F4F6F8", minHeight:"100vh", overflowY:"auto", overflowX:"hidden" }}>
+
+      {/* NAV */}
+      <nav style={{ background:C.sidebar, padding:"14px 5%", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:99 }}>
+        <div style={{ fontSize:20, fontWeight:900, color:C.white }}>&#127470;&#127475; Tax<span style={{ color:"#F39C12" }}>Saathi</span></div>
+        <div style={{ display:"flex", gap:12 }}>
+          <button onClick={()=>{ setMode("login"); setShowForm(true); }} style={{ background:"transparent", border:"1.5px solid rgba(255,255,255,0.4)", color:C.white, padding:"8px 20px", borderRadius:8, cursor:"pointer", fontWeight:600, fontSize:14 }}>Sign In</button>
+          <button onClick={()=>{ setMode("signup"); setShowForm(true); }} style={{ background:"#F39C12", border:"none", color:C.sidebar, padding:"8px 20px", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:14 }}>Start Free</button>
         </div>
-        {done ? (
-          <div style={{ textAlign:"center", padding:"20px 0" }}>
-            <div style={{ fontSize:48, marginBottom:12 }}>📧</div>
-            <div style={{ fontWeight:700, fontSize:16, marginBottom:8 }}>Reset Email Sent!</div>
-            <button style={{ ...btn(), width:"100%", justifyContent:"center" }} onClick={() => { setMode("login"); setDone(false); }}>Back to Login</button>
-          </div>
-        ) : (
-          <>
-            {mode !== "forgot" && (
-              <div style={{ display:"flex", marginBottom:24, borderRadius:8, overflow:"hidden", border:`1.5px solid ${C.border}` }}>
-                {["login","signup"].map(m => (
-                  <button key={m} onClick={() => { setMode(m); setErr(""); }} style={{ flex:1, padding:"10px", background:mode===m?C.primary:"transparent", color:mode===m?C.white:C.textMuted, border:"none", fontWeight:600, fontSize:14, cursor:"pointer" }}>
-                    {m === "login" ? "Sign In" : "Sign Up"}
-                  </button>
+      </nav>
+
+      {/* HERO */}
+      <div style={{ background:`linear-gradient(135deg, ${C.sidebar} 0%, ${C.primary} 100%)`, padding:"70px 5% 60px", textAlign:"center" }}>
+        <div style={{ display:"inline-block", background:"rgba(243,156,18,0.15)", border:"1px solid rgba(243,156,18,0.3)", color:"#F39C12", padding:"5px 16px", borderRadius:20, fontSize:12, fontWeight:700, marginBottom:20 }}>&#127470;&#127475; MADE FOR INDIAN BUSINESSES</div>
+        <h1 style={{ fontSize:"clamp(1.8rem, 4vw, 3rem)", fontWeight:900, color:C.white, marginBottom:16, lineHeight:1.2 }}>India ka GST & Tax Compliance<br/><span style={{ color:"#F39C12" }}>Ab Aasan Hai</span></h1>
+        <p style={{ color:"rgba(255,255,255,0.75)", fontSize:16, maxWidth:560, margin:"0 auto 32px", lineHeight:1.7 }}>File GSTR-1, GSTR-3B, manage invoices, track ITC, and get AI-powered tax advice — all in one platform.</p>
+        <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
+          <button onClick={()=>{ setMode("signup"); setShowForm(true); }} style={{ background:"#F39C12", color:C.sidebar, padding:"14px 36px", borderRadius:10, fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>&#128640; Start for Free</button>
+          <button onClick={()=>{ setMode("login"); setShowForm(true); }} style={{ background:"transparent", color:C.white, padding:"14px 36px", borderRadius:10, fontWeight:600, fontSize:15, border:"1.5px solid rgba(255,255,255,0.4)", cursor:"pointer" }}>Sign In</button>
+        </div>
+      </div>
+
+      {/* STATS */}
+      <div style={{ background:C.sidebar, padding:"28px 5%" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:20, maxWidth:900, margin:"0 auto", textAlign:"center" }}>
+          {[["500+","Businesses Filing"],["99%","GST Accuracy"],["24/7","AI Support"],["₹0","Setup Cost"]].map(([n,l])=>(
+            <div key={l}><div style={{ fontSize:"1.8rem", fontWeight:900, color:"#F39C12" }}>{n}</div><div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginTop:4 }}>{l}</div></div>
+          ))}
+        </div>
+      </div>
+
+      {/* FEATURES */}
+      <div style={{ padding:"60px 5%", background:C.white }}>
+        <div style={{ textAlign:"center", marginBottom:40 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:C.accent, letterSpacing:2, textTransform:"uppercase", marginBottom:8 }}>Everything You Need</div>
+          <h2 style={{ fontSize:"clamp(1.4rem, 3vw, 2rem)", fontWeight:900, color:C.text }}>GST Compliance Banaya Simple</h2>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))", gap:18, maxWidth:1100, margin:"0 auto" }}>
+          {featureList.map((ft,i)=>(
+            <div key={i} style={{ background:"#F4F6F8", borderRadius:12, padding:22, border:"1px solid #D5D8DC" }}>
+              <div style={{ fontSize:26, marginBottom:10 }}>{ft.icon}</div>
+              <div style={{ fontWeight:700, fontSize:15, marginBottom:5 }}>{ft.title}</div>
+              <div style={{ color:C.textMuted, fontSize:13, lineHeight:1.6 }}>{ft.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* PRICING */}
+      <div style={{ padding:"60px 5%", background:"#F4F6F8" }}>
+        <div style={{ textAlign:"center", marginBottom:40 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:C.accent, letterSpacing:2, textTransform:"uppercase", marginBottom:8 }}>Pricing</div>
+          <h2 style={{ fontSize:"clamp(1.4rem, 3vw, 2rem)", fontWeight:900, color:C.text }}>Apne Business ke Liye Plan Chunein</h2>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(210px, 1fr))", gap:18, maxWidth:1000, margin:"0 auto" }}>
+          {planList.map((p,i)=>(
+            <div key={i} style={{ background:p.popular?C.sidebar:C.white, borderRadius:14, padding:22, border:p.popular?`2px solid ${C.accent}`:"1.5px solid #D5D8DC", position:"relative" }}>
+              {p.popular && <div style={{ position:"absolute", top:-12, left:"50%", transform:"translateX(-50%)", background:"#F39C12", color:C.sidebar, fontSize:10, fontWeight:800, padding:"3px 12px", borderRadius:20, whiteSpace:"nowrap" }}>MOST POPULAR</div>}
+              <div style={{ fontWeight:800, fontSize:17, marginBottom:4, color:p.popular?C.white:C.text }}>{p.name}</div>
+              <div style={{ fontSize:"1.6rem", fontWeight:900, marginBottom:4, color:p.popular?"#F39C12":p.color }}>{p.price}</div>
+              <div style={{ fontSize:12, color:p.popular?"rgba(255,255,255,0.6)":C.textMuted, marginBottom:14 }}>{p.desc}</div>
+              <ul style={{ listStyle:"none", marginBottom:18 }}>
+                {p.features.map((feat,j)=>(
+                  <li key={j} style={{ fontSize:12, padding:"5px 0", borderBottom:`1px solid ${p.popular?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.06)"}`, display:"flex", gap:8, color:p.popular?"rgba(255,255,255,0.85)":C.text }}>
+                    <span style={{ color:p.popular?"#F39C12":"#1E8449", fontWeight:700 }}>&#10003;</span>{feat}
+                  </li>
                 ))}
+              </ul>
+              <button onClick={()=>{ setMode("signup"); setShowForm(true); }} style={{ width:"100%", padding:10, borderRadius:8, fontWeight:700, fontSize:13, cursor:"pointer", background:p.popular?"#F39C12":"transparent", color:p.popular?C.sidebar:C.accent, border:p.popular?"none":`1.5px solid ${C.accent}` }}>
+                {p.name==="Free"?"Start Free":"Get Started"}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div style={{ background:"linear-gradient(135deg, #F39C12, #e67e22)", padding:"50px 5%", textAlign:"center" }}>
+        <h2 style={{ fontSize:"clamp(1.4rem, 3vw, 2rem)", fontWeight:900, color:C.sidebar, marginBottom:12 }}>Aaj Hi Shuru Karein — Bilkul Free!</h2>
+        <p style={{ color:"rgba(13,33,55,0.7)", fontSize:15, marginBottom:24 }}>No credit card required. Setup in 2 minutes.</p>
+        <button onClick={()=>{ setMode("signup"); setShowForm(true); }} style={{ background:C.sidebar, color:C.white, padding:"13px 36px", borderRadius:10, fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>&#128640; Create Free Account</button>
+      </div>
+
+      {/* FOOTER */}
+      <div style={{ background:C.sidebar, padding:"20px 5%", textAlign:"center", color:"rgba(255,255,255,0.4)", fontSize:12 }}>
+        &copy; 2026 TaxSaathi &bull; Made with &#10084;&#65039; in India &bull; <a href="/privacy-policy.html" style={{ color:"rgba(255,255,255,0.4)", textDecoration:"none" }}>Privacy Policy</a>
+      </div>
+
+      {/* AUTH MODAL */}
+      {showForm && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, padding:16 }}
+          onClick={e=>{ if(e.target===e.currentTarget) setShowForm(false); }}>
+          <div style={{ background:C.white, borderRadius:16, padding:"32px 36px", width:"100%", maxWidth:460, boxShadow:"0 20px 60px rgba(0,0,0,0.3)", maxHeight:"90vh", overflowY:"auto" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+              <div style={{ fontSize:20, fontWeight:900, color:C.primary }}>&#127470;&#127475; TaxSaathi</div>
+              <button onClick={()=>setShowForm(false)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:C.textMuted }}>&times;</button>
+            </div>
+            {done ? (
+              <div style={{ textAlign:"center", padding:"20px 0" }}>
+                <div style={{ fontSize:48, marginBottom:12 }}>&#128231;</div>
+                <div style={{ fontWeight:700, marginBottom:8 }}>Reset Email Sent!</div>
+                <button style={{ ...btn(), width:"100%", justifyContent:"center" }} onClick={()=>{ setMode("login"); setDone(false); }}>Back to Login</button>
               </div>
-            )}
-            {mode === "signup" && (
+            ) : (
               <>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-                  <div><div style={lbl}>Full Name</div><input style={inp} name="name" placeholder="Rajesh Kumar" onChange={handle} /></div>
-                  <div><div style={lbl}>Email</div><input style={inp} name="email" placeholder="you@company.com" onChange={handle} /></div>
-                </div>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-                  <div><div style={lbl}>Mobile</div><input style={inp} name="mobile" placeholder="+91 98765 43210" onChange={handle} /></div>
-                  <div><div style={lbl}>Company Name</div><input style={inp} name="company" placeholder="XYZ Pvt Ltd" onChange={handle} /></div>
-                </div>
-                <div style={{ marginBottom:14 }}><div style={lbl}>GSTIN</div><input style={inp} name="gstin" placeholder="27AABCU9603R1ZX" onChange={handle} /></div>
-              </>
-            )}
-            {(mode === "login" || mode === "forgot") && (
-              <div style={{ marginBottom:14 }}><div style={lbl}>Email</div><input style={inp} name="email" placeholder="you@company.com" onChange={handle} /></div>
-            )}
-            {mode !== "forgot" && (
-              <div style={{ marginBottom:20 }}>
-                <div style={lbl}>Password</div>
-                <div style={{ position:"relative" }}>
-                  <input style={{ ...inp, paddingRight:44 }} name="password" type={show?"text":"password"} placeholder="••••••••" onChange={handle} />
-                  <span style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:C.textMuted, fontSize:13 }} onClick={() => setShow(!show)}>{show?"Hide":"Show"}</span>
-                </div>
-                {mode === "login" && <div style={{ textAlign:"right", marginTop:6 }}><span style={{ fontSize:12, color:C.primaryLight, cursor:"pointer" }} onClick={() => setMode("forgot")}>Forgot Password?</span></div>}
-              </div>
-            )}
-            {err && <div style={{ background:"#FDEDEC", border:`1px solid ${C.danger}40`, borderRadius:7, padding:"10px 14px", fontSize:13, color:C.danger, marginBottom:14 }}>⚠️ {err}</div>}
-            <button style={{ ...btn(), width:"100%", justifyContent:"center", padding:"12px", fontSize:15 }} onClick={submit} disabled={busy}>
-              {busy ? "Please wait…" : mode==="login" ? "Sign In →" : mode==="signup" ? "Create Free Account →" : "Send Reset Link"}
-            </button>
-            {mode !== "forgot" && (
-              <>
-                <div style={{ display:"flex", alignItems:"center", gap:10, margin:"16px 0" }}>
-                  <div style={{ flex:1, height:1, background:C.border }} />
-                  <span style={{ fontSize:12, color:C.textMuted }}>OR</span>
-                  <div style={{ flex:1, height:1, background:C.border }} />
+                {mode !== "forgot" && (
+                  <div style={{ display:"flex", marginBottom:18, borderRadius:8, overflow:"hidden", border:`1.5px solid ${C.border}` }}>
+                    {["login","signup"].map(m=>(
+                      <button key={m} onClick={()=>{ setMode(m); setErr(""); }} style={{ flex:1, padding:"10px", background:mode===m?C.primary:"transparent", color:mode===m?C.white:C.textMuted, border:"none", fontWeight:600, fontSize:14, cursor:"pointer" }}>
+                        {m==="login"?"Sign In":"Sign Up"}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {mode==="signup" && (
+                  <>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+                      <div><div style={lbl}>Full Name</div><input style={inp} name="name" placeholder="Rajesh Kumar" onChange={handle} /></div>
+                      <div><div style={lbl}>Email</div><input style={inp} name="email" placeholder="you@company.com" onChange={handle} /></div>
+                    </div>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+                      <div><div style={lbl}>Mobile</div><input style={inp} name="mobile" placeholder="+91 98765 43210" onChange={handle} /></div>
+                      <div><div style={lbl}>Company</div><input style={inp} name="company" placeholder="XYZ Pvt Ltd" onChange={handle} /></div>
+                    </div>
+                    <div style={{ marginBottom:12 }}><div style={lbl}>GSTIN</div><input style={inp} name="gstin" placeholder="27AABCU9603R1ZX" onChange={handle} /></div>
+                  </>
+                )}
+                {(mode==="login"||mode==="forgot") && (
+                  <div style={{ marginBottom:12 }}><div style={lbl}>Email</div><input style={inp} name="email" placeholder="you@company.com" onChange={handle} /></div>
+                )}
+                {mode !== "forgot" && (
+                  <div style={{ marginBottom:12, position:"relative" }}>
+                    <div style={lbl}>Password</div>
+                    <input style={inp} name="password" type={show?"text":"password"} placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onChange={handle} />
+                    <button onClick={()=>setShow(s=>!s)} style={{ position:"absolute", right:10, top:30, background:"none", border:"none", cursor:"pointer", color:C.textMuted, fontSize:12 }}>{show?"Hide":"Show"}</button>
+                  </div>
+                )}
+                {mode==="login" && <div style={{ textAlign:"right", marginBottom:12 }}><button onClick={()=>setMode("forgot")} style={{ background:"none", border:"none", color:C.accent, cursor:"pointer", fontSize:12 }}>Forgot Password?</button></div>}
+                {err && <div style={{ color:C.danger, fontSize:13, marginBottom:12, padding:"8px 12px", background:"#FDEDEC", borderRadius:6 }}>{err}</div>}
+                <button style={{ ...btn(), width:"100%", justifyContent:"center", padding:"12px", fontSize:15 }} onClick={submit} disabled={busy}>
+                  {busy?"Please wait...":(mode==="login"?"Sign In":mode==="signup"?"Create Account":"Send Reset Email")}
+                </button>
+                <div style={{ display:"flex", alignItems:"center", gap:10, margin:"14px 0" }}>
+                  <div style={{ flex:1, height:1, background:C.border }} /><span style={{ color:C.textMuted, fontSize:12 }}>OR</span><div style={{ flex:1, height:1, background:C.border }} />
                 </div>
                 <button onClick={()=>supabase.auth.signInWithOAuth({ provider:"google", options:{ redirectTo:window.location.origin }})} style={{ width:"100%", padding:"11px", borderRadius:7, border:`1.5px solid ${C.border}`, background:C.white, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:10, fontSize:14, fontWeight:600, color:C.text }}>
-                  <span style={{ fontWeight:900, color:"#4285F4", fontSize:16 }}>G</span> Continue with Google
+                  <span style={{ fontSize:18 }}>G</span> Continue with Google
                 </button>
               </>
             )}
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── INVOICE GENERATOR ────────────────────────────────────────────────────────
 function InvoiceGenerator({ company, clients, saveInvoice }) {
   const emptyLine = () => ({ description:"", hsn:"", qty:1, unit:"Nos", rate:0, gst_rate:18, amount:0, cgst:0, sgst:0, igst:0, total:0 });
   const [inv, setInv] = useState({
