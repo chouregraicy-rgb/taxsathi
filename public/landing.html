@@ -4,6 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>TaxSaathi — India's Smartest GST Platform</title>
+<link rel="icon" type="image/svg+xml" href="/vite.svg" />
+<link rel="shortcut icon" href="/vite.svg" />
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
 <style>
 :root{
@@ -603,6 +605,11 @@ if(window.location.hash && window.location.hash.includes('access_token')) {
   window.location.replace('/index.html' + window.location.hash);
 }
 </script>
+  document.getElementById('authModal').classList.add('active');
+  switchTab(tab||'signin');
+  document.body.style.overflow='hidden';
+}
+function openModal(tab){
   document.getElementById('authModal').classList.add('active');
   switchTab(tab||'signin');
   document.body.style.overflow='hidden';
