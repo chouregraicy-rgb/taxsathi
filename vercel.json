@@ -11,6 +11,7 @@
     },
     { "src": "/(.*\\.(js|css|ico|png|svg|woff|woff2))", "dest": "/$1" },
     { "src": "/landing.html", "dest": "/landing.html" },
+    { "src": "/index.html", "dest": "/index.html" },
     { "src": "/", "dest": "/landing.html" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
