@@ -190,6 +190,35 @@ footer{background:var(--navy);padding:50px 5% 30px;color:rgba(255,255,255,0.6);}
 .fade-up-delay-1{animation-delay:0.1s;opacity:0;}
 .fade-up-delay-2{animation-delay:0.2s;opacity:0;}
 .fade-up-delay-3{animation-delay:0.3s;opacity:0;}
+
+/* AUTH MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);z-index:2000;display:none;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.active{display:flex;}
+.modal-box{background:white;border-radius:20px;width:100%;max-width:440px;padding:40px 36px;position:relative;animation:fadeUp 0.3s ease;}
+.modal-close{position:absolute;top:16px;right:20px;background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;}
+.modal-close:hover{color:var(--text);}
+.modal-logo{display:flex;align-items:center;gap:8px;margin-bottom:24px;}
+.modal-logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--navy);}
+.modal-logo-text span{color:var(--gold);}
+.modal-tabs{display:flex;background:var(--off);border-radius:10px;padding:4px;margin-bottom:28px;}
+.modal-tab{flex:1;padding:9px;border:none;background:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;color:var(--muted);transition:all 0.2s;}
+.modal-tab.active{background:white;color:var(--navy);box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+.modal-form{display:none;}
+.modal-form.active{display:block;}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;}
+.form-group input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;}
+.form-group input:focus{border-color:var(--accent);}
+.form-submit{width:100%;padding:13px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;font-family:'Syne',sans-serif;transition:all 0.2s;margin-top:4px;}
+.form-submit:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(243,156,18,0.4);}
+.modal-divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--muted);font-size:13px;}
+.modal-divider::before,.modal-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.google-btn{width:100%;padding:11px;border:1.5px solid var(--border);border-radius:10px;background:white;display:flex;align-items:center;justify-content:center;gap:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;color:var(--text);}
+.google-btn:hover{border-color:var(--accent);background:var(--off);}
+.modal-footer-text{text-align:center;font-size:13px;color:var(--muted);margin-top:20px;}
+.modal-footer-text a{color:var(--accent);text-decoration:none;font-weight:600;}
+.nav-signin{background:transparent;color:rgba(255,255,255,0.85)!important;border:1.5px solid rgba(255,255,255,0.35);padding:8px 20px;border-radius:8px;font-weight:600!important;transition:all 0.2s!important;cursor:pointer;}
+.nav-signin:hover{background:rgba(255,255,255,0.1)!important;border-color:white!important;}
 </style>
 </head>
 <body>
@@ -205,7 +234,8 @@ footer{background:var(--navy);padding:50px 5% 30px;color:rgba(255,255,255,0.6);}
     <a href="#how">How it Works</a>
     <a href="#pricing">Pricing</a>
     <a href="#testimonials">Reviews</a>
-    <a href="https://www.taxsaathi.online/#" class="nav-cta">Start Free →</a>
+    <a href="#" class="nav-signin" onclick="openModal('signin');return false;">Sign In</a>
+    <a href="#" class="nav-cta" onclick="openModal('signup');return false;">Start Free →</a>
   </div>
   <button class="nav-toggle" onclick="document.querySelector('.nav-links').style.display=document.querySelector('.nav-links').style.display==='flex'?'none':'flex'">
     <span></span><span></span><span></span>
@@ -220,8 +250,8 @@ footer{background:var(--navy);padding:50px 5% 30px;color:rgba(255,255,255,0.6);}
       <h1 class="fade-up fade-up-delay-1">India ka <span>GST & Tax</span> Compliance, Ab Aasan Hai</h1>
       <p class="hero-sub fade-up fade-up-delay-2">File GSTR-1, GSTR-3B, manage invoices, track ITC, and get AI-powered tax advice — all in one platform. Trusted by businesses across India.</p>
       <div class="hero-btns fade-up fade-up-delay-3">
-        <a href="https://www.taxsaathi.online/#" class="btn-primary">🚀 Start for Free</a>
-        <a href="#pricing" class="btn-outline">View Plans →</a>
+        <a href="#" class="btn-primary" onclick="openModal('signup');return false;">🚀 Start for Free</a>
+        <a href="#" class="btn-outline" onclick="openModal('signin');return false;">Sign In →</a>
       </div>
       <div class="hero-trust fade-up fade-up-delay-3">
         <div class="hero-avatars">
@@ -459,7 +489,7 @@ footer{background:var(--navy);padding:50px 5% 30px;color:rgba(255,255,255,0.6);}
   <h2>Aaj Hi Shuru Karein — Bilkul Free!</h2>
   <p>No credit card required. Setup in 2 minutes. Start filing smarter today.</p>
   <div class="cta-btns">
-    <a href="https://www.taxsaathi.online/#" class="btn-dark">🚀 Create Free Account</a>
+    <a href="#" class="btn-dark" onclick="openModal('signup');return false;">🚀 Create Free Account</a>
     <a href="https://wa.me/917000000000?text=Hi%20TaxSaathi%2C%20I%20want%20to%20know%20more%20about%20your%20plans" class="btn-white">💬 WhatsApp Us</a>
   </div>
 </section>
@@ -504,10 +534,106 @@ footer{background:var(--navy);padding:50px 5% 30px;color:rgba(255,255,255,0.6);}
   </div>
 </footer>
 
-<!-- WhatsApp Float -->
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-logo">
+      <div style="width:32px;height:32px;background:#0D2137;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:17px;">🇮🇳</div>
+      <span class="modal-logo-text">Tax<span>Saathi</span></span>
+    </div>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="signinTab" onclick="switchTab('signin')">Sign In</button>
+      <button class="modal-tab" id="signupTab" onclick="switchTab('signup')">Create Account</button>
+    </div>
+
+    <!-- SIGN IN FORM -->
+    <div class="modal-form active" id="signinForm">
+      <button class="google-btn" onclick="handleGoogleAuth()">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Continue with Google
+      </button>
+      <div class="modal-divider">or sign in with email</div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" placeholder="you@company.com" id="signinEmail"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" placeholder="Enter your password" id="signinPassword"/>
+      </div>
+      <div style="text-align:right;margin-bottom:16px;">
+        <a href="#" style="font-size:13px;color:var(--accent);text-decoration:none;font-weight:500;">Forgot password?</a>
+      </div>
+      <button class="form-submit" onclick="handleSignIn()">Sign In to TaxSaathi →</button>
+      <p class="modal-footer-text">Don't have an account? <a href="#" onclick="switchTab('signup');return false;">Create one free</a></p>
+    </div>
+
+    <!-- SIGN UP FORM -->
+    <div class="modal-form" id="signupForm">
+      <button class="google-btn" onclick="handleGoogleAuth()">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Sign up with Google
+      </button>
+      <div class="modal-divider">or sign up with email</div>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" placeholder="Rajesh Kumar" id="signupName"/>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" placeholder="you@company.com" id="signupEmail"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" placeholder="Create a strong password" id="signupPassword"/>
+      </div>
+      <button class="form-submit" onclick="handleSignUp()">Create Free Account 🚀</button>
+      <p class="modal-footer-text">Already have an account? <a href="#" onclick="switchTab('signin');return false;">Sign in</a></p>
+      <p style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px;">By signing up, you agree to our <a href="/privacy-policy.html" style="color:var(--accent);">Privacy Policy</a> & Terms</p>
+    </div>
+  </div>
+</div>
+
 <a href="https://wa.me/917000000000?text=Hi%20TaxSaathi%2C%20I%20want%20to%20know%20more!" class="whatsapp-float" title="Chat on WhatsApp">💬</a>
 
 <script>
+function openModal(tab){
+  document.getElementById('authModal').classList.add('active');
+  switchTab(tab||'signin');
+  document.body.style.overflow='hidden';
+}
+function closeModal(){
+  document.getElementById('authModal').classList.remove('active');
+  document.body.style.overflow='';
+}
+function switchTab(tab){
+  document.getElementById('signinTab').classList.toggle('active',tab==='signin');
+  document.getElementById('signupTab').classList.toggle('active',tab==='signup');
+  document.getElementById('signinForm').classList.toggle('active',tab==='signin');
+  document.getElementById('signupForm').classList.toggle('active',tab==='signup');
+}
+function handleGoogleAuth(){
+  // Connect to your Firebase/Supabase Google Auth here
+  window.location.href='https://www.taxsaathi.online/#';
+}
+function handleSignIn(){
+  const email=document.getElementById('signinEmail').value;
+  const pass=document.getElementById('signinPassword').value;
+  if(!email||!pass){alert('Please fill all fields');return;}
+  // Connect to your auth backend here
+  window.location.href='https://www.taxsaathi.online/#';
+}
+function handleSignUp(){
+  const name=document.getElementById('signupName').value;
+  const email=document.getElementById('signupEmail').value;
+  const pass=document.getElementById('signupPassword').value;
+  if(!name||!email||!pass){alert('Please fill all fields');return;}
+  // Connect to your auth backend here
+  window.location.href='https://www.taxsaathi.online/#';
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
 // Intersection Observer for scroll animations
 const observer = new IntersectionObserver((entries) => {
   entries.forEach(e => {
