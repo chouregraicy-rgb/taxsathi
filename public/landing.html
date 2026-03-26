@@ -613,24 +613,60 @@ function switchTab(tab){
   document.getElementById('signinForm').classList.toggle('active',tab==='signin');
   document.getElementById('signupForm').classList.toggle('active',tab==='signup');
 }
+const SUPABASE_URL = 'https://zwxoiwvahybpzhekoyej.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3eG9pd3ZhaHlicHpoZWtveWVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDEyNzYsImV4cCI6MjA4ODg3NzI3Nn0.KcaNVvjz3nk_z13iGXwfuJTe4LQAfX8TaIE2XWgjNtw';
+
+async function supabaseRequest(endpoint, body) {
+  const res = await fetch(SUPABASE_URL + endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+    },
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
 function handleGoogleAuth(){
-  // Connect to your Firebase/Supabase Google Auth here
-  window.location.href='/#';
+  window.location.href = SUPABASE_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(window.location.origin + '/#');
 }
-function handleSignIn(){
-  const email=document.getElementById('signinEmail').value;
-  const pass=document.getElementById('signinPassword').value;
+
+async function handleSignIn(){
+  const email = document.getElementById('signinEmail').value;
+  const pass = document.getElementById('signinPassword').value;
   if(!email||!pass){alert('Please fill all fields');return;}
-  // Connect to your auth backend here
-  window.location.href='/#';
+  const btn = document.querySelector('#signinForm .form-submit');
+  btn.textContent = 'Signing in...';
+  btn.disabled = true;
+  const data = await supabaseRequest('/auth/v1/token?grant_type=password', { email, password: pass });
+  if(data.access_token) {
+    window.location.href = '/#';
+  } else {
+    alert(data.error_description || data.msg || 'Invalid email or password');
+    btn.textContent = 'Sign In to TaxSaathi →';
+    btn.disabled = false;
+  }
 }
-function handleSignUp(){
-  const name=document.getElementById('signupName').value;
-  const email=document.getElementById('signupEmail').value;
-  const pass=document.getElementById('signupPassword').value;
+
+async function handleSignUp(){
+  const name = document.getElementById('signupName').value;
+  const email = document.getElementById('signupEmail').value;
+  const pass = document.getElementById('signupPassword').value;
   if(!name||!email||!pass){alert('Please fill all fields');return;}
-  // Connect to your auth backend here
-  window.location.href='/#';
+  const btn = document.querySelector('#signupForm .form-submit');
+  btn.textContent = 'Creating account...';
+  btn.disabled = true;
+  const data = await supabaseRequest('/auth/v1/signup', { email, password: pass, data: { full_name: name } });
+  if(data.id || data.access_token) {
+    alert('Account created! Please check your email to confirm, then sign in.');
+    switchTab('signin');
+  } else {
+    alert(data.error_description || data.msg || 'Signup failed. Try again.');
+  }
+  btn.textContent = 'Create Free Account 🚀';
+  btn.disabled = false;
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 
