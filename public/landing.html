@@ -598,7 +598,11 @@ footer{background:var(--navy);padding:50px 5% 30px;color:rgba(255,255,255,0.6);}
 <a href="https://wa.me/917000000000?text=Hi%20TaxSaathi%2C%20I%20want%20to%20know%20more!" class="whatsapp-float" title="Chat on WhatsApp">💬</a>
 
 <script>
-function openModal(tab){
+// If Supabase redirected back with a token, send to React app immediately
+if(window.location.hash && window.location.hash.includes('access_token')) {
+  window.location.replace('/index.html' + window.location.hash);
+}
+</script>
   document.getElementById('authModal').classList.add('active');
   switchTab(tab||'signin');
   document.body.style.overflow='hidden';
@@ -630,7 +634,7 @@ async function supabaseRequest(endpoint, body) {
 }
 
 function handleGoogleAuth(){
-  window.location.href = SUPABASE_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(window.location.origin + '/#');
+  window.location.href = SUPABASE_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent('https://www.taxsaathi.online/');
 }
 
 async function handleSignIn(){
