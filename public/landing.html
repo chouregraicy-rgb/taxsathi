@@ -615,14 +615,14 @@ function switchTab(tab){
 }
 function handleGoogleAuth(){
   // Connect to your Firebase/Supabase Google Auth here
-  window.location.href='/app';
+  window.location.href='/#';
 }
 function handleSignIn(){
   const email=document.getElementById('signinEmail').value;
   const pass=document.getElementById('signinPassword').value;
   if(!email||!pass){alert('Please fill all fields');return;}
   // Connect to your auth backend here
-  window.location.href='/app';
+  window.location.href='/#';
 }
 function handleSignUp(){
   const name=document.getElementById('signupName').value;
@@ -630,7 +630,7 @@ function handleSignUp(){
   const pass=document.getElementById('signupPassword').value;
   if(!name||!email||!pass){alert('Please fill all fields');return;}
   // Connect to your auth backend here
-  window.location.href='/app';
+  window.location.href='/#';
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 
