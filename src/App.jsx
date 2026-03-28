@@ -1363,7 +1363,7 @@ async function handleUpgrade(planId) {
                 ["WhatsApp Reminders","❌","✅","❌ Email only"],
                 ["GSTR-2B Auto-Reconciliation","✅","✅","💰 Paid add-on"],
                 ["Offline Mode","❌","✅","❌"],
-                ["Price","₹0","₹799/mo","₹1,799/mo"],
+                ["Price","₹0","₹599/mo","₹1,799/mo"],
               ].map(([feat,...vals])=>(
                 <tr key={feat}>
                   <td style={{...TD,fontWeight:600}}>{feat}</td>
