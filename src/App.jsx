@@ -47,6 +47,31 @@ const PLANS = [
 
 const CA_PROFESSIONALS = [];
 
+// ─── Plan Access Control ───────────────────────────────────────────────────────
+const PLAN_HIERARCHY = { free: 0, starter: 1, pro: 2, enterprise: 3 };
+
+function hasAccess(userPlan, requiredPlan) {
+  return (PLAN_HIERARCHY[userPlan] || 0) >= (PLAN_HIERARCHY[requiredPlan] || 0);
+}
+
+function PlanGate({ userPlan, requiredPlan, feature, setPage, children }) {
+  if (hasAccess(userPlan, requiredPlan)) return children;
+  const planInfo = PLANS.find(p => p.id === requiredPlan);
+  return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:400, textAlign:"center", padding:40 }}>
+      <div style={{ fontSize:60, marginBottom:16 }}>🔒</div>
+      <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:8 }}>{feature} is a {planInfo?.name} Feature</div>
+      <div style={{ fontSize:15, color:C.textMuted, marginBottom:32, maxWidth:400, lineHeight:1.6 }}>
+        Upgrade to <strong>{planInfo?.name}</strong> plan (₹{planInfo?.price}/mo) to unlock {feature} and many more powerful features.
+      </div>
+      <button onClick={()=>setPage("billing")} style={{ ...btn("primary"), padding:"14px 36px", fontSize:15, borderRadius:10 }}>
+        🚀 Upgrade to {planInfo?.name} — ₹{planInfo?.price}/mo
+      </button>
+      <div style={{ marginTop:16, fontSize:13, color:C.textMuted }}>Cancel anytime • No hidden fees</div>
+    </div>
+  );
+}
+
 // ─── PIN CODE → CITY MAPPING ──────────────────────────────────────────────────
 // Used to auto-detect city/state from PIN code using India Post API
 async function lookupPincode(pin) {
@@ -1234,8 +1259,8 @@ async function handleUpgrade(planId) {
     return;
   }
 
-  const amount = planId === 'pro' ? 99900 : 59900;
-  const planName = planId === 'pro' ? 'Pro' : 'Starter';
+  const amount = planId === 'enterprise' ? 79900 : planId === 'pro' ? 59900 : 29900;
+  const planName = planId === 'enterprise' ? 'Enterprise' : planId === 'pro' ? 'Pro' : 'Starter';
 
   try {
     const orderRes = await fetch('/api/create-order', {
@@ -1274,8 +1299,8 @@ async function handleUpgrade(planId) {
         const verifyData = await verifyRes.json();
 
         if (verifyData.success) {
-          setSubscription({ plan: planId, status: 'active' });
-          alert(`🎉 ${planName} Plan activated successfully!`);
+          await upgradePlan(planId);
+          alert(`🎉 ${planName} Plan activated successfully! All features are now unlocked.`);
         } else {
           alert('Payment verification failed. Contact support.');
         }
@@ -5211,38 +5236,38 @@ export default function App() {
         <div style={{ flex:1, overflowY:"auto", maxHeight:"100dvh", padding:page==="ai"?20:24 }}>
           {page==="dashboard"  && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} />}
           {page==="invoice"    && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} />}
-          {page==="upload"     && <UploadPage data={data} />}
+          {page==="upload"     && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Excel Upload" setPage={setPage}><UploadPage data={data} /></PlanGate>}
           {page==="reports"    && <ReportsPage data={data} summary={summary} />}
-          {page==="ai"         && <AIAssistant summary={summary} company={auth.activeCompany} />}
-          {page==="ca"         && <CAMarketplace />}
+          {page==="ai"         && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="AI Tax Assistant" setPage={setPage}><AIAssistant summary={summary} company={auth.activeCompany} /></PlanGate>}
+          {page==="ca"         && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="CA Marketplace" setPage={setPage}><CAMarketplace /></PlanGate>}
           {page==="companies"  && <MultiCompany companies={auth.companies} activeCompany={auth.activeCompany} setActiveCompany={auth.setActiveCompany} addCompany={auth.addCompany} plan={auth.plan} />}
           {page==="calendar"   && <CalendarPage />}
           {page==="clients"    && <ClientsPage data={data} auth={auth} />}
-          {page==="einvoice"   && <EInvoice company={auth.activeCompany} sales={data.sales} />}
-          {page==="ewaybill"   && <EWayBill company={auth.activeCompany} sales={data.sales} />}
-          {page==="whatsapp"   && <WhatsAppNotifications clients={data.clients} company={auth.activeCompany} />}
+          {page==="einvoice"   && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="E-Invoice Generation" setPage={setPage}><EInvoice company={auth.activeCompany} sales={data.sales} /></PlanGate>}
+          {page==="ewaybill"   && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="E-Way Bill" setPage={setPage}><EWayBill company={auth.activeCompany} sales={data.sales} /></PlanGate>}
+          {page==="whatsapp"   && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="WhatsApp Alerts" setPage={setPage}><WhatsAppNotifications clients={data.clients} company={auth.activeCompany} /></PlanGate>}
           {page==="ca_enroll"  && <CAEnrollment />}
           {page==="billing"    && <Subscription plan={auth.plan} upgradePlan={auth.upgradePlan} user={auth.user} />}
           {page==="settings"      && <SettingsPage auth={auth} />}
-          {page==="expenses"      && <ExpensePage data={data} auth={auth} />}
-          {page==="purchase_orders" && <PurchaseOrders auth={auth} data={data} />}
-          {page==="bank_recon"    && <BankReconciliation data={data} />}
-          {page==="gstr2b"        && <GSTR2BReconciliation data={data} />}
-          {page==="tds"           && <TDSManager auth={auth} />}
-          {page==="financials"    && <FinancialReports data={data} auth={auth} />}
-          {page==="audit"         && <AuditTrail auth={auth} />}
-          {page==="client_portal" && <ClientPortal data={data} auth={auth} />}
-          {page==="payments"      && <PaymentGateway data={data} auth={auth} />}
-          {page==="tally"         && <TallyImport data={data} />}
-          {page==="inventory"     && <InventoryPage data={data} />}
-          {page==="team"          && <TeamAccess auth={auth} />}
-          {page==="recurring"     && <RecurringInvoices auth={auth} data={data} />}
-          {page==="gst_health"    && <GSTHealthCheck auth={auth} data={data} />}
-          {page==="payroll"       && <PayrollPage auth={auth} />}
-          {page==="form16"        && <Form16Generator auth={auth} />}
-          {page==="gst_filing"    && <DirectGSTFiling data={data} auth={auth} />}
-          {page==="etds"          && <ETDSFiling auth={auth} />}
-          {page==="itr"           && <ITRFiling auth={auth} data={data} />}
+          {page==="expenses"      && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Expense Tracking" setPage={setPage}><ExpensePage data={data} auth={auth} /></PlanGate>}
+          {page==="purchase_orders" && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Purchase Orders" setPage={setPage}><PurchaseOrders auth={auth} data={data} /></PlanGate>}
+          {page==="bank_recon"    && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="Bank Reconciliation" setPage={setPage}><BankReconciliation data={data} /></PlanGate>}
+          {page==="gstr2b"        && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="GSTR-2B Reconciliation" setPage={setPage}><GSTR2BReconciliation data={data} /></PlanGate>}
+          {page==="tds"           && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="TDS Manager" setPage={setPage}><TDSManager auth={auth} /></PlanGate>}
+          {page==="financials"    && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Financial Reports" setPage={setPage}><FinancialReports data={data} auth={auth} /></PlanGate>}
+          {page==="audit"         && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Audit Trail" setPage={setPage}><AuditTrail auth={auth} /></PlanGate>}
+          {page==="client_portal" && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Client Portal" setPage={setPage}><ClientPortal data={data} auth={auth} /></PlanGate>}
+          {page==="payments"      && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Payment Collection" setPage={setPage}><PaymentGateway data={data} auth={auth} /></PlanGate>}
+          {page==="tally"         && <PlanGate userPlan={auth.plan} requiredPlan="enterprise" feature="Tally Import" setPage={setPage}><TallyImport data={data} /></PlanGate>}
+          {page==="inventory"     && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Inventory Management" setPage={setPage}><InventoryPage data={data} /></PlanGate>}
+          {page==="team"          && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="Team Access" setPage={setPage}><TeamAccess auth={auth} /></PlanGate>}
+          {page==="recurring"     && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Recurring Invoices" setPage={setPage}><RecurringInvoices auth={auth} data={data} /></PlanGate>}
+          {page==="gst_health"    && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="GST Health Check" setPage={setPage}><GSTHealthCheck auth={auth} data={data} /></PlanGate>}
+          {page==="payroll"       && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="Payroll" setPage={setPage}><PayrollPage auth={auth} /></PlanGate>}
+          {page==="form16"        && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="Form 16 Generator" setPage={setPage}><Form16Generator auth={auth} /></PlanGate>}
+          {page==="gst_filing"    && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Direct GST Filing" setPage={setPage}><DirectGSTFiling data={data} auth={auth} /></PlanGate>}
+          {page==="etds"          && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="E-TDS Filing" setPage={setPage}><ETDSFiling auth={auth} /></PlanGate>}
+          {page==="itr"           && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="ITR Filing" setPage={setPage}><ITRFiling auth={auth} data={data} /></PlanGate>}
         </div>
       </div>
     </div>
