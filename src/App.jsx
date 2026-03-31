@@ -1723,44 +1723,16 @@ function WhatsAppNotifications({ clients, company }) {
 
 // ─── CA ENROLLMENT / PAYMENT ──────────────────────────────────────────────────
 function CAEnrollment() {
-  const CA_PLANS = [
-    { id:"basic",    name:"Basic Listing",   price:999,  period:"year",  color:C.primaryLight, features:["Listed in CA Marketplace","PIN code search visibility","Basic profile page","Up to 10 client bookings/mo","Email support"], popular:false },
-    { id:"standard", name:"Standard",        price:2499, period:"year",  color:C.primary,      features:["Everything in Basic","Verified badge (ICAI check)","Priority listing in search","Unlimited bookings","WhatsApp booking alerts","Client reviews & ratings","25% more visibility"], popular:true },
-    { id:"premium",  name:"Premium CA",      price:4999, period:"year",  color:C.purple,       features:["Everything in Standard","Top 3 placement in city","Featured CA badge","Dedicated profile page","Direct client calls","Analytics dashboard","Lead generation reports","Priority support"], popular:false },
-  ];
-
-  const [selected, setSelected] = useState("standard");
-  const [step, setStep] = useState(1);
   const [form, setForm] = useState({ name:"", icai:"", email:"", mobile:"", city:"", state:"Maharashtra", specialization:"", experience:"", pincode:"" });
-  const [paying, setPaying] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [enrolled, setEnrolled] = useState(false);
 
-  async function handlePayment() {
-    setPaying(true);
-    const plan = CA_PLANS.find(p => p.id === selected);
-    try {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      document.body.appendChild(script);
-      await new Promise(r => script.onload = r);
-      const options = {
-        key: import.meta.env.RAZORPAY_KEY || "rzp_test_placeholder",
-        amount: plan.price * 100,
-        currency: "INR",
-        name: "TaxSaathi CA Marketplace",
-        description: `${plan.name} Plan — Annual Enrollment`,
-        handler: () => { setEnrolled(true); setPaying(false); },
-        prefill: { name: form.name, email: form.email, contact: form.mobile },
-        theme: { color: "#1B4F72" },
-        modal: { ondismiss: () => setPaying(false) }
-      };
-      new window.Razorpay(options).open();
-    } catch {
-      // Demo fallback
-      await new Promise(r => setTimeout(r, 1500));
-      setEnrolled(true);
-      setPaying(false);
-    }
+  async function handleEnroll() {
+    if (!form.name || !form.email || !form.mobile || !form.icai) return;
+    setSubmitting(true);
+    await new Promise(r => setTimeout(r, 1000));
+    setEnrolled(true);
+    setSubmitting(false);
   }
 
   if (enrolled) return (
@@ -1778,7 +1750,7 @@ function CAEnrollment() {
           <div key={i} style={{ fontSize:13, padding:"4px 0", color:C.text }}>✅ {s}</div>
         ))}
       </div>
-      <button style={{ ...btn(), padding:"12px 30px" }} onClick={() => { setEnrolled(false); setStep(1); }}>Back to Enrollment</button>
+      <button style={{ ...btn(), padding:"12px 30px" }} onClick={() => { setEnrolled(false); setForm({ name:"", icai:"", email:"", mobile:"", city:"", state:"Maharashtra", specialization:"", experience:"", pincode:"" }); }}>Back to Enrollment</button>
     </div>
   );
 
@@ -1787,6 +1759,13 @@ function CAEnrollment() {
       <div style={{ marginBottom:24 }}>
         <div style={{ fontSize:20, fontWeight:800 }}>👨‍💼 CA Enrollment & Listing</div>
         <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Join India's fastest growing CA marketplace — get clients directly</div>
+      </div>
+
+      {/* Free banner */}
+      <div style={{ ...card, marginBottom:24, background:"linear-gradient(135deg, #1E8449, #27AE60)", color:C.white, textAlign:"center", padding:20, borderRadius:12 }}>
+        <div style={{ fontSize:32, marginBottom:6 }}>🎁</div>
+        <div style={{ fontSize:22, fontWeight:900 }}>100% Free Enrollment</div>
+        <div style={{ fontSize:14, opacity:0.9, marginTop:6 }}>No charges. No hidden fees. Join the TaxSaathi CA Network for free!</div>
       </div>
 
       {/* Stats bar */}
@@ -1805,72 +1784,30 @@ function CAEnrollment() {
         ))}
       </div>
 
-      {step === 1 && (
-        <>
-          {/* Pricing Plans */}
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, marginBottom:24 }}>
-            {CA_PLANS.map(p => (
-              <div key={p.id} onClick={() => setSelected(p.id)}
-                style={{ ...card, cursor:"pointer", border:`2px solid ${selected===p.id?p.color:C.border}`, background:selected===p.id?p.color+"0a":C.white, position:"relative", transition:"all 0.2s" }}>
-                {p.popular && <div style={{ position:"absolute", top:-12, left:"50%", transform:"translateX(-50%)", background:p.color, color:C.white, fontSize:11, fontWeight:700, padding:"3px 14px", borderRadius:20 }}>MOST POPULAR</div>}
-                <div style={{ fontWeight:800, fontSize:16, color:p.color, marginBottom:6 }}>{p.name}</div>
-                <div style={{ marginBottom:16 }}>
-                  <span style={{ fontSize:30, fontWeight:900, color:p.color }}>₹{p.price.toLocaleString("en-IN")}</span>
-                  <span style={{ fontSize:12, color:C.textMuted }}>/{p.period}</span>
-                </div>
-                {p.features.map(f => (
-                  <div key={f} style={{ display:"flex", gap:8, fontSize:12, padding:"4px 0", alignItems:"flex-start" }}>
-                    <span style={{ color:C.success, flexShrink:0 }}>✓</span><span>{f}</span>
-                  </div>
-                ))}
-                <div style={{ marginTop:16, padding:"10px", borderRadius:7, background:selected===p.id?p.color:C.bg, textAlign:"center", color:selected===p.id?C.white:C.textMuted, fontWeight:600, fontSize:13 }}>
-                  {selected===p.id ? "✓ Selected" : "Select Plan"}
-                </div>
-              </div>
-            ))}
+      {/* Enrollment Form */}
+      <div style={{ maxWidth:600, margin:"0 auto" }}>
+        <div style={card}>
+          <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.primary }}>📋 Your CA Profile Details</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+            <div><div style={lbl}>Full Name *</div><input style={inp} placeholder="CA Firstname Lastname" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></div>
+            <div><div style={lbl}>ICAI Membership No. *</div><input style={inp} placeholder="123456" value={form.icai} onChange={e=>setForm({...form,icai:e.target.value})} /></div>
           </div>
-          <div style={{ textAlign:"center" }}>
-            <button style={{ ...btn(), padding:"14px 40px", fontSize:15 }} onClick={() => setStep(2)}>
-              Continue with {CA_PLANS.find(p=>p.id===selected)?.name} — ₹{CA_PLANS.find(p=>p.id===selected)?.price.toLocaleString("en-IN")}/yr →
-            </button>
-            <div style={{ fontSize:12, color:C.textMuted, marginTop:8 }}>✅ No commission on first 3 bookings • Cancel anytime • GST invoice provided</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+            <div><div style={lbl}>Email *</div><input style={inp} placeholder="ca@example.in" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} /></div>
+            <div><div style={lbl}>Mobile (WhatsApp) *</div><input style={inp} placeholder="98765 43210" value={form.mobile} onChange={e=>setForm({...form,mobile:e.target.value})} /></div>
           </div>
-        </>
-      )}
-
-      {step === 2 && (
-        <div style={{ maxWidth:600, margin:"0 auto" }}>
-          <div style={{ ...card, marginBottom:20, background:C.primaryLighter }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div><div style={{ fontWeight:700 }}>{CA_PLANS.find(p=>p.id===selected)?.name}</div><div style={{ fontSize:12, color:C.textMuted }}>Annual enrollment fee</div></div>
-              <div style={{ fontSize:22, fontWeight:900, color:C.primary }}>₹{CA_PLANS.find(p=>p.id===selected)?.price.toLocaleString("en-IN")}</div>
-            </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+            <div><div style={lbl}>PIN Code</div><input style={inp} placeholder="452001" maxLength={6} value={form.pincode} onChange={e=>setForm({...form,pincode:e.target.value})} /></div>
+            <div><div style={lbl}>City *</div><input style={inp} placeholder="Indore" value={form.city} onChange={e=>setForm({...form,city:e.target.value})} /></div>
           </div>
-          <div style={card}>
-            <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.primary }}>📋 Your CA Profile Details</div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-              <div><div style={lbl}>Full Name *</div><input style={inp} placeholder="CA Firstname Lastname" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></div>
-              <div><div style={lbl}>ICAI Membership No. *</div><input style={inp} placeholder="123456" value={form.icai} onChange={e=>setForm({...form,icai:e.target.value})} /></div>
-            </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-              <div><div style={lbl}>Email *</div><input style={inp} placeholder="ca@example.in" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} /></div>
-              <div><div style={lbl}>Mobile (WhatsApp) *</div><input style={inp} placeholder="98765 43210" value={form.mobile} onChange={e=>setForm({...form,mobile:e.target.value})} /></div>
-            </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-              <div><div style={lbl}>PIN Code</div><input style={inp} placeholder="452001" maxLength={6} value={form.pincode} onChange={e=>setForm({...form,pincode:e.target.value})} /></div>
-              <div><div style={lbl}>City *</div><input style={inp} placeholder="Indore" value={form.city} onChange={e=>setForm({...form,city:e.target.value})} /></div>
-            </div>
-            <div style={{ marginBottom:14 }}><div style={lbl}>Specialization *</div><input style={inp} placeholder="GST Filing, ITR, TDS" value={form.specialization} onChange={e=>setForm({...form,specialization:e.target.value})} /></div>
-            <div style={{ marginBottom:20 }}><div style={lbl}>Years of Experience</div><input style={inp} type="number" min={1} placeholder="5" value={form.experience} onChange={e=>setForm({...form,experience:e.target.value})} /></div>
-            <div style={{ display:"flex", gap:10 }}>
-              <button style={{ ...btn("outline") }} onClick={() => setStep(1)}>← Back</button>
-              <button style={{ ...btn("success"), flex:1, justifyContent:"center", padding:"12px" }} onClick={handlePayment} disabled={paying || !form.name || !form.email || !form.mobile}>
-                {paying ? "⏳ Processing Payment…" : `💳 Pay ₹${CA_PLANS.find(p=>p.id===selected)?.price.toLocaleString("en-IN")} & Enroll`}
-              </button>
-            </div>
-          </div>
+          <div style={{ marginBottom:14 }}><div style={lbl}>Specialization *</div><input style={inp} placeholder="GST Filing, ITR, TDS" value={form.specialization} onChange={e=>setForm({...form,specialization:e.target.value})} /></div>
+          <div style={{ marginBottom:20 }}><div style={lbl}>Years of Experience</div><input style={inp} type="number" min={1} placeholder="5" value={form.experience} onChange={e=>setForm({...form,experience:e.target.value})} /></div>
+          <button style={{ ...btn("success"), width:"100%", justifyContent:"center", padding:"14px", fontSize:15 }} onClick={handleEnroll} disabled={submitting || !form.name || !form.email || !form.mobile || !form.icai}>
+            {submitting ? "⏳ Enrolling…" : "🚀 Enroll for Free"}
+          </button>
+          <div style={{ fontSize:12, color:C.textMuted, marginTop:10, textAlign:"center" }}>✅ Free forever • No credit card required • ICAI verified</div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
