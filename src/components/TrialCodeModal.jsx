@@ -1,4 +1,5 @@
 // src/components/TrialCodeModal.jsx
+
 import { useState } from 'react';
 import './TrialCodeModal.css';
 
