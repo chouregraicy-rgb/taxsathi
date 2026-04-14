@@ -32,11 +32,11 @@ const STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisga
 const MOCK_SALES = [];
 const MOCK_PURCHASES = [];
 const MOCK_CLIENTS = [];
-const COMPLIANCE = [  { task:"GSTR-1 Filing", due:"11 Apr 2026", period:"Mar 2026", color:"#2E86C1", type:"GST" },
-  { task:"GSTR-3B Filing", due:"20 Apr 2026", period:"Mar 2026", color:"#F39C12", type:"GST" },
-  { task:"TDS Deposit", due:"07 May 2026", period:"Apr 2026", color:"#E67E22", type:"TDS" },
-  { task:"Annual Return GSTR-9", due:"31 Dec 2026", period:"FY 2025-26", color:"#1B4F72", type:"Annual" },
-  { task:"Income Tax Return", due:"31 Jul 2026", period:"FY 2025-26", color:"#C0392B", type:"ITR" },
+const COMPLIANCE = [  { task:"GSTR-1 Filing", due:"11 Apr 2024", period:"Mar 2024", color:"#2E86C1", type:"GST" },
+  { task:"GSTR-3B Filing", due:"20 Apr 2024", period:"Mar 2024", color:"#F39C12", type:"GST" },
+  { task:"TDS Deposit", due:"07 May 2024", period:"Apr 2024", color:"#E67E22", type:"TDS" },
+  { task:"Annual Return GSTR-9", due:"31 Dec 2024", period:"FY 2023-24", color:"#1B4F72", type:"Annual" },
+  { task:"Income Tax Return", due:"31 Jul 2024", period:"FY 2023-24", color:"#C0392B", type:"ITR" },
 ];
 const PLANS = [
   { id:"free", name:"Free", price:0, color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","Compliance Calendar","5 Clients","Email Support"], limit:"Free forever" },
@@ -46,31 +46,6 @@ const PLANS = [
 ];
 
 const CA_PROFESSIONALS = [];
-
-// ─── Plan Access Control ───────────────────────────────────────────────────────
-const PLAN_HIERARCHY = { free: 0, starter: 1, pro: 2, enterprise: 3 };
-
-function hasAccess(userPlan, requiredPlan) {
-  return (PLAN_HIERARCHY[userPlan] || 0) >= (PLAN_HIERARCHY[requiredPlan] || 0);
-}
-
-function PlanGate({ userPlan, requiredPlan, feature, setPage, children }) {
-  if (hasAccess(userPlan, requiredPlan)) return children;
-  const planInfo = PLANS.find(p => p.id === requiredPlan);
-  return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:400, textAlign:"center", padding:40 }}>
-      <div style={{ fontSize:60, marginBottom:16 }}>🔒</div>
-      <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:8 }}>{feature} is a {planInfo?.name} Feature</div>
-      <div style={{ fontSize:15, color:C.textMuted, marginBottom:32, maxWidth:400, lineHeight:1.6 }}>
-        Upgrade to <strong>{planInfo?.name}</strong> plan (₹{planInfo?.price}/mo) to unlock {feature} and many more powerful features.
-      </div>
-      <button onClick={()=>setPage("billing")} style={{ ...btn("primary"), padding:"14px 36px", fontSize:15, borderRadius:10 }}>
-        🚀 Upgrade to {planInfo?.name} — ₹{planInfo?.price}/mo
-      </button>
-      <div style={{ marginTop:16, fontSize:13, color:C.textMuted }}>Cancel anytime • No hidden fees</div>
-    </div>
-  );
-}
 
 // ─── PIN CODE → CITY MAPPING ──────────────────────────────────────────────────
 // Used to auto-detect city/state from PIN code using India Post API
@@ -441,17 +416,7 @@ function useAuth() {
   async function fetchProfile(uid) {
     const { data: p } = await supabase.from("users").select("*").eq("id", uid).single();
     const { data: c } = await supabase.from("companies").select("*").eq("user_id", uid);
-    if (p && !p.name) {
-      const { data: { user: au } } = await supabase.auth.getUser();
-      const n = au?.user_metadata?.full_name || au?.user_metadata?.name || au?.email?.split("@")[0] || "";
-      if (n) { await supabase.from("users").upsert({ id: uid, name: n, email: au.email, plan: p?.plan||"free" }); p.name = n; }
-    }
-    if (!p) {
-      const { data: { user: au } } = await supabase.auth.getUser();
-      const n = au?.user_metadata?.full_name || au?.user_metadata?.name || au?.email?.split("@")[0] || "User";
-      await supabase.from("users").upsert({ id: uid, name: n, email: au?.email, plan: "free" });
-      setProfile({ id: uid, name: n, plan: "free" });
-    } else { setProfile(p); }
+    setProfile(p);
     const cos = c || [];
     setCompanies(cos);
     setActiveCompany(cos[0] || null);
@@ -471,10 +436,7 @@ function useAuth() {
     if (error) throw error;
     return data;
   }
-  async function signOut() { 
-  await supabase.auth.signOut(); 
-  window.location.href = '/landing.html';
-}
+  async function signOut() { await supabase.auth.signOut(); }
   async function resetPassword(email) {
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) throw error;
@@ -597,13 +559,12 @@ function useData(companyId) {
 
 // ─── AUTH SCREEN ──────────────────────────────────────────────────────────────
 function AuthScreen({ onLogin, onSignup, onReset }) {
-  const [mode, setMode] = React.useState("login");
-  const [showForm, setShowForm] = React.useState(false);
-  const [err, setErr] = React.useState("");
-  const [done, setDone] = React.useState(false);
-  const [busy, setBusy] = React.useState(false);
-  const [show, setShow] = React.useState(false);
-  const [f, setF] = React.useState({ name:"", email:"", mobile:"", company:"", gstin:"", password:"" });
+  const [mode, setMode] = useState("login");
+  const [show, setShow] = useState(false);
+  const [err, setErr] = useState("");
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [f, setF] = useState({ name:"", email:"", mobile:"", company:"", gstin:"", password:"" });
   const handle = e => setF({ ...f, [e.target.name]: e.target.value });
 
   async function submit() {
@@ -616,180 +577,80 @@ function AuthScreen({ onLogin, onSignup, onReset }) {
     setBusy(false);
   }
 
-  const featureList = [
-    { icon:"📊", title:"GST Reports & Filing", desc:"Auto-generate GSTR-1, GSTR-3B with one click" },
-    { icon:"🧾", title:"Invoice Generator", desc:"GST-compliant invoices in seconds" },
-    { icon:"🤖", title:"AI Tax Assistant", desc:"Ask anything in Hindi or English" },
-    { icon:"💰", title:"ITC Reconciliation", desc:"Maximize your Input Tax Credit" },
-    { icon:"📱", title:"E-Invoice & E-Way Bill", desc:"Direct GST portal integration" },
-    { icon:"👨‍💼", title:"CA Marketplace", desc:"Find verified CAs in your city" },
-  ];
-
-  const planList = [
-    { name:"Free", price:"₹0", desc:"Forever free", color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","5 Clients"] },
-    { name:"Starter", price:"₹299/mo", desc:"For small business", color:"#2E86C1", features:["3 GSTINs","Excel Upload","50 Clients","AI Assistant"] },
-    { name:"Pro", price:"₹599/mo", desc:"Most Popular ⭐", color:"#1B4F72", popular:true, features:["10 GSTINs","E-Invoice","Bank Recon","Unlimited AI"] },
-    { name:"Enterprise", price:"₹799/mo", desc:"For large orgs", color:"#7D3C98", features:["Unlimited GSTINs","Dedicated CA","Custom Integration","SLA"] },
-  ];
-
   return (
-    <div style={{ fontFamily:"'Segoe UI', Arial, sans-serif", background:"#F4F6F8", minHeight:"100vh", overflowY:"auto", overflowX:"hidden" }}>
-
-      {/* NAV */}
-      <nav style={{ background:C.sidebar, padding:"14px 5%", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:99 }}>
-        <div style={{ fontSize:20, fontWeight:900, color:C.white }}>&#127470;&#127475; Tax<span style={{ color:"#F39C12" }}>Saathi</span></div>
-        <div style={{ display:"flex", gap:12 }}>
-          <button onClick={()=>{ setMode("login"); setShowForm(true); }} style={{ background:"transparent", border:"1.5px solid rgba(255,255,255,0.4)", color:C.white, padding:"8px 20px", borderRadius:8, cursor:"pointer", fontWeight:600, fontSize:14 }}>Sign In</button>
-          <button onClick={()=>{ setMode("signup"); setShowForm(true); }} style={{ background:"#F39C12", border:"none", color:C.sidebar, padding:"8px 20px", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:14 }}>Start Free</button>
+    <div style={{ minHeight:"100vh", background:`linear-gradient(135deg, ${C.sidebar} 0%, ${C.primary} 100%)`, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:C.white, borderRadius:16, padding:"40px 44px", width:"100%", maxWidth:520, boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
+        <div style={{ textAlign:"center", marginBottom:28 }}>
+          <div style={{ fontSize:34, fontWeight:900, color:C.primary }}>🇮🇳 TaxSaathi 2.0</div>
+          <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>India's Most Advanced GST Compliance Platform</div>
         </div>
-      </nav>
-
-      {/* HERO */}
-      <div style={{ background:`linear-gradient(135deg, ${C.sidebar} 0%, ${C.primary} 100%)`, padding:"70px 5% 60px", textAlign:"center" }}>
-        <div style={{ display:"inline-block", background:"rgba(243,156,18,0.15)", border:"1px solid rgba(243,156,18,0.3)", color:"#F39C12", padding:"5px 16px", borderRadius:20, fontSize:12, fontWeight:700, marginBottom:20 }}>&#127470;&#127475; MADE FOR INDIAN BUSINESSES</div>
-        <h1 style={{ fontSize:"clamp(1.8rem, 4vw, 3rem)", fontWeight:900, color:C.white, marginBottom:16, lineHeight:1.2 }}>India ka GST & Tax Compliance<br/><span style={{ color:"#F39C12" }}>Ab Aasan Hai</span></h1>
-        <p style={{ color:"rgba(255,255,255,0.75)", fontSize:16, maxWidth:560, margin:"0 auto 32px", lineHeight:1.7 }}>File GSTR-1, GSTR-3B, manage invoices, track ITC, and get AI-powered tax advice — all in one platform.</p>
-        <div style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap" }}>
-          <button onClick={()=>{ setMode("signup"); setShowForm(true); }} style={{ background:"#F39C12", color:C.sidebar, padding:"14px 36px", borderRadius:10, fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>&#128640; Start for Free</button>
-          <button onClick={()=>{ setMode("login"); setShowForm(true); }} style={{ background:"transparent", color:C.white, padding:"14px 36px", borderRadius:10, fontWeight:600, fontSize:15, border:"1.5px solid rgba(255,255,255,0.4)", cursor:"pointer" }}>Sign In</button>
-        </div>
-      </div>
-
-      {/* STATS */}
-      <div style={{ background:C.sidebar, padding:"28px 5%" }}>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:20, maxWidth:900, margin:"0 auto", textAlign:"center" }}>
-          {[["500+","Businesses Filing"],["99%","GST Accuracy"],["24/7","AI Support"],["₹0","Setup Cost"]].map(([n,l])=>(
-            <div key={l}><div style={{ fontSize:"1.8rem", fontWeight:900, color:"#F39C12" }}>{n}</div><div style={{ color:"rgba(255,255,255,0.6)", fontSize:12, marginTop:4 }}>{l}</div></div>
-          ))}
-        </div>
-      </div>
-
-      {/* FEATURES */}
-      <div style={{ padding:"60px 5%", background:C.white }}>
-        <div style={{ textAlign:"center", marginBottom:40 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:C.accent, letterSpacing:2, textTransform:"uppercase", marginBottom:8 }}>Everything You Need</div>
-          <h2 style={{ fontSize:"clamp(1.4rem, 3vw, 2rem)", fontWeight:900, color:C.text }}>GST Compliance Banaya Simple</h2>
-        </div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))", gap:18, maxWidth:1100, margin:"0 auto" }}>
-          {featureList.map((ft,i)=>(
-            <div key={i} style={{ background:"#F4F6F8", borderRadius:12, padding:22, border:"1px solid #D5D8DC" }}>
-              <div style={{ fontSize:26, marginBottom:10 }}>{ft.icon}</div>
-              <div style={{ fontWeight:700, fontSize:15, marginBottom:5 }}>{ft.title}</div>
-              <div style={{ color:C.textMuted, fontSize:13, lineHeight:1.6 }}>{ft.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* PRICING */}
-      <div style={{ padding:"60px 5%", background:"#F4F6F8" }}>
-        <div style={{ textAlign:"center", marginBottom:40 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:C.accent, letterSpacing:2, textTransform:"uppercase", marginBottom:8 }}>Pricing</div>
-          <h2 style={{ fontSize:"clamp(1.4rem, 3vw, 2rem)", fontWeight:900, color:C.text }}>Apne Business ke Liye Plan Chunein</h2>
-        </div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(210px, 1fr))", gap:18, maxWidth:1000, margin:"0 auto" }}>
-          {planList.map((p,i)=>(
-            <div key={i} style={{ background:p.popular?C.sidebar:C.white, borderRadius:14, padding:22, border:p.popular?`2px solid ${C.accent}`:"1.5px solid #D5D8DC", position:"relative" }}>
-              {p.popular && <div style={{ position:"absolute", top:-12, left:"50%", transform:"translateX(-50%)", background:"#F39C12", color:C.sidebar, fontSize:10, fontWeight:800, padding:"3px 12px", borderRadius:20, whiteSpace:"nowrap" }}>MOST POPULAR</div>}
-              <div style={{ fontWeight:800, fontSize:17, marginBottom:4, color:p.popular?C.white:C.text }}>{p.name}</div>
-              <div style={{ fontSize:"1.6rem", fontWeight:900, marginBottom:4, color:p.popular?"#F39C12":p.color }}>{p.price}</div>
-              <div style={{ fontSize:12, color:p.popular?"rgba(255,255,255,0.6)":C.textMuted, marginBottom:14 }}>{p.desc}</div>
-              <ul style={{ listStyle:"none", marginBottom:18 }}>
-                {p.features.map((feat,j)=>(
-                  <li key={j} style={{ fontSize:12, padding:"5px 0", borderBottom:`1px solid ${p.popular?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.06)"}`, display:"flex", gap:8, color:p.popular?"rgba(255,255,255,0.85)":C.text }}>
-                    <span style={{ color:p.popular?"#F39C12":"#1E8449", fontWeight:700 }}>&#10003;</span>{feat}
-                  </li>
+        {done ? (
+          <div style={{ textAlign:"center", padding:"20px 0" }}>
+            <div style={{ fontSize:48, marginBottom:12 }}>📧</div>
+            <div style={{ fontWeight:700, fontSize:16, marginBottom:8 }}>Reset Email Sent!</div>
+            <button style={{ ...btn(), width:"100%", justifyContent:"center" }} onClick={() => { setMode("login"); setDone(false); }}>Back to Login</button>
+          </div>
+        ) : (
+          <>
+            {mode !== "forgot" && (
+              <div style={{ display:"flex", marginBottom:24, borderRadius:8, overflow:"hidden", border:`1.5px solid ${C.border}` }}>
+                {["login","signup"].map(m => (
+                  <button key={m} onClick={() => { setMode(m); setErr(""); }} style={{ flex:1, padding:"10px", background:mode===m?C.primary:"transparent", color:mode===m?C.white:C.textMuted, border:"none", fontWeight:600, fontSize:14, cursor:"pointer" }}>
+                    {m === "login" ? "Sign In" : "Sign Up"}
+                  </button>
                 ))}
-              </ul>
-              <button onClick={()=>{ setMode("signup"); setShowForm(true); }} style={{ width:"100%", padding:10, borderRadius:8, fontWeight:700, fontSize:13, cursor:"pointer", background:p.popular?"#F39C12":"transparent", color:p.popular?C.sidebar:C.accent, border:p.popular?"none":`1.5px solid ${C.accent}` }}>
-                {p.name==="Free"?"Start Free":"Get Started"}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* CTA */}
-      <div style={{ background:"linear-gradient(135deg, #F39C12, #e67e22)", padding:"50px 5%", textAlign:"center" }}>
-        <h2 style={{ fontSize:"clamp(1.4rem, 3vw, 2rem)", fontWeight:900, color:C.sidebar, marginBottom:12 }}>Aaj Hi Shuru Karein — Bilkul Free!</h2>
-        <p style={{ color:"rgba(13,33,55,0.7)", fontSize:15, marginBottom:24 }}>No credit card required. Setup in 2 minutes.</p>
-        <button onClick={()=>{ setMode("signup"); setShowForm(true); }} style={{ background:C.sidebar, color:C.white, padding:"13px 36px", borderRadius:10, fontWeight:700, fontSize:15, border:"none", cursor:"pointer" }}>&#128640; Create Free Account</button>
-      </div>
-
-      {/* FOOTER */}
-      <div style={{ background:C.sidebar, padding:"20px 5%", textAlign:"center", color:"rgba(255,255,255,0.4)", fontSize:12 }}>
-        &copy; 2026 TaxSaathi &bull; Made with &#10084;&#65039; in India &bull; <a href="/privacy-policy.html" style={{ color:"rgba(255,255,255,0.4)", textDecoration:"none" }}>Privacy Policy</a>
-      </div>
-
-      {/* AUTH MODAL */}
-      {showForm && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, padding:16 }}
-          onClick={e=>{ if(e.target===e.currentTarget) setShowForm(false); }}>
-          <div style={{ background:C.white, borderRadius:16, padding:"32px 36px", width:"100%", maxWidth:460, boxShadow:"0 20px 60px rgba(0,0,0,0.3)", maxHeight:"90vh", overflowY:"auto" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-              <div style={{ fontSize:20, fontWeight:900, color:C.primary }}>&#127470;&#127475; TaxSaathi</div>
-              <button onClick={()=>setShowForm(false)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:C.textMuted }}>&times;</button>
-            </div>
-            {done ? (
-              <div style={{ textAlign:"center", padding:"20px 0" }}>
-                <div style={{ fontSize:48, marginBottom:12 }}>&#128231;</div>
-                <div style={{ fontWeight:700, marginBottom:8 }}>Reset Email Sent!</div>
-                <button style={{ ...btn(), width:"100%", justifyContent:"center" }} onClick={()=>{ setMode("login"); setDone(false); }}>Back to Login</button>
               </div>
-            ) : (
+            )}
+            {mode === "signup" && (
               <>
-                {mode !== "forgot" && (
-                  <div style={{ display:"flex", marginBottom:18, borderRadius:8, overflow:"hidden", border:`1.5px solid ${C.border}` }}>
-                    {["login","signup"].map(m=>(
-                      <button key={m} onClick={()=>{ setMode(m); setErr(""); }} style={{ flex:1, padding:"10px", background:mode===m?C.primary:"transparent", color:mode===m?C.white:C.textMuted, border:"none", fontWeight:600, fontSize:14, cursor:"pointer" }}>
-                        {m==="login"?"Sign In":"Sign Up"}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {mode==="signup" && (
-                  <>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
-                      <div><div style={lbl}>Full Name</div><input style={inp} name="name" placeholder="Rajesh Kumar" onChange={handle} /></div>
-                      <div><div style={lbl}>Email</div><input style={inp} name="email" placeholder="you@company.com" onChange={handle} /></div>
-                    </div>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
-                      <div><div style={lbl}>Mobile</div><input style={inp} name="mobile" placeholder="+91 98765 43210" onChange={handle} /></div>
-                      <div><div style={lbl}>Company</div><input style={inp} name="company" placeholder="XYZ Pvt Ltd" onChange={handle} /></div>
-                    </div>
-                    <div style={{ marginBottom:12 }}><div style={lbl}>GSTIN</div><input style={inp} name="gstin" placeholder="27AABCU9603R1ZX" onChange={handle} /></div>
-                  </>
-                )}
-                {(mode==="login"||mode==="forgot") && (
-                  <div style={{ marginBottom:12 }}><div style={lbl}>Email</div><input style={inp} name="email" placeholder="you@company.com" onChange={handle} /></div>
-                )}
-                {mode !== "forgot" && (
-                  <div style={{ marginBottom:12, position:"relative" }}>
-                    <div style={lbl}>Password</div>
-                    <input style={inp} name="password" type={show?"text":"password"} placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" onChange={handle} />
-                    <button onClick={()=>setShow(s=>!s)} style={{ position:"absolute", right:10, top:30, background:"none", border:"none", cursor:"pointer", color:C.textMuted, fontSize:12 }}>{show?"Hide":"Show"}</button>
-                  </div>
-                )}
-                {mode==="login" && <div style={{ textAlign:"right", marginBottom:12 }}><button onClick={()=>setMode("forgot")} style={{ background:"none", border:"none", color:C.accent, cursor:"pointer", fontSize:12 }}>Forgot Password?</button></div>}
-                {err && <div style={{ color:C.danger, fontSize:13, marginBottom:12, padding:"8px 12px", background:"#FDEDEC", borderRadius:6 }}>{err}</div>}
-                <button style={{ ...btn(), width:"100%", justifyContent:"center", padding:"12px", fontSize:15 }} onClick={submit} disabled={busy}>
-                  {busy?"Please wait...":(mode==="login"?"Sign In":mode==="signup"?"Create Account":"Send Reset Email")}
-                </button>
-                <div style={{ display:"flex", alignItems:"center", gap:10, margin:"14px 0" }}>
-                  <div style={{ flex:1, height:1, background:C.border }} /><span style={{ color:C.textMuted, fontSize:12 }}>OR</span><div style={{ flex:1, height:1, background:C.border }} />
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+                  <div><div style={lbl}>Full Name</div><input style={inp} name="name" placeholder="Rajesh Kumar" onChange={handle} /></div>
+                  <div><div style={lbl}>Email</div><input style={inp} name="email" placeholder="you@company.com" onChange={handle} /></div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+                  <div><div style={lbl}>Mobile</div><input style={inp} name="mobile" placeholder="+91 98765 43210" onChange={handle} /></div>
+                  <div><div style={lbl}>Company Name</div><input style={inp} name="company" placeholder="XYZ Pvt Ltd" onChange={handle} /></div>
+                </div>
+                <div style={{ marginBottom:14 }}><div style={lbl}>GSTIN</div><input style={inp} name="gstin" placeholder="27AABCU9603R1ZX" onChange={handle} /></div>
+              </>
+            )}
+            {(mode === "login" || mode === "forgot") && (
+              <div style={{ marginBottom:14 }}><div style={lbl}>Email</div><input style={inp} name="email" placeholder="you@company.com" onChange={handle} /></div>
+            )}
+            {mode !== "forgot" && (
+              <div style={{ marginBottom:20 }}>
+                <div style={lbl}>Password</div>
+                <div style={{ position:"relative" }}>
+                  <input style={{ ...inp, paddingRight:44 }} name="password" type={show?"text":"password"} placeholder="••••••••" onChange={handle} />
+                  <span style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", cursor:"pointer", color:C.textMuted, fontSize:13 }} onClick={() => setShow(!show)}>{show?"Hide":"Show"}</span>
+                </div>
+                {mode === "login" && <div style={{ textAlign:"right", marginTop:6 }}><span style={{ fontSize:12, color:C.primaryLight, cursor:"pointer" }} onClick={() => setMode("forgot")}>Forgot Password?</span></div>}
+              </div>
+            )}
+            {err && <div style={{ background:"#FDEDEC", border:`1px solid ${C.danger}40`, borderRadius:7, padding:"10px 14px", fontSize:13, color:C.danger, marginBottom:14 }}>⚠️ {err}</div>}
+            <button style={{ ...btn(), width:"100%", justifyContent:"center", padding:"12px", fontSize:15 }} onClick={submit} disabled={busy}>
+              {busy ? "Please wait…" : mode==="login" ? "Sign In →" : mode==="signup" ? "Create Free Account →" : "Send Reset Link"}
+            </button>
+            {mode !== "forgot" && (
+              <>
+                <div style={{ display:"flex", alignItems:"center", gap:10, margin:"16px 0" }}>
+                  <div style={{ flex:1, height:1, background:C.border }} />
+                  <span style={{ fontSize:12, color:C.textMuted }}>OR</span>
+                  <div style={{ flex:1, height:1, background:C.border }} />
                 </div>
                 <button onClick={()=>supabase.auth.signInWithOAuth({ provider:"google", options:{ redirectTo:window.location.origin }})} style={{ width:"100%", padding:"11px", borderRadius:7, border:`1.5px solid ${C.border}`, background:C.white, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:10, fontSize:14, fontWeight:600, color:C.text }}>
-                  <span style={{ fontSize:18 }}>G</span> Continue with Google
+                  <span style={{ fontWeight:900, color:"#4285F4", fontSize:16 }}>G</span> Continue with Google
                 </button>
               </>
             )}
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
+// ─── INVOICE GENERATOR ────────────────────────────────────────────────────────
 function InvoiceGenerator({ company, clients, saveInvoice }) {
   const emptyLine = () => ({ description:"", hsn:"", qty:1, unit:"Nos", rate:0, gst_rate:18, amount:0, cgst:0, sgst:0, igst:0, total:0 });
   const [inv, setInv] = useState({
@@ -1064,6 +925,16 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
           <textarea style={{...inp,height:80,resize:"none"}} value={inv.terms} onChange={e=>setInv({...inv,terms:e.target.value})} />
         </div>
       </div>
+
+      {/* Mobile Bottom Nav */}
+      <nav className="mobile-bottom-nav">
+        {mobileBottomNav.map(n => (
+          <button key={n.id} className={page===n.id?"active":""} onClick={()=>{ setPage(n.id); setSidebarOpen(false); }}>
+            <span className="icon">{n.icon}</span>
+            {n.label}
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
@@ -1101,7 +972,7 @@ function AIAssistant({ summary, company }) {
       Answer in a mix of Hindi and English (Hinglish) when appropriate. Be concise, practical, and accurate about Indian GST laws. Current date: ${new Date().toLocaleDateString("en-IN")}.`;
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method:"POST",
-        headers:{ "Content-Type":"application/json", "x-api-key":import.meta.env.VITE_ANTHROPIC_KEY, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+        headers:{ "Content-Type":"application/json" },
         body: JSON.stringify({
           model:"claude-sonnet-4-20250514",
           max_tokens:1000,
@@ -1113,15 +984,10 @@ function AIAssistant({ summary, company }) {
         })
       });
       const data = await res.json();
-      if (data.error) {
-        const reply = `Error: ${data.error.message || JSON.stringify(data.error)}`;
-        setMessages(m => [...m, { role:"assistant", content:reply }]);
-      } else {
-        const reply = data.content?.[0]?.text || "Sorry, kuch problem ho gayi. Please try again.";
-        setMessages(m => [...m, { role:"assistant", content:reply }]);
-      }
+      const reply = data.content?.[0]?.text || "Sorry, kuch problem ho gayi. Please try again.";
+      setMessages(m => [...m, { role:"assistant", content:reply }]);
     } catch(e) {
-      setMessages(m => [...m, { role:"assistant", content:`Error: ${e.message}` }]);
+      setMessages(m => [...m, { role:"assistant", content:"Network error. Please check your connection and try again." }]);
     }
     setLoading(false);
   }
@@ -1259,8 +1125,8 @@ async function handleUpgrade(planId) {
     return;
   }
 
-  const amount = planId === 'enterprise' ? 79900 : planId === 'pro' ? 59900 : 29900;
-  const planName = planId === 'enterprise' ? 'Enterprise' : planId === 'pro' ? 'Pro' : 'Starter';
+  const amount = planId === 'pro' ? 99900 : 59900;
+  const planName = planId === 'pro' ? 'Pro' : 'Starter';
 
   try {
     const orderRes = await fetch('/api/create-order', {
@@ -1299,8 +1165,8 @@ async function handleUpgrade(planId) {
         const verifyData = await verifyRes.json();
 
         if (verifyData.success) {
-          await upgradePlan(planId);
-          alert(`🎉 ${planName} Plan activated successfully! All features are now unlocked.`);
+          setSubscription({ plan: planId, status: 'active' });
+          alert(`🎉 ${planName} Plan activated successfully!`);
         } else {
           alert('Payment verification failed. Contact support.');
         }
@@ -1388,7 +1254,7 @@ async function handleUpgrade(planId) {
                 ["WhatsApp Reminders","❌","✅","❌ Email only"],
                 ["GSTR-2B Auto-Reconciliation","✅","✅","💰 Paid add-on"],
                 ["Offline Mode","❌","✅","❌"],
-                ["Price","₹0","₹599/mo","₹1,799/mo"],
+                ["Price","₹0","₹799/mo","₹1,799/mo"],
               ].map(([feat,...vals])=>(
                 <tr key={feat}>
                   <td style={{...TD,fontWeight:600}}>{feat}</td>
@@ -1417,8 +1283,8 @@ function Dashboard({ summary, profile, plan }) {
     <div>
       <div style={{ marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:800 }}>{new Date().getHours()<12?"Good Morning":new Date().getHours()<17?"Good Afternoon":"Good Evening"}, {profile?.name?.split(" ")[0] || auth?.user?.email?.split("@")[0] || "User"} 👋</div>
-          <div style={{ fontSize:14, color:C.textMuted, marginTop:4 }}>{`GST compliance overview for ${new Date().toLocaleString("en-IN",{month:"long",year:"numeric"})}`}</div>
+          <div style={{ fontSize:22, fontWeight:800 }}>Good Morning, {profile?.name?.split(" ")[0] || "User"} 👋</div>
+          <div style={{ fontSize:14, color:C.textMuted, marginTop:4 }}>GST compliance overview for March 2026</div>
         </div>
         <span style={badge(plan==="pro"?C.primary:plan==="starter"?C.primaryLight:plan==="enterprise"?C.purple:C.textMuted)}>
           {plan.toUpperCase()} PLAN
@@ -1723,16 +1589,44 @@ function WhatsAppNotifications({ clients, company }) {
 
 // ─── CA ENROLLMENT / PAYMENT ──────────────────────────────────────────────────
 function CAEnrollment() {
+  const CA_PLANS = [
+    { id:"basic",    name:"Basic Listing",   price:999,  period:"year",  color:C.primaryLight, features:["Listed in CA Marketplace","PIN code search visibility","Basic profile page","Up to 10 client bookings/mo","Email support"], popular:false },
+    { id:"standard", name:"Standard",        price:2499, period:"year",  color:C.primary,      features:["Everything in Basic","Verified badge (ICAI check)","Priority listing in search","Unlimited bookings","WhatsApp booking alerts","Client reviews & ratings","25% more visibility"], popular:true },
+    { id:"premium",  name:"Premium CA",      price:4999, period:"year",  color:C.purple,       features:["Everything in Standard","Top 3 placement in city","Featured CA badge","Dedicated profile page","Direct client calls","Analytics dashboard","Lead generation reports","Priority support"], popular:false },
+  ];
+
+  const [selected, setSelected] = useState("standard");
+  const [step, setStep] = useState(1);
   const [form, setForm] = useState({ name:"", icai:"", email:"", mobile:"", city:"", state:"Maharashtra", specialization:"", experience:"", pincode:"" });
-  const [submitting, setSubmitting] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [enrolled, setEnrolled] = useState(false);
 
-  async function handleEnroll() {
-    if (!form.name || !form.email || !form.mobile || !form.icai) return;
-    setSubmitting(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setEnrolled(true);
-    setSubmitting(false);
+  async function handlePayment() {
+    setPaying(true);
+    const plan = CA_PLANS.find(p => p.id === selected);
+    try {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      document.body.appendChild(script);
+      await new Promise(r => script.onload = r);
+      const options = {
+        key: import.meta.env.RAZORPAY_KEY || "rzp_test_placeholder",
+        amount: plan.price * 100,
+        currency: "INR",
+        name: "TaxSaathi CA Marketplace",
+        description: `${plan.name} Plan — Annual Enrollment`,
+        handler: () => { setEnrolled(true); setPaying(false); },
+        prefill: { name: form.name, email: form.email, contact: form.mobile },
+        theme: { color: "#1B4F72" },
+        modal: { ondismiss: () => setPaying(false) }
+      };
+      new window.Razorpay(options).open();
+    } catch {
+      // Demo fallback
+      await new Promise(r => setTimeout(r, 1500));
+      setEnrolled(true);
+      setPaying(false);
+    }
   }
 
   if (enrolled) return (
@@ -1750,7 +1644,7 @@ function CAEnrollment() {
           <div key={i} style={{ fontSize:13, padding:"4px 0", color:C.text }}>✅ {s}</div>
         ))}
       </div>
-      <button style={{ ...btn(), padding:"12px 30px" }} onClick={() => { setEnrolled(false); setForm({ name:"", icai:"", email:"", mobile:"", city:"", state:"Maharashtra", specialization:"", experience:"", pincode:"" }); }}>Back to Enrollment</button>
+      <button style={{ ...btn(), padding:"12px 30px" }} onClick={() => { setEnrolled(false); setStep(1); }}>Back to Enrollment</button>
     </div>
   );
 
@@ -1759,13 +1653,6 @@ function CAEnrollment() {
       <div style={{ marginBottom:24 }}>
         <div style={{ fontSize:20, fontWeight:800 }}>👨‍💼 CA Enrollment & Listing</div>
         <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Join India's fastest growing CA marketplace — get clients directly</div>
-      </div>
-
-      {/* Free banner */}
-      <div style={{ ...card, marginBottom:24, background:"linear-gradient(135deg, #1E8449, #27AE60)", color:C.white, textAlign:"center", padding:20, borderRadius:12 }}>
-        <div style={{ fontSize:32, marginBottom:6 }}>🎁</div>
-        <div style={{ fontSize:22, fontWeight:900 }}>100% Free Enrollment</div>
-        <div style={{ fontSize:14, opacity:0.9, marginTop:6 }}>No charges. No hidden fees. Join the TaxSaathi CA Network for free!</div>
       </div>
 
       {/* Stats bar */}
@@ -1784,30 +1671,72 @@ function CAEnrollment() {
         ))}
       </div>
 
-      {/* Enrollment Form */}
-      <div style={{ maxWidth:600, margin:"0 auto" }}>
-        <div style={card}>
-          <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.primary }}>📋 Your CA Profile Details</div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-            <div><div style={lbl}>Full Name *</div><input style={inp} placeholder="CA Firstname Lastname" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></div>
-            <div><div style={lbl}>ICAI Membership No. *</div><input style={inp} placeholder="123456" value={form.icai} onChange={e=>setForm({...form,icai:e.target.value})} /></div>
+      {step === 1 && (
+        <>
+          {/* Pricing Plans */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, marginBottom:24 }}>
+            {CA_PLANS.map(p => (
+              <div key={p.id} onClick={() => setSelected(p.id)}
+                style={{ ...card, cursor:"pointer", border:`2px solid ${selected===p.id?p.color:C.border}`, background:selected===p.id?p.color+"0a":C.white, position:"relative", transition:"all 0.2s" }}>
+                {p.popular && <div style={{ position:"absolute", top:-12, left:"50%", transform:"translateX(-50%)", background:p.color, color:C.white, fontSize:11, fontWeight:700, padding:"3px 14px", borderRadius:20 }}>MOST POPULAR</div>}
+                <div style={{ fontWeight:800, fontSize:16, color:p.color, marginBottom:6 }}>{p.name}</div>
+                <div style={{ marginBottom:16 }}>
+                  <span style={{ fontSize:30, fontWeight:900, color:p.color }}>₹{p.price.toLocaleString("en-IN")}</span>
+                  <span style={{ fontSize:12, color:C.textMuted }}>/{p.period}</span>
+                </div>
+                {p.features.map(f => (
+                  <div key={f} style={{ display:"flex", gap:8, fontSize:12, padding:"4px 0", alignItems:"flex-start" }}>
+                    <span style={{ color:C.success, flexShrink:0 }}>✓</span><span>{f}</span>
+                  </div>
+                ))}
+                <div style={{ marginTop:16, padding:"10px", borderRadius:7, background:selected===p.id?p.color:C.bg, textAlign:"center", color:selected===p.id?C.white:C.textMuted, fontWeight:600, fontSize:13 }}>
+                  {selected===p.id ? "✓ Selected" : "Select Plan"}
+                </div>
+              </div>
+            ))}
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-            <div><div style={lbl}>Email *</div><input style={inp} placeholder="ca@example.in" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} /></div>
-            <div><div style={lbl}>Mobile (WhatsApp) *</div><input style={inp} placeholder="98765 43210" value={form.mobile} onChange={e=>setForm({...form,mobile:e.target.value})} /></div>
+          <div style={{ textAlign:"center" }}>
+            <button style={{ ...btn(), padding:"14px 40px", fontSize:15 }} onClick={() => setStep(2)}>
+              Continue with {CA_PLANS.find(p=>p.id===selected)?.name} — ₹{CA_PLANS.find(p=>p.id===selected)?.price.toLocaleString("en-IN")}/yr →
+            </button>
+            <div style={{ fontSize:12, color:C.textMuted, marginTop:8 }}>✅ No commission on first 3 bookings • Cancel anytime • GST invoice provided</div>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-            <div><div style={lbl}>PIN Code</div><input style={inp} placeholder="452001" maxLength={6} value={form.pincode} onChange={e=>setForm({...form,pincode:e.target.value})} /></div>
-            <div><div style={lbl}>City *</div><input style={inp} placeholder="Indore" value={form.city} onChange={e=>setForm({...form,city:e.target.value})} /></div>
+        </>
+      )}
+
+      {step === 2 && (
+        <div style={{ maxWidth:600, margin:"0 auto" }}>
+          <div style={{ ...card, marginBottom:20, background:C.primaryLighter }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div><div style={{ fontWeight:700 }}>{CA_PLANS.find(p=>p.id===selected)?.name}</div><div style={{ fontSize:12, color:C.textMuted }}>Annual enrollment fee</div></div>
+              <div style={{ fontSize:22, fontWeight:900, color:C.primary }}>₹{CA_PLANS.find(p=>p.id===selected)?.price.toLocaleString("en-IN")}</div>
+            </div>
           </div>
-          <div style={{ marginBottom:14 }}><div style={lbl}>Specialization *</div><input style={inp} placeholder="GST Filing, ITR, TDS" value={form.specialization} onChange={e=>setForm({...form,specialization:e.target.value})} /></div>
-          <div style={{ marginBottom:20 }}><div style={lbl}>Years of Experience</div><input style={inp} type="number" min={1} placeholder="5" value={form.experience} onChange={e=>setForm({...form,experience:e.target.value})} /></div>
-          <button style={{ ...btn("success"), width:"100%", justifyContent:"center", padding:"14px", fontSize:15 }} onClick={handleEnroll} disabled={submitting || !form.name || !form.email || !form.mobile || !form.icai}>
-            {submitting ? "⏳ Enrolling…" : "🚀 Enroll for Free"}
-          </button>
-          <div style={{ fontSize:12, color:C.textMuted, marginTop:10, textAlign:"center" }}>✅ Free forever • No credit card required • ICAI verified</div>
+          <div style={card}>
+            <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.primary }}>📋 Your CA Profile Details</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+              <div><div style={lbl}>Full Name *</div><input style={inp} placeholder="CA Firstname Lastname" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></div>
+              <div><div style={lbl}>ICAI Membership No. *</div><input style={inp} placeholder="123456" value={form.icai} onChange={e=>setForm({...form,icai:e.target.value})} /></div>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+              <div><div style={lbl}>Email *</div><input style={inp} placeholder="ca@example.in" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} /></div>
+              <div><div style={lbl}>Mobile (WhatsApp) *</div><input style={inp} placeholder="98765 43210" value={form.mobile} onChange={e=>setForm({...form,mobile:e.target.value})} /></div>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+              <div><div style={lbl}>PIN Code</div><input style={inp} placeholder="452001" maxLength={6} value={form.pincode} onChange={e=>setForm({...form,pincode:e.target.value})} /></div>
+              <div><div style={lbl}>City *</div><input style={inp} placeholder="Indore" value={form.city} onChange={e=>setForm({...form,city:e.target.value})} /></div>
+            </div>
+            <div style={{ marginBottom:14 }}><div style={lbl}>Specialization *</div><input style={inp} placeholder="GST Filing, ITR, TDS" value={form.specialization} onChange={e=>setForm({...form,specialization:e.target.value})} /></div>
+            <div style={{ marginBottom:20 }}><div style={lbl}>Years of Experience</div><input style={inp} type="number" min={1} placeholder="5" value={form.experience} onChange={e=>setForm({...form,experience:e.target.value})} /></div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button style={{ ...btn("outline") }} onClick={() => setStep(1)}>← Back</button>
+              <button style={{ ...btn("success"), flex:1, justifyContent:"center", padding:"12px" }} onClick={handlePayment} disabled={paying || !form.name || !form.email || !form.mobile}>
+                {paying ? "⏳ Processing Payment…" : `💳 Pay ₹${CA_PLANS.find(p=>p.id===selected)?.price.toLocaleString("en-IN")} & Enroll`}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -5046,27 +4975,7 @@ function DirectGSTFiling({ data, auth }) {
   );
 }
 
-export default function App() {
-  // TEST SUPABASE CONNECTION
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("=== SUPABASE DEBUG ===");
-      console.log("Session:", session);
-      if (session) {
-        console.log("User ID:", session.user.id);
-        console.log("User Email:", session.user.email);
-      }
-    });
-  }, []);
-  
-  const auth = useAuth();
-}
-// DEBUG useAuth
-console.log("=== useAuth DEBUG ===");
-console.log("Auth user:", auth.user);
-console.log("Auth loading:", auth.loading);
-console.log("Auth companies:", auth.companies?.length || 0);
-console.log("Auth profile:", auth.profile);
+
 export default function App() {
   const auth = useAuth();
   const data = useData(auth.activeCompany?.id);
@@ -5138,10 +5047,21 @@ export default function App() {
   // Pages are defined as top-level components below
 
 
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const mobileBottomNav = [
+    { id:"dashboard", icon:"🏠", label:"Home" },
+    { id:"invoice",   icon:"🧾", label:"Invoice" },
+    { id:"reports",   icon:"📊", label:"Reports" },
+    { id:"ai",        icon:"🤖", label:"AI" },
+    { id:"settings",  icon:"⚙️",  label:"More" },
+  ];
+
   return (
-    <div style={{ display:"flex", height:"100vh", fontFamily:"'Segoe UI', Arial, sans-serif", background:C.bg, overflow:"hidden" }}>
+    <div className="app-shell" style={{ background:C.bg }}>
+      <div className={sidebarOpen ? "sidebar-overlay open" : "sidebar-overlay"} onClick={()=>setSidebarOpen(false)} />
+
       {/* Sidebar */}
-      <div id="taxs-sidebar" style={{ width:220, background:C.sidebar, display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto" }}>
+      <div className={sidebarOpen ? "app-sidebar open" : "app-sidebar"} style={{ background:C.sidebar }}>
         <div style={{ padding:"18px 16px 14px", borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
           <div style={{ fontSize:18, fontWeight:900, color:C.white }}>🇮🇳 TaxSaathi</div>
           <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", marginTop:2, letterSpacing:1, textTransform:"uppercase" }}>2.0 — Beyond Zoho</div>
@@ -5158,7 +5078,7 @@ export default function App() {
 
         <nav style={{ padding:"8px 0", flex:1 }}>
           {nav.map(n => (
-            <div key={n.id} onClick={()=>setPage(n.id)} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", cursor:"pointer", background:page===n.id?"rgba(46,134,193,0.3)":"transparent", color:page===n.id?C.white:"rgba(255,255,255,0.55)", fontSize:13, fontWeight:page===n.id?600:400, borderLeft:`3px solid ${page===n.id?C.primaryLight:"transparent"}`, transition:"all 0.15s", position:"relative" }}>
+            <div key={n.id} onClick={()=>{ setPage(n.id); setSidebarOpen(false); }} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", cursor:"pointer", background:page===n.id?"rgba(46,134,193,0.3)":"transparent", color:page===n.id?C.white:"rgba(255,255,255,0.55)", fontSize:13, fontWeight:page===n.id?600:400, borderLeft:`3px solid ${page===n.id?C.primaryLight:"transparent"}`, transition:"all 0.15s", position:"relative" }}>
               <span style={{ fontSize:15 }}>{n.icon}</span>
               <span style={{ flex:1 }}>{n.label}</span>
               {n.badge && <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:10, background:n.badge==="NEW"?"#E74C3C":"#F39C12", color:C.white }}>{n.badge}</span>}
@@ -5181,50 +5101,54 @@ export default function App() {
       </div>
 
       {/* Main */}
-      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", height:"100dvh", minHeight:"100dvh" }}>
-        <div style={{ background:C.white, borderBottom:`1px solid ${C.border}`, padding:"0 24px", height:54, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
-          <div style={{ fontWeight:700, fontSize:16 }}>{nav.find(n=>n.id===page)?.icon} {nav.find(n=>n.id===page)?.label}</div>
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            {auth.activeCompany && <div style={{ fontSize:12, color:C.textMuted, background:C.bg, padding:"4px 12px", borderRadius:20, border:`1px solid ${C.border}` }}>🏢 {auth.activeCompany.company_name}</div>}
-            <div style={{ fontSize:12, color:C.textMuted, background:C.bg, padding:"4px 12px", borderRadius:20, border:`1px solid ${C.border}` }}>{`📅 ${new Date().toLocaleString("en-IN",{month:"long",year:"numeric"})}`}</div>
-            <button onClick={()=>setDark(d=>!d)} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:20, padding:"4px 12px", cursor:"pointer", fontSize:13, color:C.textMuted }}>{dark?"☀️ Light":"🌙 Dark"}</button>
+      <div className="app-main">
+        <div className="app-topbar" style={{ background:C.white, borderBottom:`1px solid ${C.border}`, padding:"0 24px" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <button className="hamburger-btn" onClick={()=>setSidebarOpen(o=>!o)}>
+              <span /><span /><span />
+            </button>
+            <div style={{ fontWeight:700, fontSize:15 }}>{nav.find(n=>n.id===page)?.icon} {nav.find(n=>n.id===page)?.label}</div>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            {auth.activeCompany && <div style={{ fontSize:11, color:C.textMuted, background:C.bg, padding:"3px 10px", borderRadius:20, border:`1px solid ${C.border}` }}>🏢 {auth.activeCompany.company_name}</div>}
+            <button onClick={()=>setDark(d=>!d)} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:20, padding:"3px 10px", cursor:"pointer", fontSize:12, color:C.textMuted }}>{dark?"☀️":"🌙"}</button>
           </div>
         </div>
-        <div style={{ flex:1, overflowY:"auto", maxHeight:"100dvh", padding:page==="ai"?20:24 }}>
+        <div className="app-content" style={{ padding:page==="ai"?20:24 }}>
           {page==="dashboard"  && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} />}
           {page==="invoice"    && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} />}
-          {page==="upload"     && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Excel Upload" setPage={setPage}><UploadPage data={data} /></PlanGate>}
+          {page==="upload"     && <UploadPage data={data} />}
           {page==="reports"    && <ReportsPage data={data} summary={summary} />}
-          {page==="ai"         && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="AI Tax Assistant" setPage={setPage}><AIAssistant summary={summary} company={auth.activeCompany} /></PlanGate>}
-          {page==="ca"         && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="CA Marketplace" setPage={setPage}><CAMarketplace /></PlanGate>}
+          {page==="ai"         && <AIAssistant summary={summary} company={auth.activeCompany} />}
+          {page==="ca"         && <CAMarketplace />}
           {page==="companies"  && <MultiCompany companies={auth.companies} activeCompany={auth.activeCompany} setActiveCompany={auth.setActiveCompany} addCompany={auth.addCompany} plan={auth.plan} />}
           {page==="calendar"   && <CalendarPage />}
           {page==="clients"    && <ClientsPage data={data} auth={auth} />}
-          {page==="einvoice"   && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="E-Invoice Generation" setPage={setPage}><EInvoice company={auth.activeCompany} sales={data.sales} /></PlanGate>}
-          {page==="ewaybill"   && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="E-Way Bill" setPage={setPage}><EWayBill company={auth.activeCompany} sales={data.sales} /></PlanGate>}
-          {page==="whatsapp"   && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="WhatsApp Alerts" setPage={setPage}><WhatsAppNotifications clients={data.clients} company={auth.activeCompany} /></PlanGate>}
+          {page==="einvoice"   && <EInvoice company={auth.activeCompany} sales={data.sales} />}
+          {page==="ewaybill"   && <EWayBill company={auth.activeCompany} sales={data.sales} />}
+          {page==="whatsapp"   && <WhatsAppNotifications clients={data.clients} company={auth.activeCompany} />}
           {page==="ca_enroll"  && <CAEnrollment />}
           {page==="billing"    && <Subscription plan={auth.plan} upgradePlan={auth.upgradePlan} user={auth.user} />}
           {page==="settings"      && <SettingsPage auth={auth} />}
-          {page==="expenses"      && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Expense Tracking" setPage={setPage}><ExpensePage data={data} auth={auth} /></PlanGate>}
-          {page==="purchase_orders" && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Purchase Orders" setPage={setPage}><PurchaseOrders auth={auth} data={data} /></PlanGate>}
-          {page==="bank_recon"    && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="Bank Reconciliation" setPage={setPage}><BankReconciliation data={data} /></PlanGate>}
-          {page==="gstr2b"        && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="GSTR-2B Reconciliation" setPage={setPage}><GSTR2BReconciliation data={data} /></PlanGate>}
-          {page==="tds"           && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="TDS Manager" setPage={setPage}><TDSManager auth={auth} /></PlanGate>}
-          {page==="financials"    && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Financial Reports" setPage={setPage}><FinancialReports data={data} auth={auth} /></PlanGate>}
-          {page==="audit"         && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Audit Trail" setPage={setPage}><AuditTrail auth={auth} /></PlanGate>}
-          {page==="client_portal" && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Client Portal" setPage={setPage}><ClientPortal data={data} auth={auth} /></PlanGate>}
-          {page==="payments"      && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Payment Collection" setPage={setPage}><PaymentGateway data={data} auth={auth} /></PlanGate>}
-          {page==="tally"         && <PlanGate userPlan={auth.plan} requiredPlan="enterprise" feature="Tally Import" setPage={setPage}><TallyImport data={data} /></PlanGate>}
-          {page==="inventory"     && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Inventory Management" setPage={setPage}><InventoryPage data={data} /></PlanGate>}
-          {page==="team"          && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="Team Access" setPage={setPage}><TeamAccess auth={auth} /></PlanGate>}
-          {page==="recurring"     && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Recurring Invoices" setPage={setPage}><RecurringInvoices auth={auth} data={data} /></PlanGate>}
-          {page==="gst_health"    && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="GST Health Check" setPage={setPage}><GSTHealthCheck auth={auth} data={data} /></PlanGate>}
-          {page==="payroll"       && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="Payroll" setPage={setPage}><PayrollPage auth={auth} /></PlanGate>}
-          {page==="form16"        && <PlanGate userPlan={auth.plan} requiredPlan="pro" feature="Form 16 Generator" setPage={setPage}><Form16Generator auth={auth} /></PlanGate>}
-          {page==="gst_filing"    && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="Direct GST Filing" setPage={setPage}><DirectGSTFiling data={data} auth={auth} /></PlanGate>}
-          {page==="etds"          && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="E-TDS Filing" setPage={setPage}><ETDSFiling auth={auth} /></PlanGate>}
-          {page==="itr"           && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="ITR Filing" setPage={setPage}><ITRFiling auth={auth} data={data} /></PlanGate>}
+          {page==="expenses"      && <ExpensePage data={data} auth={auth} />}
+          {page==="purchase_orders" && <PurchaseOrders auth={auth} data={data} />}
+          {page==="bank_recon"    && <BankReconciliation data={data} />}
+          {page==="gstr2b"        && <GSTR2BReconciliation data={data} />}
+          {page==="tds"           && <TDSManager auth={auth} />}
+          {page==="financials"    && <FinancialReports data={data} auth={auth} />}
+          {page==="audit"         && <AuditTrail auth={auth} />}
+          {page==="client_portal" && <ClientPortal data={data} auth={auth} />}
+          {page==="payments"      && <PaymentGateway data={data} auth={auth} />}
+          {page==="tally"         && <TallyImport data={data} />}
+          {page==="inventory"     && <InventoryPage data={data} />}
+          {page==="team"          && <TeamAccess auth={auth} />}
+          {page==="recurring"     && <RecurringInvoices auth={auth} data={data} />}
+          {page==="gst_health"    && <GSTHealthCheck auth={auth} data={data} />}
+          {page==="payroll"       && <PayrollPage auth={auth} />}
+          {page==="form16"        && <Form16Generator auth={auth} />}
+          {page==="gst_filing"    && <DirectGSTFiling data={data} auth={auth} />}
+          {page==="etds"          && <ETDSFiling auth={auth} />}
+          {page==="itr"           && <ITRFiling auth={auth} data={data} />}
         </div>
       </div>
     </div>
