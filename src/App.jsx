@@ -5046,7 +5046,27 @@ function DirectGSTFiling({ data, auth }) {
   );
 }
 
-
+export default function App() {
+  // TEST SUPABASE CONNECTION
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("=== SUPABASE DEBUG ===");
+      console.log("Session:", session);
+      if (session) {
+        console.log("User ID:", session.user.id);
+        console.log("User Email:", session.user.email);
+      }
+    });
+  }, []);
+  
+  const auth = useAuth();
+}
+// DEBUG useAuth
+console.log("=== useAuth DEBUG ===");
+console.log("Auth user:", auth.user);
+console.log("Auth loading:", auth.loading);
+console.log("Auth companies:", auth.companies?.length || 0);
+console.log("Auth profile:", auth.profile);
 export default function App() {
   const auth = useAuth();
   const data = useData(auth.activeCompany?.id);
