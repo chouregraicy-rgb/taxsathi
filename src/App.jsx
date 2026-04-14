@@ -5281,10 +5281,13 @@ export default function App() {
       </div>
 
       {/* ===== NEW: TRIAL CODE MODAL COMPONENT ===== */}
-      {/* <TrialCodeModal
+      <TrialCodeModal
         userId={auth.user?.id || "guest"}
         email={auth.user?.email || "user@example.com"}
         isOpen={showTrialModal}
         onClose={() => setShowTrialModal(false)}
         onSuccess={handleTrialSuccess}
-      /> */}
+      />
+    </div>
+  );
+}
