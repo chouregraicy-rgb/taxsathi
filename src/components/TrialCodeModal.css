@@ -1,0 +1,270 @@
+/* src/components/TrialCodeModal.css */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 500px;
+  width: 90%;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.trial-modal h2 {
+  color: #2c3e50;
+  font-size: 28px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.modal-subtitle {
+  color: #7f8c8d;
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.modal-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #7f8c8d;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.modal-close:hover {
+  color: #2c3e50;
+}
+
+/* Trial Code Input Group */
+.trial-input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.trial-input {
+  flex: 1;
+  padding: 12px 15px;
+  border: 2px solid #e0e6ed;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+  transition: all 0.3s;
+}
+
+.trial-input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.trial-input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.trial-button {
+  padding: 12px 25px;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.trial-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+}
+
+.trial-button:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Messages */
+.error-message {
+  background-color: #fee;
+  border-left: 4px solid #e74c3c;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  animation: shake 0.3s ease-in;
+}
+
+.error-message p {
+  color: #c0392b;
+  margin: 0;
+  font-weight: 500;
+}
+
+.success-message {
+  background-color: #efe;
+  border-left: 4px solid #27ae60;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.success-message p {
+  color: #229954;
+  margin: 0;
+  font-weight: 500;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.info-box {
+  background-color: #e8f4f8;
+  border-left: 4px solid #3498db;
+  padding: 12px 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.info-box p {
+  color: #2980b9;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Trial Features */
+.trial-features {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 25px 0;
+}
+
+.trial-features h3 {
+  color: #2c3e50;
+  margin: 0 0 15px 0;
+  font-size: 16px;
+}
+
+.trial-features ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.trial-features li {
+  color: #555;
+  padding: 8px 0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.trial-features li:before {
+  content: '✓';
+  color: #27ae60;
+  font-weight: bold;
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+/* Trial Note */
+.trial-note {
+  text-align: center;
+  color: #7f8c8d;
+  font-size: 13px;
+  margin: 20px 0 0 0;
+}
+
+.trial-note a {
+  color: #3498db;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s;
+}
+
+.trial-note a:hover {
+  color: #2980b9;
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .modal-content {
+    padding: 25px;
+    max-width: 100%;
+    margin: 20px;
+  }
+
+  .trial-modal h2 {
+    font-size: 24px;
+  }
+
+  .trial-input-group {
+    flex-direction: column;
+  }
+
+  .trial-button {
+    width: 100%;
+  }
+
+  .trial-features {
+    padding: 15px;
+  }
+
+  .trial-features h3 {
+    font-size: 14px;
+  }
+
+  .trial-features li {
+    font-size: 13px;
+  }
+}
