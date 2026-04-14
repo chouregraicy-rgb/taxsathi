@@ -4977,6 +4977,29 @@ function DirectGSTFiling({ data, auth }) {
 
 
 export default function App() {
+  const [forceRender, setForceRender] = useState(false);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log("Force rendering dashboard after 5s timeout");
+      setForceRender(true);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const auth = useAuth();
+  
+  // SHOW DASHBOARD EVEN IF LOADING
+  if (auth.loading && !forceRender) {
+    return (
+      <div style={{display:"flex", alignItems:"center", justifyContent:"center", height:"100dvh", background:"#0D2137", color:"white"}}>
+        <div style={{textAlign:"center"}}>
+          <div style={{fontSize:32, fontWeight:900, marginBottom:16}}>🇮🇳 TaxSaathi</div>
+          <div style={{color:"rgba(255,255,255,0.6)"}}>Loading...</div>
+        </div>
+      </div>
+    );
+  }
   const auth = useAuth();
   const data = useData(auth.activeCompany?.id);
   const [page, setPage] = useState("dashboard");
