@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, createContext, useContext } from "react";
 import { createClient } from "@supabase/supabase-js";
-import TrialCodeModal from "./components/TrialCodeModal";
+// import TrialCodeModal from "./components/TrialCodeModal";
 
 // ─── Supabase ─────────────────────────────────────────────────────────────────
 const supabase = createClient(
