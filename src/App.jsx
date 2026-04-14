@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, createContext, useContext } from "react";
 import { createClient } from "@supabase/supabase-js";
-// import TrialCodeModal from "./components/TrialCodeModal";
 
 // ─── Supabase ─────────────────────────────────────────────────────────────────
 const supabase = createClient(
@@ -5053,10 +5052,6 @@ export default function App() {
   const data = useData(auth.activeCompany?.id);
   const [page, setPage] = useState("dashboard");
   const [dark, setDark] = useState(() => localStorage.getItem("ts_dark") === "1");
-  
-  // ===== NEW: TRIAL CODE SYSTEM STATE =====
-  const [showTrialModal, setShowTrialModal] = useState(false);
-  const [userTrialStatus, setUserTrialStatus] = useState(null);
   useEffect(() => {
     document.body.style.background = dark ? "#0D1117" : "";
     document.body.style.color = dark ? "#E6EDF3" : "";
@@ -5069,43 +5064,6 @@ export default function App() {
     style.textContent = `@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }`;
     document.head.appendChild(style);
   }, []);
-
-  // ===== NEW: CHECK TRIAL STATUS =====
-  useEffect(() => {
-    if (auth.user?.id) {
-      checkTrialStatus(auth.user.id);
-    }
-  }, [auth.user?.id]);
-
-  const checkTrialStatus = async (userId) => {
-    try {
-      const response = await fetch('/api/free-trial', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'check-status',
-          userId: userId
-        })
-      });
-
-      const data = await response.json();
-      setUserTrialStatus(data);
-      
-      // If user has active trial, upgrade plan to Pro
-      if (data.hasActiveTrial && auth.plan === 'free') {
-        auth.upgradePlan('pro');
-      }
-    } catch (error) {
-      console.error('Error checking trial status:', error);
-    }
-  };
-
-  const handleTrialSuccess = () => {
-    if (auth.user?.id) {
-      checkTrialStatus(auth.user.id);
-      setShowTrialModal(false);
-    }
-  };
 
   if (auth.loading) {
     return (
@@ -5168,36 +5126,6 @@ export default function App() {
           <div style={{ fontSize:18, fontWeight:900, color:C.white }}>🇮🇳 TaxSaathi</div>
           <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", marginTop:2, letterSpacing:1, textTransform:"uppercase" }}>2.0 — Beyond Zoho</div>
         </div>
-
-        {/* ===== NEW: TRIAL STATUS BADGE ===== */}
-        {userTrialStatus?.hasActiveTrial && (
-          <div style={{ padding:"10px 12px", margin:"8px 12px", background:"rgba(46,134,193,0.2)", border:"1px solid #2E86C1", borderRadius:8, fontSize:12, color:"#2E86C1", fontWeight:600, textAlign:"center" }}>
-            ✅ Trial Active<br/>({userTrialStatus.daysRemaining} days remaining)
-          </div>
-        )}
-
-        {/* ===== NEW: APPLY TRIAL CODE BUTTON ===== */}
-        {!userTrialStatus?.hasActiveTrial && (
-          <button 
-            onClick={() => setShowTrialModal(true)}
-            style={{ 
-              margin:"10px 12px", 
-              padding:"12px 16px", 
-              background:"linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
-              color:"white", 
-              border:"none", 
-              borderRadius:8, 
-              cursor:"pointer", 
-              fontSize:13, 
-              fontWeight:600,
-              textAlign:"center",
-              transition:"all 0.3s",
-              boxShadow:"0 4px 15px rgba(102,126,234,0.3)"
-            }}
-          >
-            🎁 Apply Free Trial Code
-          </button>
-        )}
 
         {/* Company Switcher */}
         {auth.companies.length > 1 && (
@@ -5279,15 +5207,6 @@ export default function App() {
           {page==="itr"           && <PlanGate userPlan={auth.plan} requiredPlan="starter" feature="ITR Filing" setPage={setPage}><ITRFiling auth={auth} data={data} /></PlanGate>}
         </div>
       </div>
-
-      {/* ===== NEW: TRIAL CODE MODAL COMPONENT ===== */}
-      <TrialCodeModal
-        userId={auth.user?.id || "guest"}
-        email={auth.user?.email || "user@example.com"}
-        isOpen={showTrialModal}
-        onClose={() => setShowTrialModal(false)}
-        onSuccess={handleTrialSuccess}
-      />
     </div>
   );
 }
