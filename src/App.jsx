@@ -1389,7 +1389,7 @@ function Dashboard({ summary, profile, plan }) {
     <div>
       <div style={{ marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:800 }}>{new Date().getHours()<12?"Good Morning":new Date().getHours()<17?"Good Afternoon":"Good Evening"}, {profile?.name?.split(" ")[0] || "User"} 👋</div>
+          <div style={{ fontSize:22, fontWeight:800 }}>{new Date().getHours()<12?"Good Morning":new Date().getHours()<17?"Good Afternoon":"Good Evening"}, {profile?.name?.split(" ")[0] || auth?.user?.email?.split("@")[0] || "User"} 👋</div>
           <div style={{ fontSize:14, color:C.textMuted, marginTop:4 }}>{`GST compliance overview for ${new Date().toLocaleString("en-IN",{month:"long",year:"numeric"})}`}</div>
         </div>
         <span style={badge(plan==="pro"?C.primary:plan==="starter"?C.primaryLight:plan==="enterprise"?C.purple:C.textMuted)}>
@@ -1695,151 +1695,295 @@ function WhatsAppNotifications({ clients, company }) {
 
 // ─── CA ENROLLMENT / PAYMENT ──────────────────────────────────────────────────
 function CAEnrollment() {
-  const CA_PLANS = [
-    { id:"basic",    name:"Basic Listing",   price:999,  period:"year",  color:C.primaryLight, features:["Listed in CA Marketplace","PIN code search visibility","Basic profile page","Up to 10 client bookings/mo","Email support"], popular:false },
-    { id:"standard", name:"Standard",        price:2499, period:"year",  color:C.primary,      features:["Everything in Basic","Verified badge (ICAI check)","Priority listing in search","Unlimited bookings","WhatsApp booking alerts","Client reviews & ratings","25% more visibility"], popular:true },
-    { id:"premium",  name:"Premium CA",      price:4999, period:"year",  color:C.purple,       features:["Everything in Standard","Top 3 placement in city","Featured CA badge","Dedicated profile page","Direct client calls","Analytics dashboard","Lead generation reports","Priority support"], popular:false },
+  const COURSES = [
+    { id:"gst_basics",    title:"GST Fundamentals",         duration:"4 hrs",  lessons:12, level:"Beginner",      icon:"📘", color:C.primaryLight, topics:["GST Structure & Rates","GSTIN Registration","Input Tax Credit","Filing GSTR-1 & 3B"] },
+    { id:"gst_advanced",  title:"Advanced GST Filing",      duration:"6 hrs",  lessons:18, level:"Intermediate",  icon:"📗", color:C.success,      topics:["GSTR-9 Annual Return","E-Invoice & E-Way Bill","GST Audit","Composition Scheme"] },
+    { id:"itr_filing",    title:"ITR Filing Masterclass",   duration:"5 hrs",  lessons:15, level:"Intermediate",  icon:"📙", color:C.accent,       topics:["ITR-1 to ITR-4","Capital Gains","TDS Reconciliation","Refund Claims"] },
+    { id:"tds_tcs",       title:"TDS & TCS Compliance",     duration:"3 hrs",  lessons:10, level:"Beginner",      icon:"📒", color:C.purple,       topics:["TDS Rates & Sections","Form 16 & 26AS","TDS Returns","Late Filing Penalties"] },
+    { id:"startup",       title:"Startup & MSME Compliance",duration:"4 hrs",  lessons:14, level:"Advanced",      icon:"🚀", color:C.danger,       topics:["Company Incorporation","ROC Filings","MSME Registration","Startup Tax Benefits"] },
+    { id:"ca_practice",   title:"Building Your CA Practice", duration:"3 hrs",  lessons:9,  level:"Advanced",     icon:"💼", color:C.primary,      topics:["Client Acquisition","Fee Structuring","Digital CA Tools","Growing on TaxSaathi"] },
   ];
 
-  const [selected, setSelected] = useState("standard");
-  const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ name:"", icai:"", email:"", mobile:"", city:"", state:"Maharashtra", specialization:"", experience:"", pincode:"" });
-  const [paying, setPaying] = useState(false);
-  const [enrolled, setEnrolled] = useState(false);
+  const [tab, setTab]       = useState("register"); // "register" | "courses"
+  const [step, setStep]     = useState(1);
+  const [form, setForm]     = useState({
+    name:"", icai:"", email:"", mobile:"", city:"", state:"Maharashtra",
+    specialization:"", experience:"", pincode:"", languages:"Hindi, English",
+    about:"", consultFee:"", firmName:"", website:""
+  });
+  const [selectedCourses, setSelectedCourses] = useState([]);
+  const [submitting, setSubmitting]   = useState(false);
+  const [done, setDone]               = useState(false);
+  const [courseEnrolled, setCourseEnrolled] = useState([]);
 
-  async function handlePayment() {
-    setPaying(true);
-    const plan = CA_PLANS.find(p => p.id === selected);
-    try {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      document.body.appendChild(script);
-      await new Promise(r => script.onload = r);
-      const options = {
-        key: import.meta.env.RAZORPAY_KEY || "rzp_test_placeholder",
-        amount: plan.price * 100,
-        currency: "INR",
-        name: "TaxSaathi CA Marketplace",
-        description: `${plan.name} Plan — Annual Enrollment`,
-        handler: () => { setEnrolled(true); setPaying(false); },
-        prefill: { name: form.name, email: form.email, contact: form.mobile },
-        theme: { color: "#1B4F72" },
-        modal: { ondismiss: () => setPaying(false) }
-      };
-      new window.Razorpay(options).open();
-    } catch {
-      // Demo fallback
-      await new Promise(r => setTimeout(r, 1500));
-      setEnrolled(true);
-      setPaying(false);
-    }
+  const STATES = ["Andhra Pradesh","Bihar","Chhattisgarh","Delhi","Goa","Gujarat","Haryana","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Punjab","Rajasthan","Tamil Nadu","Telangana","Uttar Pradesh","West Bengal"];
+  const SPECS  = ["GST Filing","GST Audit","ITR Filing","TDS/TCS","Startup Compliance","E-commerce GST","Real Estate GST","Manufacturing GST","International Taxation","Corporate Law","MSME Advisory","Payroll & PF"];
+
+  function toggleCourse(id) {
+    setSelectedCourses(prev => prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id]);
   }
 
-  if (enrolled) return (
-    <div style={{ ...card, textAlign:"center", maxWidth:500, margin:"40px auto", padding:40 }}>
-      <div style={{ fontSize:60 }}>🎉</div>
-      <div style={{ fontSize:22, fontWeight:900, color:C.success, marginTop:16 }}>Enrollment Successful!</div>
-      <div style={{ color:C.textMuted, marginTop:10, lineHeight:1.8 }}>
-        Welcome to TaxSaathi CA Network!<br/>
-        Your profile will be live within <strong>2 hours</strong>.<br/>
+  async function handleSubmit() {
+    if (!form.name || !form.email || !form.mobile || !form.icai) return alert("Please fill all required fields marked with *");
+    setSubmitting(true);
+    await new Promise(r => setTimeout(r, 1800));
+    setSubmitting(false);
+    setDone(true);
+  }
+
+  function enrollCourse(id) {
+    setCourseEnrolled(prev => prev.includes(id) ? prev : [...prev, id]);
+  }
+
+  // ── SUCCESS SCREEN ──
+  if (done) return (
+    <div style={{ ...card, textAlign:"center", maxWidth:560, margin:"40px auto", padding:48 }}>
+      <div style={{ fontSize:64, marginBottom:8 }}>🎉</div>
+      <div style={{ fontSize:24, fontWeight:900, color:C.success }}>Registration Successful!</div>
+      <div style={{ color:C.textMuted, marginTop:10, lineHeight:1.9, fontSize:14 }}>
+        Welcome to TaxSaathi CA Network, <strong>{form.name}</strong>!<br/>
+        Your profile is under review — goes live within <strong>2 hours</strong>.<br/>
         ICAI verification completes in <strong>24 hours</strong>.
       </div>
-      <div style={{ ...card, margin:"20px 0", background:C.primaryLighter, textAlign:"left" }}>
-        <div style={{ fontWeight:700, marginBottom:8 }}>📋 What happens next:</div>
-        {["Profile goes live on CA Marketplace","Clients in your PIN area can find you","You get WhatsApp alert for each booking","ICAI membership verified within 24hrs","Verified badge added to your profile"].map((s,i) => (
-          <div key={i} style={{ fontSize:13, padding:"4px 0", color:C.text }}>✅ {s}</div>
+      <div style={{ ...card, margin:"24px 0", background:C.primaryLighter, textAlign:"left", padding:20 }}>
+        <div style={{ fontWeight:700, marginBottom:10, fontSize:14 }}>📋 What happens next:</div>
+        {[
+          "Profile goes live on CA Marketplace",
+          "Clients in your PIN code area can find & book you",
+          "WhatsApp alert for every new booking",
+          "ICAI membership verified within 24 hrs",
+          "Verified ✓ badge added to your profile",
+          "Free access to all enrolled courses"
+        ].map((s,i) => (
+          <div key={i} style={{ fontSize:13, padding:"5px 0", color:C.text, display:"flex", gap:8 }}>
+            <span style={{ color:C.success, flexShrink:0 }}>✅</span>{s}
+          </div>
         ))}
       </div>
-      <button style={{ ...btn(), padding:"12px 30px" }} onClick={() => { setEnrolled(false); setStep(1); }}>Back to Enrollment</button>
+      {selectedCourses.length > 0 && (
+        <div style={{ background:"#F0FFF4", border:`1px solid ${C.success}40`, borderRadius:8, padding:14, marginBottom:20, textAlign:"left" }}>
+          <div style={{ fontWeight:700, fontSize:13, color:C.success, marginBottom:6 }}>📚 Courses Enrolled ({selectedCourses.length})</div>
+          {selectedCourses.map(id => {
+            const c = COURSES.find(x=>x.id===id);
+            return <div key={id} style={{ fontSize:12, color:C.text, padding:"3px 0" }}>{c?.icon} {c?.title}</div>;
+          })}
+        </div>
+      )}
+      <button style={{ ...btn("success"), padding:"12px 32px", justifyContent:"center" }} onClick={() => { setDone(false); setStep(1); setForm({ name:"", icai:"", email:"", mobile:"", city:"", state:"Maharashtra", specialization:"", experience:"", pincode:"", languages:"Hindi, English", about:"", consultFee:"", firmName:"", website:"" }); setSelectedCourses([]); }}>
+        ← Back to Enrollment
+      </button>
     </div>
   );
 
   return (
     <div>
-      <div style={{ marginBottom:24 }}>
-        <div style={{ fontSize:20, fontWeight:800 }}>👨‍💼 CA Enrollment & Listing</div>
-        <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Join India's fastest growing CA marketplace — get clients directly</div>
+      {/* Header */}
+      <div style={{ marginBottom:20, display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:12 }}>
+        <div>
+          <div style={{ fontSize:22, fontWeight:900 }}>🏅 CA Enrollment — 100% Free</div>
+          <div style={{ fontSize:13, color:C.success, fontWeight:700, marginTop:4 }}>✅ No fees • No commission • Join India's fastest growing CA network</div>
+        </div>
+        <div style={{ display:"flex", background:C.bg, borderRadius:8, border:`1px solid ${C.border}`, overflow:"hidden" }}>
+          {[["register","👨‍💼 CA Registration"],["courses","📚 Free Courses"]].map(([id,label]) => (
+            <button key={id} onClick={()=>setTab(id)} style={{ padding:"9px 20px", fontSize:13, fontWeight:tab===id?700:400, background:tab===id?C.primary:"transparent", color:tab===id?C.white:C.textMuted, border:"none", cursor:"pointer", transition:"all 0.15s" }}>{label}</button>
+          ))}
+        </div>
       </div>
 
-      {/* Stats bar */}
+      {/* Stats */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:24 }}>
         {[
-          { label:"CAs Enrolled", value:"35+", icon:"👨‍💼", color:C.primary },
-          { label:"Cities Covered", value:"20+", icon:"📍", color:C.success },
-          { label:"Client Bookings", value:"1,200+", icon:"📅", color:C.accent },
-          { label:"Avg Monthly Leads", value:"8-15", icon:"📈", color:C.purple },
+          { label:"CAs Enrolled", value:"35+",   icon:"👨‍💼", color:C.primary },
+          { label:"Cities Covered",value:"20+",  icon:"📍",  color:C.success },
+          { label:"Free Courses",  value:"6",    icon:"📚",  color:C.accent },
+          { label:"Avg Leads/mo",  value:"8-15", icon:"📈",  color:C.purple },
         ].map((s,i) => (
           <div key={i} style={{ ...card, padding:"16px 20px", borderTop:`3px solid ${s.color}` }}>
-            <div style={{ fontSize:22, marginBottom:6 }}>{s.icon}</div>
+            <div style={{ fontSize:22, marginBottom:4 }}>{s.icon}</div>
             <div style={{ fontSize:22, fontWeight:800, color:s.color }}>{s.value}</div>
-            <div style={{ fontSize:11, color:C.textMuted, fontWeight:600, textTransform:"uppercase" }}>{s.label}</div>
+            <div style={{ fontSize:11, color:C.textMuted, fontWeight:600, textTransform:"uppercase", letterSpacing:0.5 }}>{s.label}</div>
           </div>
         ))}
       </div>
 
-      {step === 1 && (
-        <>
-          {/* Pricing Plans */}
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, marginBottom:24 }}>
-            {CA_PLANS.map(p => (
-              <div key={p.id} onClick={() => setSelected(p.id)}
-                style={{ ...card, cursor:"pointer", border:`2px solid ${selected===p.id?p.color:C.border}`, background:selected===p.id?p.color+"0a":C.white, position:"relative", transition:"all 0.2s" }}>
-                {p.popular && <div style={{ position:"absolute", top:-12, left:"50%", transform:"translateX(-50%)", background:p.color, color:C.white, fontSize:11, fontWeight:700, padding:"3px 14px", borderRadius:20 }}>MOST POPULAR</div>}
-                <div style={{ fontWeight:800, fontSize:16, color:p.color, marginBottom:6 }}>{p.name}</div>
-                <div style={{ marginBottom:16 }}>
-                  <span style={{ fontSize:30, fontWeight:900, color:p.color }}>₹{p.price.toLocaleString("en-IN")}</span>
-                  <span style={{ fontSize:12, color:C.textMuted }}>/{p.period}</span>
-                </div>
-                {p.features.map(f => (
-                  <div key={f} style={{ display:"flex", gap:8, fontSize:12, padding:"4px 0", alignItems:"flex-start" }}>
-                    <span style={{ color:C.success, flexShrink:0 }}>✓</span><span>{f}</span>
-                  </div>
-                ))}
-                <div style={{ marginTop:16, padding:"10px", borderRadius:7, background:selected===p.id?p.color:C.bg, textAlign:"center", color:selected===p.id?C.white:C.textMuted, fontWeight:600, fontSize:13 }}>
-                  {selected===p.id ? "✓ Selected" : "Select Plan"}
-                </div>
+      {/* ── CA REGISTRATION TAB ── */}
+      {tab === "register" && (
+        <div>
+          {/* Step indicator */}
+          <div style={{ display:"flex", gap:0, marginBottom:24, background:C.bg, borderRadius:10, overflow:"hidden", border:`1px solid ${C.border}` }}>
+            {[["1","Basic Info"],["2","Professional Details"],["3","Course Selection"]].map(([n,label],i) => (
+              <div key={n} onClick={()=>step>i+1&&setStep(i+1)} style={{ flex:1, padding:"12px 16px", textAlign:"center", background:step===i+1?C.primary:step>i+1?C.primaryLighter:"transparent", color:step===i+1?C.white:step>i+1?C.primary:C.textMuted, fontWeight:step===i+1?700:400, fontSize:13, cursor:step>i+1?"pointer":"default", borderRight:i<2?`1px solid ${C.border}`:"none", transition:"all 0.2s" }}>
+                <span style={{ fontWeight:800 }}>{step>i+1?"✓":n}.</span> {label}
               </div>
             ))}
           </div>
-          <div style={{ textAlign:"center" }}>
-            <button style={{ ...btn(), padding:"14px 40px", fontSize:15 }} onClick={() => setStep(2)}>
-              Continue with {CA_PLANS.find(p=>p.id===selected)?.name} — ₹{CA_PLANS.find(p=>p.id===selected)?.price.toLocaleString("en-IN")}/yr →
-            </button>
-            <div style={{ fontSize:12, color:C.textMuted, marginTop:8 }}>✅ No commission on first 3 bookings • Cancel anytime • GST invoice provided</div>
-          </div>
-        </>
+
+          {/* STEP 1 — Basic Info */}
+          {step === 1 && (
+            <div style={{ maxWidth:680, margin:"0 auto" }}>
+              <div style={card}>
+                <div style={{ fontWeight:700, fontSize:15, marginBottom:18, color:C.primary }}>👤 Basic Information</div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+                  <div><div style={lbl}>Full Name *</div><input style={inp} placeholder="CA Firstname Lastname" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></div>
+                  <div><div style={lbl}>ICAI Membership No. *</div><input style={inp} placeholder="e.g. 123456" value={form.icai} onChange={e=>setForm({...form,icai:e.target.value})} /></div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+                  <div><div style={lbl}>Email Address *</div><input style={inp} type="email" placeholder="ca@example.in" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} /></div>
+                  <div><div style={lbl}>Mobile (WhatsApp) *</div><input style={inp} placeholder="98765 43210" value={form.mobile} onChange={e=>setForm({...form,mobile:e.target.value})} /></div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14, marginBottom:14 }}>
+                  <div><div style={lbl}>PIN Code</div><input style={inp} placeholder="452001" maxLength={6} value={form.pincode} onChange={e=>setForm({...form,pincode:e.target.value})} /></div>
+                  <div><div style={lbl}>City *</div><input style={inp} placeholder="Mumbai" value={form.city} onChange={e=>setForm({...form,city:e.target.value})} /></div>
+                  <div><div style={lbl}>State</div>
+                    <select style={inp} value={form.state} onChange={e=>setForm({...form,state:e.target.value})}>
+                      {STATES.map(s=><option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:20 }}>
+                  <div><div style={lbl}>Firm / Company Name</div><input style={inp} placeholder="e.g. Sharma & Associates" value={form.firmName} onChange={e=>setForm({...form,firmName:e.target.value})} /></div>
+                  <div><div style={lbl}>Website (optional)</div><input style={inp} placeholder="https://yoursite.com" value={form.website} onChange={e=>setForm({...form,website:e.target.value})} /></div>
+                </div>
+                <div style={{ display:"flex", justifyContent:"flex-end" }}>
+                  <button style={{ ...btn(), padding:"11px 28px" }} onClick={()=>{ if(!form.name||!form.email||!form.mobile||!form.icai) return alert("Please fill Name, ICAI No., Email & Mobile"); setStep(2); }}>
+                    Next: Professional Details →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2 — Professional Details */}
+          {step === 2 && (
+            <div style={{ maxWidth:680, margin:"0 auto" }}>
+              <div style={card}>
+                <div style={{ fontWeight:700, fontSize:15, marginBottom:18, color:C.primary }}>💼 Professional Details</div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+                  <div><div style={lbl}>Years of Experience</div><input style={inp} type="number" min={1} placeholder="5" value={form.experience} onChange={e=>setForm({...form,experience:e.target.value})} /></div>
+                  <div><div style={lbl}>Consultation Fee (₹/month)</div><input style={inp} type="number" placeholder="1500" value={form.consultFee} onChange={e=>setForm({...form,consultFee:e.target.value})} /></div>
+                </div>
+                <div style={{ marginBottom:14 }}>
+                  <div style={lbl}>Specialization * (select all that apply)</div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:6 }}>
+                    {SPECS.map(s => {
+                      const active = form.specialization.includes(s);
+                      return (
+                        <div key={s} onClick={()=>setForm({...form, specialization: active ? form.specialization.replace(s,"").replace(",,",",").replace(/^,|,$/g,"") : form.specialization ? form.specialization+","+s : s })}
+                          style={{ padding:"6px 14px", borderRadius:20, fontSize:12, fontWeight:600, cursor:"pointer", background:active?C.primary:C.bg, color:active?C.white:C.text, border:`1.5px solid ${active?C.primary:C.border}`, transition:"all 0.15s" }}>
+                          {active?"✓ ":""}{s}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+                  <div><div style={lbl}>Languages Spoken</div><input style={inp} placeholder="Hindi, English, Marathi" value={form.languages} onChange={e=>setForm({...form,languages:e.target.value})} /></div>
+                </div>
+                <div style={{ marginBottom:20 }}>
+                  <div style={lbl}>About You (optional)</div>
+                  <textarea style={{...inp, height:80, resize:"none"}} placeholder="Brief intro about your practice, expertise, and how you help clients..." value={form.about} onChange={e=>setForm({...form,about:e.target.value})} />
+                </div>
+                <div style={{ display:"flex", gap:10 }}>
+                  <button style={{ ...btn("outline") }} onClick={()=>setStep(1)}>← Back</button>
+                  <button style={{ ...btn(), flex:1, justifyContent:"center", padding:"11px" }} onClick={()=>setStep(3)}>
+                    Next: Select Free Courses →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3 — Course Selection */}
+          {step === 3 && (
+            <div style={{ maxWidth:780, margin:"0 auto" }}>
+              <div style={{ ...card, marginBottom:16, background:C.primaryLighter, border:`1.5px solid ${C.primaryLight}40`, padding:16 }}>
+                <div style={{ fontWeight:700, color:C.primary, marginBottom:4 }}>🎁 Select Free Courses to Enroll</div>
+                <div style={{ fontSize:13, color:C.textMuted }}>All courses are completely free for enrolled CAs. Select as many as you like!</div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:20 }}>
+                {COURSES.map(c => {
+                  const selected = selectedCourses.includes(c.id);
+                  return (
+                    <div key={c.id} onClick={()=>toggleCourse(c.id)} style={{ ...card, cursor:"pointer", border:`2px solid ${selected?c.color:C.border}`, background:selected?c.color+"0d":C.white, transition:"all 0.2s", position:"relative" }}>
+                      {selected && <div style={{ position:"absolute", top:12, right:12, width:22, height:22, borderRadius:"50%", background:c.color, color:C.white, fontSize:12, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>✓</div>}
+                      <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                        <div style={{ fontSize:32, flexShrink:0 }}>{c.icon}</div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontWeight:700, fontSize:14, marginBottom:3, color:selected?c.color:C.text }}>{c.title}</div>
+                          <div style={{ display:"flex", gap:10, marginBottom:8 }}>
+                            <span style={{ fontSize:11, color:C.textMuted }}>⏱ {c.duration}</span>
+                            <span style={{ fontSize:11, color:C.textMuted }}>📖 {c.lessons} lessons</span>
+                            <span style={{ ...badge(c.color), fontSize:10 }}>{c.level}</span>
+                          </div>
+                          <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
+                            {c.topics.map(t=><span key={t} style={{ fontSize:10, background:C.bg, border:`1px solid ${C.border}`, borderRadius:4, padding:"2px 7px", color:C.textMuted }}>{t}</span>)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ ...card, background:C.primaryLighter, marginBottom:16, padding:16 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div>
+                    <div style={{ fontWeight:700, fontSize:14 }}>🏅 CA Registration — FREE</div>
+                    <div style={{ fontSize:12, color:C.textMuted, marginTop:2 }}>
+                      {selectedCourses.length > 0 ? `+ ${selectedCourses.length} course${selectedCourses.length>1?"s":""} selected` : "No courses selected (you can enroll later too)"}
+                    </div>
+                  </div>
+                  <div style={{ fontSize:24, fontWeight:900, color:C.success }}>₹0</div>
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:10 }}>
+                <button style={{ ...btn("outline") }} onClick={()=>setStep(2)}>← Back</button>
+                <button style={{ ...btn("success"), flex:1, justifyContent:"center", padding:"13px", fontSize:15 }} onClick={handleSubmit} disabled={submitting}>
+                  {submitting ? "⏳ Submitting…" : "🚀 Complete Free Enrollment →"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
-      {step === 2 && (
-        <div style={{ maxWidth:600, margin:"0 auto" }}>
-          <div style={{ ...card, marginBottom:20, background:C.primaryLighter }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div><div style={{ fontWeight:700 }}>{CA_PLANS.find(p=>p.id===selected)?.name}</div><div style={{ fontSize:12, color:C.textMuted }}>Annual enrollment fee</div></div>
-              <div style={{ fontSize:22, fontWeight:900, color:C.primary }}>₹{CA_PLANS.find(p=>p.id===selected)?.price.toLocaleString("en-IN")}</div>
-            </div>
+      {/* ── FREE COURSES TAB ── */}
+      {tab === "courses" && (
+        <div>
+          <div style={{ ...card, background:`linear-gradient(135deg, ${C.primaryLighter}, #fff)`, border:`1.5px solid ${C.primaryLight}40`, marginBottom:20, padding:20 }}>
+            <div style={{ fontWeight:800, fontSize:16, color:C.primary, marginBottom:4 }}>📚 Free CA Learning Centre</div>
+            <div style={{ fontSize:13, color:C.textMuted }}>All courses are free for TaxSaathi-enrolled CAs. Earn certificates to boost your profile visibility.</div>
           </div>
-          <div style={card}>
-            <div style={{ fontWeight:700, fontSize:15, marginBottom:16, color:C.primary }}>📋 Your CA Profile Details</div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-              <div><div style={lbl}>Full Name *</div><input style={inp} placeholder="CA Firstname Lastname" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></div>
-              <div><div style={lbl}>ICAI Membership No. *</div><input style={inp} placeholder="123456" value={form.icai} onChange={e=>setForm({...form,icai:e.target.value})} /></div>
-            </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-              <div><div style={lbl}>Email *</div><input style={inp} placeholder="ca@example.in" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} /></div>
-              <div><div style={lbl}>Mobile (WhatsApp) *</div><input style={inp} placeholder="98765 43210" value={form.mobile} onChange={e=>setForm({...form,mobile:e.target.value})} /></div>
-            </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-              <div><div style={lbl}>PIN Code</div><input style={inp} placeholder="452001" maxLength={6} value={form.pincode} onChange={e=>setForm({...form,pincode:e.target.value})} /></div>
-              <div><div style={lbl}>City *</div><input style={inp} placeholder="Indore" value={form.city} onChange={e=>setForm({...form,city:e.target.value})} /></div>
-            </div>
-            <div style={{ marginBottom:14 }}><div style={lbl}>Specialization *</div><input style={inp} placeholder="GST Filing, ITR, TDS" value={form.specialization} onChange={e=>setForm({...form,specialization:e.target.value})} /></div>
-            <div style={{ marginBottom:20 }}><div style={lbl}>Years of Experience</div><input style={inp} type="number" min={1} placeholder="5" value={form.experience} onChange={e=>setForm({...form,experience:e.target.value})} /></div>
-            <div style={{ display:"flex", gap:10 }}>
-              <button style={{ ...btn("outline") }} onClick={() => setStep(1)}>← Back</button>
-              <button style={{ ...btn("success"), flex:1, justifyContent:"center", padding:"12px" }} onClick={handlePayment} disabled={paying || !form.name || !form.email || !form.mobile}>
-                {paying ? "⏳ Processing Payment…" : `💳 Pay ₹${CA_PLANS.find(p=>p.id===selected)?.price.toLocaleString("en-IN")} & Enroll`}
-              </button>
-            </div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+            {COURSES.map(c => {
+              const enrolled = courseEnrolled.includes(c.id);
+              return (
+                <div key={c.id} style={{ ...card, border:`1.5px solid ${C.border}`, transition:"all 0.2s" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                    <div style={{ fontSize:36 }}>{c.icon}</div>
+                    <span style={{ ...badge(c.color), fontSize:10 }}>{c.level}</span>
+                  </div>
+                  <div style={{ fontWeight:800, fontSize:14, marginBottom:6, color:C.text }}>{c.title}</div>
+                  <div style={{ display:"flex", gap:14, marginBottom:12 }}>
+                    <span style={{ fontSize:12, color:C.textMuted }}>⏱ {c.duration}</span>
+                    <span style={{ fontSize:12, color:C.textMuted }}>📖 {c.lessons} lessons</span>
+                  </div>
+                  <div style={{ marginBottom:14 }}>
+                    {c.topics.map(t=>(
+                      <div key={t} style={{ fontSize:12, color:C.textMuted, padding:"3px 0", display:"flex", gap:6 }}>
+                        <span style={{ color:c.color }}>›</span>{t}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                    <span style={{ fontSize:18, fontWeight:900, color:C.success }}>FREE</span>
+                    {enrolled && <span style={{ ...badge(C.success), fontSize:10 }}>✓ Enrolled</span>}
+                  </div>
+                  <button onClick={()=>enrollCourse(c.id)} style={{ ...btn(enrolled?"outline":"success"), width:"100%", justifyContent:"center", fontSize:13 }}>
+                    {enrolled ? "▶ Continue Learning" : "🎓 Enroll Free"}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
