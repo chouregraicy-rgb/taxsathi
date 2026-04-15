@@ -12,8 +12,37 @@ html, body, #root {
   max-width: 100% !important;
 }
 
+/* ── 1. Remove browser-like scrollbar ──────────── */
+#taxs-content::-webkit-scrollbar { width: 4px; }
+#taxs-content::-webkit-scrollbar-track { background: transparent; }
+#taxs-content::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+
+/* ── 2. Better mobile font sizes ───────────────── */
 @media (max-width: 768px) {
-  #taxs-sidebar {
-    display: none !important;
+  body { font-size: 14px; }
+  h1 { font-size: 1.6em !important; }
+
+  /* ── 3. Hide sidebar, show bottom nav ─────────── */
+  #taxs-sidebar { display: none !important; }
+  #taxs-bottom-nav { display: flex !important; }
+
+  /* Extra padding so content doesn't hide behind bottom nav */
+  #taxs-content {
+    padding: 12px !important;
+    padding-bottom: calc(68px + env(safe-area-inset-bottom)) !important;
   }
+
+  /* Tighten up cards on mobile */
+  #taxs-content > div > div[style*="padding:24"],
+  #taxs-content > div > div[style*="padding: 24"] {
+    padding: 14px !important;
+  }
+}
+
+/* ── 4. Status bar color (via meta theme-color in index.html) ── */
+/* Handled in index.html */
+
+/* ── Desktop: keep scrollbar subtle ───────────── */
+@media (min-width: 769px) {
+  #taxs-content::-webkit-scrollbar { width: 6px; }
 }
