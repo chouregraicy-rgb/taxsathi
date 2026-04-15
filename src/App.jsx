@@ -1775,6 +1775,7 @@ function CAEnrollment() {
 
   const [tab, setTab]       = useState("register"); // "register" | "courses"
   const [step, setStep]     = useState(1);
+  const [activeCourse, setActiveCourse] = useState(null);
   const [form, setForm]     = useState({
     name:"", icai:"", email:"", mobile:"", city:"", state:"Maharashtra",
     specialization:"", experience:"", pincode:"", languages:"Hindi, English",
@@ -1803,6 +1804,9 @@ function CAEnrollment() {
   function enrollCourse(id) {
     setCourseEnrolled(prev => prev.includes(id) ? prev : [...prev, id]);
   }
+
+  // ── COURSE PLAYER ──
+  if (activeCourse) return <AICoursePlayer course={activeCourse} onBack={()=>setActiveCourse(null)} />;
 
   // ── SUCCESS SCREEN ──
   if (done) return (
@@ -2047,8 +2051,8 @@ function CAEnrollment() {
                     <span style={{ fontSize:18, fontWeight:900, color:C.success }}>FREE</span>
                     {enrolled && <span style={{ ...badge(C.success), fontSize:10 }}>✓ Enrolled</span>}
                   </div>
-                  <button onClick={()=>enrollCourse(c.id)} style={{ ...btn(enrolled?"outline":"success"), width:"100%", justifyContent:"center", fontSize:13 }}>
-                    {enrolled ? "▶ Continue Learning" : "🎓 Enroll Free"}
+                  <button onClick={()=>{ enrollCourse(c.id); setActiveCourse(c); }} style={{ ...btn(enrolled?"outline":"success"), width:"100%", justifyContent:"center", fontSize:13 }}>
+                    {enrolled ? "▶ Continue Learning" : "🎓 Enroll & Start"}
                   </button>
                 </div>
               );
@@ -2059,6 +2063,211 @@ function CAEnrollment() {
     </div>
   );
 }
+// ─── AI COURSE PLAYER ────────────────────────────────────────────────────────
+function AICoursePlayer({ course, onBack }) {
+  const [selectedLesson, setSelectedLesson] = useState(null);
+  const [content, setContent]   = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [completed, setCompleted] = useState([]);
+  const [question, setQuestion] = useState("");
+  const [qaHistory, setQaHistory] = useState([]);
+  const [qaLoading, setQaLoading] = useState(false);
+
+  const lessons = course.topics.map((topic, i) => ({
+    id: i,
+    title: topic,
+    duration: `${8 + i * 3} min`,
+  }));
+
+  async function loadLesson(lesson) {
+    setSelectedLesson(lesson);
+    setContent("");
+    setLoading(true);
+    setQaHistory([]);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: `You are an expert Indian CA (Chartered Accountant) trainer creating course content for TaxSaathi — an Indian GST & tax compliance platform. Write clear, practical lesson content specifically for Indian businesses and CAs. Use Indian examples (INR, GSTIN, Indian company names). Format with clear sections using **bold headers**, bullet points, and practical examples. Keep it educational, precise, and actionable. Write in a professional but friendly tone. Include a real-world Indian example at the end.`,
+          messages: [{
+            role: "user",
+            content: `Create a detailed lesson on "${lesson.title}" for the course "${course.title}". Include: 1) What it is and why it matters for Indian businesses, 2) Key concepts explained simply, 3) Step-by-step process, 4) A real Indian business example, 5) Common mistakes to avoid. Keep it practical and focused on Indian tax/GST context.`
+          }]
+        })
+      });
+      const data = await res.json();
+      setContent(data.content?.[0]?.text || "Unable to load lesson. Please try again.");
+    } catch {
+      setContent("Unable to load lesson content. Please check your connection.");
+    }
+    setLoading(false);
+    setCompleted(prev => prev.includes(lesson.id) ? prev : [...prev, lesson.id]);
+  }
+
+  async function askQuestion() {
+    if (!question.trim() || !selectedLesson) return;
+    const q = question.trim();
+    setQuestion("");
+    setQaHistory(h => [...h, { role:"user", text:q }]);
+    setQaLoading(true);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 500,
+          system: `You are an expert Indian CA trainer. Answer questions about "${selectedLesson.title}" in the context of Indian taxation and GST. Be concise, practical, and use Indian examples.`,
+          messages: [
+            { role:"user", content:`Lesson context: ${content.slice(0,500)}` },
+            { role:"assistant", content:"I understand the lesson context. I'm ready to answer your questions." },
+            { role:"user", content: q }
+          ]
+        })
+      });
+      const data = await res.json();
+      setQaHistory(h => [...h, { role:"assistant", text: data.content?.[0]?.text || "Could not get answer." }]);
+    } catch {
+      setQaHistory(h => [...h, { role:"assistant", text:"Unable to answer. Please try again." }]);
+    }
+    setQaLoading(false);
+  }
+
+  function renderContent(text) {
+    return text.split("\n").map((line, i) => {
+      if (line.startsWith("**") && line.endsWith("**")) return <div key={i} style={{ fontWeight:700, fontSize:15, color:C.primary, marginTop:16, marginBottom:6 }}>{line.replace(/\*\*/g,"")}</div>;
+      if (line.startsWith("* ") || line.startsWith("- ")) return <div key={i} style={{ display:"flex", gap:8, fontSize:13, lineHeight:1.7, marginBottom:4 }}><span style={{ color:C.primary, flexShrink:0 }}>›</span><span>{line.slice(2).replace(/\*\*(.*?)\*\*/g, (_,m)=>m)}</span></div>;
+      if (/^\d+\)/.test(line)) return <div key={i} style={{ fontSize:13, lineHeight:1.7, marginBottom:6, paddingLeft:8, borderLeft:`2px solid ${C.border}` }}>{line.replace(/\*\*(.*?)\*\*/g,(_,m)=>m)}</div>;
+      if (line.trim() === "") return <div key={i} style={{ height:8 }} />;
+      return <div key={i} style={{ fontSize:13, lineHeight:1.8, marginBottom:4, color:C.text }}>{line.replace(/\*\*(.*?)\*\*/g,(_,m)=>m)}</div>;
+    });
+  }
+
+  const progress = lessons.length > 0 ? Math.round((completed.length / lessons.length) * 100) : 0;
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:20 }}>
+        <button onClick={onBack} style={{ ...btn("outline"), padding:"8px 14px", fontSize:13 }}>← Back</button>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:18, fontWeight:900 }}>{course.icon} {course.title}</div>
+          <div style={{ fontSize:12, color:C.textMuted, marginTop:2 }}>{course.duration} • {lessons.length} lessons • {course.level}</div>
+        </div>
+        <div style={{ textAlign:"right" }}>
+          <div style={{ fontSize:12, color:C.textMuted, marginBottom:4 }}>Progress: {progress}%</div>
+          <div style={{ width:140, height:6, background:C.bg, borderRadius:10, overflow:"hidden", border:`1px solid ${C.border}` }}>
+            <div style={{ width:`${progress}%`, height:"100%", background:C.success, borderRadius:10, transition:"width 0.4s" }} />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"280px 1fr", gap:20, alignItems:"start" }}>
+        {/* Lesson List */}
+        <div style={card}>
+          <div style={{ fontWeight:700, fontSize:13, marginBottom:12, color:C.textMuted, textTransform:"uppercase", letterSpacing:0.5 }}>Course Lessons</div>
+          {lessons.map((lesson, i) => {
+            const done = completed.includes(lesson.id);
+            const active = selectedLesson?.id === lesson.id;
+            return (
+              <div key={i} onClick={() => loadLesson(lesson)} style={{ display:"flex", gap:10, alignItems:"flex-start", padding:"10px 12px", borderRadius:8, marginBottom:6, cursor:"pointer", background:active?C.primary+"12":done?"#F0FFF4":"transparent", border:`1px solid ${active?C.primary:done?C.success+"44":C.border}`, transition:"all 0.15s" }}>
+                <div style={{ width:22, height:22, borderRadius:"50%", background:done?C.success:active?C.primary:C.bg, border:`1.5px solid ${done?C.success:active?C.primary:C.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:11, color:done||active?C.white:C.textMuted, fontWeight:700, marginTop:1 }}>
+                  {done ? "✓" : i+1}
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:12, fontWeight:active?700:500, color:active?C.primary:C.text, lineHeight:1.4 }}>{lesson.title}</div>
+                  <div style={{ fontSize:10, color:C.textMuted, marginTop:2 }}>⏱ {lesson.duration}</div>
+                </div>
+              </div>
+            );
+          })}
+          {completed.length === lessons.length && (
+            <div style={{ marginTop:12, padding:12, background:C.successLight, borderRadius:8, textAlign:"center", border:`1px solid ${C.success}40` }}>
+              <div style={{ fontSize:20, marginBottom:4 }}>🎓</div>
+              <div style={{ fontSize:12, fontWeight:700, color:C.success }}>Course Complete!</div>
+              <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>Certificate earned</div>
+            </div>
+          )}
+        </div>
+
+        {/* Lesson Content */}
+        <div>
+          {!selectedLesson ? (
+            <div style={{ ...card, textAlign:"center", padding:48 }}>
+              <div style={{ fontSize:48, marginBottom:12 }}>{course.icon}</div>
+              <div style={{ fontSize:18, fontWeight:800, marginBottom:8 }}>{course.title}</div>
+              <div style={{ color:C.textMuted, fontSize:13, marginBottom:20, lineHeight:1.7 }}>
+                This course is powered by AI — each lesson is generated fresh and tailored to Indian tax practice. Click any lesson on the left to begin!
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8, justifyContent:"center", marginBottom:24 }}>
+                {course.topics.map(t => <span key={t} style={{ fontSize:12, background:C.primaryLighter, color:C.primary, padding:"4px 10px", borderRadius:20, border:`1px solid ${C.primaryLight}40` }}>{t}</span>)}
+              </div>
+              <button style={{ ...btn("success"), padding:"12px 28px", justifyContent:"center" }} onClick={() => loadLesson(lessons[0])}>
+                ▶ Start First Lesson
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div style={{ ...card, marginBottom:16 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                  <div style={{ fontSize:16, fontWeight:800, color:C.primary }}>{selectedLesson.title}</div>
+                  <span style={{ ...badge(course.color), fontSize:11 }}>AI Generated</span>
+                </div>
+                {loading ? (
+                  <div style={{ textAlign:"center", padding:"32px 0" }}>
+                    <div style={{ fontSize:32, marginBottom:12 }}>⚡</div>
+                    <div style={{ fontWeight:600, marginBottom:6 }}>AI is generating your lesson…</div>
+                    <div style={{ color:C.textMuted, fontSize:13 }}>Creating personalized content for Indian CA practice</div>
+                  </div>
+                ) : (
+                  <div style={{ lineHeight:1.8 }}>{renderContent(content)}</div>
+                )}
+              </div>
+
+              {/* Navigation */}
+              {!loading && (
+                <div style={{ display:"flex", gap:10, marginBottom:16 }}>
+                  {selectedLesson.id > 0 && (
+                    <button style={{ ...btn("outline"), fontSize:12 }} onClick={() => loadLesson(lessons[selectedLesson.id - 1])}>← Previous</button>
+                  )}
+                  {selectedLesson.id < lessons.length - 1 && (
+                    <button style={{ ...btn("success"), fontSize:12, marginLeft:"auto" }} onClick={() => loadLesson(lessons[selectedLesson.id + 1])}>Next Lesson →</button>
+                  )}
+                </div>
+              )}
+
+              {/* Q&A */}
+              {!loading && (
+                <div style={card}>
+                  <div style={{ fontWeight:700, fontSize:14, marginBottom:12, color:C.primary }}>💬 Ask AI About This Lesson</div>
+                  {qaHistory.map((m, i) => (
+                    <div key={i} style={{ marginBottom:10, display:"flex", gap:8, flexDirection:m.role==="user"?"row-reverse":"row" }}>
+                      <div style={{ width:28, height:28, borderRadius:"50%", background:m.role==="user"?C.primary:C.primaryLighter, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, color:m.role==="user"?C.white:C.primary, fontWeight:700, flexShrink:0 }}>
+                        {m.role==="user"?"U":"AI"}
+                      </div>
+                      <div style={{ maxWidth:"80%", padding:"10px 14px", borderRadius:10, background:m.role==="user"?C.primary:C.bg, color:m.role==="user"?C.white:C.text, fontSize:13, lineHeight:1.7, border:`1px solid ${C.border}` }}>
+                        {m.text}
+                      </div>
+                    </div>
+                  ))}
+                  {qaLoading && <div style={{ fontSize:13, color:C.textMuted, padding:"8px 0" }}>⏳ AI is thinking…</div>}
+                  <div style={{ display:"flex", gap:10, marginTop:12 }}>
+                    <input style={{ ...inp, flex:1, fontSize:13 }} placeholder="Ask a question about this lesson…" value={question} onChange={e=>setQuestion(e.target.value)} onKeyDown={e=>e.key==="Enter"&&askQuestion()} />
+                    <button style={{ ...btn(), padding:"10px 18px" }} onClick={askQuestion} disabled={qaLoading||!question.trim()}>Ask</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── DARK MODE CONTEXT ────────────────────────────────────────────────────────
 const DarkModeContext = React.createContext({ dark: false, toggle: () => {} });
 
