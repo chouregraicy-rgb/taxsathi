@@ -1220,9 +1220,45 @@ function MultiCompany({ companies, activeCompany, setActiveCompany, addCompany, 
 }
 
 // ─── SUBSCRIPTION / BILLING ───────────────────────────────────────────────────
+// ─── COUPON CODES ─────────────────────────────────────────────────────────────
+const COUPONS = {
+  "TAXFREE2026":   { discount:100, type:"percent", plan:"pro",        desc:"100% off — Pro Plan FREE forever!" },
+  "TAXSAATHI100":  { discount:100, type:"percent", plan:"enterprise", desc:"100% off — Enterprise Plan FREE!" },
+  "CASPECIAL":     { discount:100, type:"percent", plan:"pro",        desc:"100% off — Pro Plan FREE for CAs!" },
+  "LAUNCH50":      { discount:50,  type:"percent", plan:"starter",    desc:"50% off — Starter Plan" },
+  "WELCOME299":    { discount:100, type:"percent", plan:"starter",    desc:"100% off — Starter Plan FREE!" },
+  "ENTERPRISE99":  { discount:100, type:"percent", plan:"enterprise", desc:"100% off — Enterprise Plan FREE!" },
+};
+
 function Subscription({ plan, upgradePlan, user }) {
   const [loading, setLoading] = useState(null);
   const [success, setSuccess] = useState("");
+  const [coupon, setCoupon]   = useState("");
+  const [couponMsg, setCouponMsg] = useState(null); // { text, valid, planId }
+  const [applying, setApplying]  = useState(false);
+
+  function applyCoupon() {
+    const code = coupon.trim().toUpperCase();
+    if (!code) return;
+    setApplying(true);
+    setTimeout(() => {
+      const c = COUPONS[code];
+      if (c) {
+        setCouponMsg({ text:`✅ Coupon applied! ${c.desc}`, valid:true, planId:c.plan, code });
+      } else {
+        setCouponMsg({ text:"❌ Invalid coupon code. Please check and try again.", valid:false });
+      }
+      setApplying(false);
+    }, 800);
+  }
+
+  async function activateWithCoupon() {
+    if (!couponMsg?.valid) return;
+    const planId = couponMsg.planId;
+    await upgradePlan(planId);
+    setSuccess(`🎉 ${PLANS.find(p=>p.id===planId)?.name} Plan activated for FREE using coupon ${couponMsg.code}!`);
+    setCoupon(""); setCouponMsg(null);
+  }
 
 async function handleUpgrade(planId) {
 
@@ -1304,6 +1340,39 @@ async function handleUpgrade(planId) {
       {success && (
         <div style={{ background:C.successLight, border:`1px solid ${C.success}40`, borderRadius:8, padding:"14px 18px", marginBottom:20, color:C.success, fontWeight:600 }}>{success}</div>
       )}
+
+      {/* ── COUPON CODE BOX ── */}
+      <div style={{ ...card, marginBottom:24, background:`linear-gradient(135deg, #FFF9E6, #fff)`, border:`1.5px solid ${C.accent}40`, padding:20 }}>
+        <div style={{ fontWeight:800, fontSize:15, marginBottom:4, color:C.accent }}>🎟️ Have a Coupon Code?</div>
+        <div style={{ fontSize:13, color:C.textMuted, marginBottom:14 }}>Enter your coupon to unlock free or discounted access to any plan instantly.</div>
+        <div style={{ display:"flex", gap:10, alignItems:"flex-start", flexWrap:"wrap" }}>
+          <div style={{ flex:1, minWidth:200 }}>
+            <input
+              style={{ ...inp, fontSize:16, letterSpacing:3, fontWeight:700, textTransform:"uppercase", borderColor: couponMsg ? (couponMsg.valid ? C.success : C.danger) : C.border }}
+              placeholder="ENTER CODE"
+              value={coupon}
+              onChange={e => { setCoupon(e.target.value); setCouponMsg(null); }}
+              onKeyDown={e => e.key==="Enter" && applyCoupon()}
+            />
+          </div>
+          <button style={{ ...btn("accent"), padding:"10px 24px", fontSize:14 }} onClick={applyCoupon} disabled={applying || !coupon.trim()}>
+            {applying ? "Checking…" : "Apply"}
+          </button>
+          {couponMsg?.valid && (
+            <button style={{ ...btn("success"), padding:"10px 24px", fontSize:14 }} onClick={activateWithCoupon}>
+              🚀 Activate Free
+            </button>
+          )}
+        </div>
+        {couponMsg && (
+          <div style={{ marginTop:10, fontSize:13, fontWeight:600, color: couponMsg.valid ? C.success : C.danger, padding:"8px 12px", borderRadius:7, background: couponMsg.valid ? C.successLight : "#FDEDEC" }}>
+            {couponMsg.text}
+          </div>
+        )}
+        <div style={{ fontSize:11, color:C.textMuted, marginTop:10 }}>
+          💡 Try: <span style={{ fontFamily:"monospace", fontWeight:700, color:C.accent }}>TAXFREE2026</span> for free Pro access
+        </div>
+      </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:28 }}>
         {PLANS.map(p => (
