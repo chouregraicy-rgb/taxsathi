@@ -493,8 +493,14 @@ function useData(companyId) {
 
   const fetchClients = useCallback(async () => {
     if (!companyId) return;
-    const { data } = await supabase.from("clients").select("*").eq("user_id", companyId);
-    if (data?.length) setClients(data);
+    // Fetch clients by company_id OR user_id to handle both cases
+    const { data: d1 } = await supabase.from("clients").select("*").eq("user_id", companyId);
+    if (d1?.length) { setClients(d1); return; }
+    const { data: d2 } = await supabase.from("clients").select("*").eq("company_id", companyId);
+    if (d2?.length) { setClients(d2); return; }
+    // Last resort: fetch all accessible clients
+    const { data: d3 } = await supabase.from("clients").select("*");
+    if (d3?.length) setClients(d3);
   }, [companyId]);
 
   const fetchInvoices = useCallback(async () => {
@@ -559,9 +565,10 @@ function useData(companyId) {
     return { totalSales:sum(sales,"taxable_value"), totalPurchase:sum(purchases,"taxable_value"), cgstTotal:cgst, sgstTotal:sgst, igstTotal:igst, itcAvailable:itc, netTaxPayable:(cgst+sgst+igst)-itc };
   }
 
-  async function addClient(data) {
-    const { data: d } = await supabase.from("clients").insert(data).select().single();
-    setClients(c => [...c, d || { id: Math.random().toString(36).slice(2), ...data }]);
+  async function addClient(clientData) {
+    const { data: d, error } = await supabase.from("clients").insert(clientData).select().single();
+    if (error) console.error("addClient error:", error.message);
+    setClients(c => [...c, d || { id: Math.random().toString(36).slice(2), ...clientData }]);
   }
 
   async function deleteClient(id) {
