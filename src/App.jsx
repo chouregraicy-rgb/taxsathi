@@ -564,7 +564,12 @@ function useData(companyId) {
     setClients(c => [...c, d || { id: Math.random().toString(36).slice(2), ...data }]);
   }
 
-  return { sales, purchases, clients, invoices, uploading, uploadExcel, saveInvoice, computeSummary, addClient };
+  async function deleteClient(id) {
+    await supabase.from("clients").delete().eq("id", id);
+    setClients(c => c.filter(cl => cl.id !== id));
+  }
+
+  return { sales, purchases, clients, invoices, uploading, uploadExcel, saveInvoice, computeSummary, addClient, deleteClient };
 }
 
 // ─── AUTH SCREEN ──────────────────────────────────────────────────────────────
@@ -2857,6 +2862,15 @@ function CalendarPage() {
 function ClientsPage({ data, auth }) {
   const [show, setShow] = useState(false);
   const [f, setF] = useState({ company_name:"", gstin:"", contact_name:"", email:"", mobile:"", state:"Maharashtra" });
+  const [deleting, setDeleting] = useState(null);
+
+  async function handleDelete(id, name) {
+    if (!window.confirm(`Delete client "${name}"? This cannot be undone.`)) return;
+    setDeleting(id);
+    await data.deleteClient(id);
+    setDeleting(null);
+  }
+
   return (
     <div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
@@ -2887,9 +2901,9 @@ function ClientsPage({ data, auth }) {
       )}
       <div style={card}>
         <table style={{ width:"100%", borderCollapse:"collapse" }}>
-          <thead><tr>{["Company","GSTIN","State","Contact","Mobile","Email","Status"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <thead><tr>{["Company","GSTIN","State","Contact","Mobile","Email","Status","Action"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
           <tbody>{data.clients.length===0?(
-            <tr><td colSpan={7} style={{...TD,textAlign:"center",padding:30,color:C.textMuted}}>No clients yet — add your first client above</td></tr>
+            <tr><td colSpan={8} style={{...TD,textAlign:"center",padding:30,color:C.textMuted}}>No clients yet — add your first client above</td></tr>
           ):data.clients.map((c,i)=>(
             <tr key={i}>
               <td style={{...TD,fontWeight:700}}>{c.company_name}</td>
@@ -2898,13 +2912,22 @@ function ClientsPage({ data, auth }) {
               <td style={TD}>{c.contact_name||"—"}</td>
               <td style={TD}>
                 {c.mobile ? (
-                  <a href={`https://wa.me/91${c.mobile}`} target="_blank" rel="noreferrer" style={{ color:C.success, fontWeight:600, fontSize:13 }}>
+                  <a href={`https://wa.me/91${c.mobile}`} target="_blank" rel="noreferrer" style={{ color:C.success, fontWeight:600, fontSize:13, textDecoration:"none" }}>
                     📱 {c.mobile}
                   </a>
                 ) : <span style={{ color:C.danger, fontSize:12 }}>⚠️ No mobile</span>}
               </td>
               <td style={TD}>{c.email||"—"}</td>
               <td style={TD}><span style={badge(c.status==="Active"?C.success:C.textMuted)}>{c.status}</span></td>
+              <td style={TD}>
+                <button
+                  style={{ ...btn("danger"), fontSize:11, padding:"4px 12px" }}
+                  onClick={() => handleDelete(c.id, c.company_name)}
+                  disabled={deleting === c.id}
+                >
+                  {deleting === c.id ? "⏳" : "🗑️ Delete"}
+                </button>
+              </td>
             </tr>
           ))}</tbody>
         </table>
