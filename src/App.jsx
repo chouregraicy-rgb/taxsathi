@@ -492,13 +492,18 @@ function useData(companyId) {
   }, [companyId]);
 
   const fetchClients = useCallback(async () => {
-    if (!companyId) return;
-    // Fetch clients by company_id OR user_id to handle both cases
-    const { data: d1 } = await supabase.from("clients").select("*").eq("user_id", companyId);
+    const { data: { user } } = await supabase.auth.getUser();
+    const uid = user?.id;
+    if (!uid) return;
+    // Try by auth user id first
+    const { data: d1 } = await supabase.from("clients").select("*").eq("user_id", uid);
     if (d1?.length) { setClients(d1); return; }
-    const { data: d2 } = await supabase.from("clients").select("*").eq("company_id", companyId);
-    if (d2?.length) { setClients(d2); return; }
-    // Last resort: fetch all accessible clients
+    // Fallback by company id
+    if (companyId) {
+      const { data: d2 } = await supabase.from("clients").select("*").eq("user_id", companyId);
+      if (d2?.length) { setClients(d2); return; }
+    }
+    // Last resort
     const { data: d3 } = await supabase.from("clients").select("*");
     if (d3?.length) setClients(d3);
   }, [companyId]);
@@ -566,9 +571,16 @@ function useData(companyId) {
   }
 
   async function addClient(clientData) {
-    const { data: d, error } = await supabase.from("clients").insert(clientData).select().single();
-    if (error) console.error("addClient error:", error.message);
-    setClients(c => [...c, d || { id: Math.random().toString(36).slice(2), ...clientData }]);
+    // Get the actual auth user id
+    const { data: { user } } = await supabase.auth.getUser();
+    const uid = user?.id;
+    const payload = { ...clientData, user_id: uid || clientData.user_id };
+    const { data: d, error } = await supabase.from("clients").insert(payload).select().single();
+    if (error) {
+      console.error("addClient error:", error.message);
+      alert("Error saving client: " + error.message);
+    }
+    setClients(c => [...c, d || { id: Math.random().toString(36).slice(2), ...payload }]);
   }
 
   async function deleteClient(id) {
