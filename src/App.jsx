@@ -1071,7 +1071,7 @@ function AIAssistant({ summary, company }) {
       Current user company: ${company?.company_name || "Unknown"}, GSTIN: ${company?.gstin || "Unknown"}, State: ${company?.state || "Unknown"}.
       Financial summary: Total Sales ₹${summary?.totalSales?.toLocaleString("en-IN") || 0}, Total Purchases ₹${summary?.totalPurchase?.toLocaleString("en-IN") || 0}, Net GST Payable ₹${summary?.netTaxPayable?.toLocaleString("en-IN") || 0}, ITC Available ₹${summary?.itcAvailable?.toLocaleString("en-IN") || 0}.
       Answer in a mix of Hindi and English (Hinglish) when appropriate. Be concise, practical, and accurate about Indian GST laws. Current date: ${new Date().toLocaleDateString("en-IN")}.`;
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/claude", {
         method:"POST",
         headers:{ "Content-Type":"application/json", "x-api-key":import.meta.env.VITE_ANTHROPIC_KEY, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
         body: JSON.stringify({
@@ -2085,14 +2085,10 @@ function AICoursePlayer({ course, onBack }) {
     setLoading(true);
     setQaHistory([]);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/claude", {
         method: "POST",
-        headers: {
-        "Content-Type": "application/json",
-        "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true"
-},
+        headers: { "Content-Type": "application/json" }, 
+        
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
@@ -2119,14 +2115,10 @@ function AICoursePlayer({ course, onBack }) {
     setQaHistory(h => [...h, { role:"user", text:q }]);
     setQaLoading(true);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/claude", {
         method: "POST",
-        headers: {
-  "Content-Type": "application/json",
-  "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
-  "anthropic-version": "2023-06-01",
-  "anthropic-dangerous-direct-browser-access": "true"
-},
+        headers: { "Content-Type": "application/json" },
+  
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 500,
@@ -5073,12 +5065,7 @@ function ITRFiling({ auth, data }) {
 async function gstAPI(action, payload) {
   const res = await fetch("/api/gst", {
     method: "POST",
-    headers: {
-  "Content-Type": "application/json",
-  "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
-  "anthropic-version": "2023-06-01",
-  "anthropic-dangerous-direct-browser-access": "true"
-},
+   headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action, payload }),
   });
   return await res.json();
