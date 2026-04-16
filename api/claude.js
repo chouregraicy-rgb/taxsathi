@@ -10,10 +10,10 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: "API key not configured" });
 
   try {
-    const { model, max_tokens, system, messages } = req.body;
+    const { max_tokens, system, messages } = req.body;
 
     const payload = {
-      model: model || "claude-haiku-4-5-20251001",
+      model: "claude-3-5-haiku-20241022",
       max_tokens: max_tokens || 1000,
       messages: messages || [],
     };
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       console.error("Anthropic API error:", JSON.stringify(data));
-      return res.status(response.status).json({ error: data.error?.message || "Anthropic API error", details: data });
+      return res.status(response.status).json({ error: data.error?.message || "Anthropic API error" });
     }
 
     return res.status(200).json(data);
