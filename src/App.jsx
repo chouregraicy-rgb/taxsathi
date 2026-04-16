@@ -2867,29 +2867,42 @@ function ClientsPage({ data, auth }) {
         <div style={{ ...card, marginBottom:20, background:C.primaryLighter }}>
           <div style={{ fontWeight:700, marginBottom:14, color:C.primary }}>New Client</div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
-            <div><div style={lbl}>Company</div><input style={inp} onChange={e=>setF({...f,company_name:e.target.value})} /></div>
-            <div><div style={lbl}>GSTIN</div><input style={inp} onChange={e=>setF({...f,gstin:e.target.value})} /></div>
+            <div><div style={lbl}>Company Name *</div><input style={inp} placeholder="ABC Pvt Ltd" onChange={e=>setF({...f,company_name:e.target.value})} /></div>
+            <div><div style={lbl}>GSTIN</div><input style={inp} placeholder="27AABCU9603R1ZX" onChange={e=>setF({...f,gstin:e.target.value.toUpperCase()})} /></div>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:14 }}>
-            <div><div style={lbl}>Contact</div><input style={inp} onChange={e=>setF({...f,contact_name:e.target.value})} /></div>
-            <div><div style={lbl}>Email</div><input style={inp} onChange={e=>setF({...f,email:e.target.value})} /></div>
-            <div><div style={lbl}>State</div><select style={inp} onChange={e=>setF({...f,state:e.target.value})}>{STATES.map(s=><option key={s}>{s}</option>)}</select></div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:12 }}>
+            <div><div style={lbl}>Contact Name</div><input style={inp} placeholder="Rajesh Kumar" onChange={e=>setF({...f,contact_name:e.target.value})} /></div>
+            <div><div style={lbl}>Mobile (WhatsApp) *</div><input style={inp} placeholder="9876543210" maxLength={10} onChange={e=>setF({...f,mobile:e.target.value.replace(/\D/g,"")})} /></div>
+            <div><div style={lbl}>Email</div><input style={inp} placeholder="client@email.com" onChange={e=>setF({...f,email:e.target.value})} /></div>
+          </div>
+          <div style={{ marginBottom:14 }}>
+            <div style={lbl}>State</div>
+            <select style={inp} onChange={e=>setF({...f,state:e.target.value})}>{STATES.map(s=><option key={s}>{s}</option>)}</select>
           </div>
           <div style={{ display:"flex", gap:10 }}>
-            <button style={btn()} onClick={async()=>{ await data.addClient({...f,user_id:auth.activeCompany?.id,status:"Active"}); setShow(false); }}>Save</button>
+            <button style={btn()} onClick={async()=>{ if(!f.company_name) return alert("Company name is required"); await data.addClient({...f,user_id:auth.activeCompany?.id,status:"Active"}); setShow(false); setF({ company_name:"", gstin:"", contact_name:"", email:"", mobile:"", state:"Maharashtra" }); }}>Save Client</button>
             <button style={btn("outline")} onClick={()=>setShow(false)}>Cancel</button>
           </div>
         </div>
       )}
       <div style={card}>
         <table style={{ width:"100%", borderCollapse:"collapse" }}>
-          <thead><tr>{["Company","GSTIN","State","Contact","Email","Status"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
-          <tbody>{data.clients.map((c,i)=>(
+          <thead><tr>{["Company","GSTIN","State","Contact","Mobile","Email","Status"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <tbody>{data.clients.length===0?(
+            <tr><td colSpan={7} style={{...TD,textAlign:"center",padding:30,color:C.textMuted}}>No clients yet — add your first client above</td></tr>
+          ):data.clients.map((c,i)=>(
             <tr key={i}>
               <td style={{...TD,fontWeight:700}}>{c.company_name}</td>
-              <td style={{...TD,fontFamily:"monospace",fontSize:11}}>{c.gstin}</td>
+              <td style={{...TD,fontFamily:"monospace",fontSize:11}}>{c.gstin||"—"}</td>
               <td style={TD}>{c.state}</td>
               <td style={TD}>{c.contact_name||"—"}</td>
+              <td style={TD}>
+                {c.mobile ? (
+                  <a href={`https://wa.me/91${c.mobile}`} target="_blank" rel="noreferrer" style={{ color:C.success, fontWeight:600, fontSize:13 }}>
+                    📱 {c.mobile}
+                  </a>
+                ) : <span style={{ color:C.danger, fontSize:12 }}>⚠️ No mobile</span>}
+              </td>
               <td style={TD}>{c.email||"—"}</td>
               <td style={TD}><span style={badge(c.status==="Active"?C.success:C.textMuted)}>{c.status}</span></td>
             </tr>
