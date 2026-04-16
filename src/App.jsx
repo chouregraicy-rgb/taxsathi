@@ -1073,9 +1073,9 @@ function AIAssistant({ summary, company }) {
       Answer in a mix of Hindi and English (Hinglish) when appropriate. Be concise, practical, and accurate about Indian GST laws. Current date: ${new Date().toLocaleDateString("en-IN")}.`;
       const res = await fetch("/api/claude", {
         method:"POST",
-        headers:{ "Content-Type":"application/json", "x-api-key":import.meta.env.VITE_ANTHROPIC_KEY, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+        headers:{ "Content-Type":"application/json" },
         body: JSON.stringify({
-          model:"claude-sonnet-4-20250514",
+          model:"claude-3-5-haiku-20241022",
           max_tokens:1000,
           system: context,
           messages:[
@@ -1307,8 +1307,8 @@ async function handleUpgrade(planId) {
         const verifyData = await verifyRes.json();
 
         if (verifyData.success) {
-          setSubscription({ plan: planId, status: 'active' });
-          alert(`🎉 ${planName} Plan activated successfully!`);
+          await upgradePlan(planId);
+          setSuccess(`🎉 ${planName} Plan activated successfully!`);
         } else {
           alert('Payment verification failed. Contact support.');
         }
@@ -1370,7 +1370,7 @@ async function handleUpgrade(planId) {
           </div>
         )}
         <div style={{ fontSize:11, color:C.textMuted, marginTop:10 }}>
-          💡 Try: <span style={{ fontFamily:"monospace", fontWeight:700, color:C.accent }}>TAXFREE2026</span> for free Pro access
+          💡 Enter your coupon code to unlock free or discounted access.
         </div>
       </div>
 
@@ -2089,7 +2089,7 @@ function AICoursePlayer({ course, onBack }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-3-5-haiku-20241022",
           max_tokens: 1000,
           system: `You are an expert Indian CA (Chartered Accountant) trainer creating course content for TaxSaathi — an Indian GST & tax compliance platform. Write clear, practical lesson content specifically for Indian businesses and CAs. Use Indian examples (INR, GSTIN, Indian company names). Format with clear sections using **bold headers**, bullet points, and practical examples. Keep it educational, precise, and actionable. Write in a professional but friendly tone. Include a real-world Indian example at the end.`,
           messages: [{
@@ -2118,7 +2118,7 @@ function AICoursePlayer({ course, onBack }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-3-5-haiku-20241022",
           max_tokens: 500,
           system: `You are an expert Indian CA trainer. Answer questions about "${selectedLesson.title}" in the context of Indian taxation and GST. Be concise, practical, and use Indian examples.`,
           messages: [
