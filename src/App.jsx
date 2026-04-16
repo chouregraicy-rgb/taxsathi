@@ -1267,8 +1267,10 @@ async function handleUpgrade(planId) {
     return;
   }
 
-  const amount = planId === 'pro' ? 99900 : 59900;
-  const planName = planId === 'pro' ? 'Pro' : 'Starter';
+  // Send amount in RUPEES — create-order.js multiplies by 100 to get paise
+  const planPrices = { starter: 299, pro: 599, enterprise: 799 };
+  const amount = planPrices[planId] || 299;
+  const planName = PLANS.find(p => p.id === planId)?.name || planId;
 
   try {
     const orderRes = await fetch('/api/create-order', {
@@ -1280,16 +1282,16 @@ async function handleUpgrade(planId) {
     const orderData = await orderRes.json();
 
     if (!orderData.id) {
-      alert('Order creation failed. Please try again.');
+      alert('Order creation failed: ' + (orderData.error || 'Please try again.'));
       return;
     }
 
     const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY,
+      key: import.meta.env.VITE_RAZORPAY_KEY || import.meta.env.VITE_RAZORPAY_KEY_ID,
       amount: orderData.amount,
       currency: 'INR',
       name: 'TaxSaathi',
-      description: `${planName} Plan Subscription`,
+      description: `${planName} Plan — Monthly Subscription`,
       order_id: orderData.id,
       handler: async function (response) {
         const verifyRes = await fetch('/api/verify-payment', {
@@ -1308,16 +1310,21 @@ async function handleUpgrade(planId) {
 
         if (verifyData.success) {
           await upgradePlan(planId);
-          setSuccess(`🎉 ${planName} Plan activated successfully!`);
+          setSuccess(`🎉 ${planName} Plan activated successfully! Welcome aboard!`);
         } else {
-          alert('Payment verification failed. Contact support.');
+          alert('Payment verification failed. Please contact support@taxsaathi.online');
         }
       },
       prefill: {
         email: user.email,
         name: user.user_metadata?.full_name || '',
       },
-      theme: { color: '#6366f1' },
+      theme: { color: '#1B4F72' },
+      modal: {
+        ondismiss: function() {
+          console.log('Payment modal closed');
+        }
+      }
     };
 
     const rzp = new window.Razorpay(options);
