@@ -2087,8 +2087,7 @@ function AICoursePlayer({ course, onBack }) {
     try {
       const res = await fetch("/api/claude", {
         method: "POST",
-        headers: { "Content-Type": "application/json" }, 
-        
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
@@ -2118,7 +2117,6 @@ function AICoursePlayer({ course, onBack }) {
       const res = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-  
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 500,
@@ -5065,7 +5063,7 @@ function ITRFiling({ auth, data }) {
 async function gstAPI(action, payload) {
   const res = await fetch("/api/gst", {
     method: "POST",
-   headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action, payload }),
   });
   return await res.json();
