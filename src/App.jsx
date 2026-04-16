@@ -1582,22 +1582,43 @@ function WhatsAppNotifications({ clients, company }) {
     const encoded = encodeURIComponent(msg);
     const clean = mobile.replace(/\D/g, "");
     const num = clean.startsWith("91") ? clean : "91" + clean;
-    window.open(`https://wa.me/${num}?text=${encoded}`, "_blank");
+    const url = `https://wa.me/${num}?text=${encoded}`;
+    const opened = window.open(url, "_blank");
+    if (!opened) {
+      // Popup blocked — fallback to direct link
+      window.location.href = url;
+    }
   }
 
   async function sendBulk() {
     if (!selected.deadline || selected.clients.length === 0) return;
-    setSending(true);
     const dl = upcoming.find(d => d.task + d.date === selected.deadline);
+    if (!dl) return alert("Please select a deadline first");
     const msg = getMsg(dl);
-    for (const c of selected.clients) {
-      if (c.mobile) {
+    const clientsWithMobile = selected.clients.filter(c => c.mobile);
+    if (clientsWithMobile.length === 0) return alert("No clients with mobile numbers selected");
+
+    if (clientsWithMobile.length === 1) {
+      // Single client — open directly
+      sendWhatsApp(clientsWithMobile[0].mobile, msg);
+      setSent(prev => [...prev, { client: clientsWithMobile[0].company_name, task: dl.task, time: new Date().toLocaleTimeString() }]);
+      alert(`✅ WhatsApp opened for ${clientsWithMobile[0].company_name}!`);
+      return;
+    }
+
+    // Multiple clients — open one by one with user confirmation
+    setSending(true);
+    for (let i = 0; i < clientsWithMobile.length; i++) {
+      const c = clientsWithMobile[i];
+      const proceed = window.confirm(`Send WhatsApp to ${c.company_name} (${c.mobile})?\n\nClick OK to open WhatsApp, Cancel to skip.\n\n(${i+1} of ${clientsWithMobile.length})`);
+      if (proceed) {
         sendWhatsApp(c.mobile, msg);
-        await new Promise(r => setTimeout(r, 800));
         setSent(prev => [...prev, { client: c.company_name, task: dl.task, time: new Date().toLocaleTimeString() }]);
+        await new Promise(r => setTimeout(r, 1500));
       }
     }
     setSending(false);
+    alert(`✅ Done! Sent to ${sent.length + clientsWithMobile.length} clients.`);
   }
 
   return (
