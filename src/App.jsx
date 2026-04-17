@@ -492,21 +492,14 @@ function useData(companyId) {
   }, [companyId]);
 
   const fetchClients = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    const uid = user?.id;
-    if (!uid) return;
-    // Try by auth user id first
-    const { data: d1 } = await supabase.from("clients").select("*").eq("user_id", uid);
-    if (d1?.length) { setClients(d1); return; }
-    // Fallback by company id
-    if (companyId) {
-      const { data: d2 } = await supabase.from("clients").select("*").eq("user_id", companyId);
-      if (d2?.length) { setClients(d2); return; }
-    }
-    // Last resort
-    const { data: d3 } = await supabase.from("clients").select("*");
-    if (d3?.length) setClients(d3);
-  }, [companyId]);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const { data, error } = await supabase
+    .from("clients")
+    .select("*")
+    .eq("user_id", user.id);
+  if (data?.length) setClients(data);
+}, [companyId]);
 
   const fetchInvoices = useCallback(async () => {
     if (!companyId) return;
