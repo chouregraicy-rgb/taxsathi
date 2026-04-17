@@ -1611,12 +1611,15 @@ function WhatsAppNotifications({ clients, company }) {
     if (clientsWithMobile.length === 0) return alert("No clients with mobile numbers selected");
 
     if (clientsWithMobile.length === 1) {
-      // Single client — open directly
-      sendWhatsApp(clientsWithMobile[0].mobile, msg);
-      setSent(prev => [...prev, { client: clientsWithMobile[0].company_name, task: dl.task, time: new Date().toLocaleTimeString() }]);
-      alert(`✅ WhatsApp opened for ${clientsWithMobile[0].company_name}!`);
-      return;
-    }
+    const c = clientsWithMobile[0];
+    const encoded = encodeURIComponent(msg);
+    const clean = c.mobile.replace(/\D/g, "");
+    const num = clean.startsWith("91") ? clean : "91" + clean;
+    const url = `https://wa.me/${num}?text=${encoded}`;
+    setSent(prev => [...prev, { client: c.company_name, task: dl.task, time: new Date().toLocaleTimeString() }]);
+    window.open(url, "_blank");
+    return;
+}
 
     // Multiple clients — open one by one with user confirmation
     setSending(true);
