@@ -1092,7 +1092,7 @@ function AIAssistant({ summary, company }) {
       Current user company: ${company?.company_name || "Unknown"}, GSTIN: ${company?.gstin || "Unknown"}, State: ${company?.state || "Unknown"}.
       Financial summary: Total Sales ₹${summary?.totalSales?.toLocaleString("en-IN") || 0}, Total Purchases ₹${summary?.totalPurchase?.toLocaleString("en-IN") || 0}, Net GST Payable ₹${summary?.netTaxPayable?.toLocaleString("en-IN") || 0}, ITC Available ₹${summary?.itcAvailable?.toLocaleString("en-IN") || 0}.
       Answer in a mix of Hindi and English (Hinglish) when appropriate. Be concise, practical, and accurate about Indian GST laws. Current date: ${new Date().toLocaleDateString("en-IN")}.`;
-      const res = await fetch("/api/claude", {
+      const res = await fetch("/api/gemini", {
         method:"POST",
         headers:{ "Content-Type":"application/json" },
         body: JSON.stringify({
@@ -2133,7 +2133,7 @@ function AICoursePlayer({ course, onBack }) {
     setLoading(true);
     setQaHistory([]);
     try {
-      const res = await fetch("/api/claude", {
+      const res = await fetch("/api/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2162,7 +2162,7 @@ function AICoursePlayer({ course, onBack }) {
     setQaHistory(h => [...h, { role:"user", text:q }]);
     setQaLoading(true);
     try {
-      const res = await fetch("/api/claude", {
+      const res = await fetch("/api/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
