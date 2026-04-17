@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       })
     });
     const data = await response.json();
-    const text = data.choices?.[0]?.message?.content || "No response";
+    const text = data.choices?.[0]?.message?.content || JSON.stringify(data);
     res.json({ content: [{ text }] });
   } catch(e) {
     res.json({ content: [{ text: "Error: " + e.message }] });
