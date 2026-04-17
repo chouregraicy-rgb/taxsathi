@@ -508,8 +508,12 @@ function useData(companyId) {
   }, [companyId]);
 
   useEffect(() => {
-    if (companyId) { fetchSales(); fetchPurchases(); fetchClients(); fetchInvoices(); }
-  }, [companyId, fetchSales, fetchPurchases, fetchClients, fetchInvoices]);
+    if (companyId) { fetchSales(); fetchPurchases(); fetchInvoices(); }
+  }, [companyId, fetchSales, fetchPurchases, fetchInvoices]);
+
+  useEffect(() => {
+    fetchClients();
+  }, [fetchClients]);
 
   async function uploadExcel(file, type) {
     if (!companyId) throw new Error("No company found.");
