@@ -1599,12 +1599,8 @@ function WhatsAppNotifications({ clients, company }) {
     const clean = mobile.replace(/\D/g, "");
     const num = clean.startsWith("91") ? clean : "91" + clean;
     const url = `https://wa.me/${num}?text=${encoded}`;
-    const opened = window.open(url, "_blank");
-    if (!opened) {
-      // Popup blocked — fallback to direct link
-      window.location.href = url;
-    }
-  }
+    window.location.href = url;
+}
 
   async function sendBulk() {
     if (!selected.deadline || selected.clients.length === 0) return;
