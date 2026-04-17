@@ -1,28 +1,30 @@
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   
-  const key = process.env.GEMINI_API_KEY;
-  
-  if (!key) {
-    return res.json({ content: [{ text: "Error: GEMINI_API_KEY not found in environment" }] });
-  }
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) return res.json({ content: [{ text: "Error: API key not found" }] });
 
   const { messages, system } = req.body;
-  const prompt = (system || "") + "\n\n" + (messages || []).map(m => m.role + ": " + m.content).join("\n");
   
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] })
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${key}`
+      },
+      body: JSON.stringify({
+        model: "meta-llama/llama-3.1-8b-instruct:free",
+        messages: [
+          { role: "system", content: system || "" },
+          ...(messages || [])
+        ]
+      })
     });
     const data = await response.json();
-    if (data.error) {
-      return res.json({ content: [{ text: "API Error: " + data.error.message }] });
-    }
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response";
+    const text = data.choices?.[0]?.message?.content || "No response";
     res.json({ content: [{ text }] });
   } catch(e) {
-    res.json({ content: [{ text: "Fetch error: " + e.message }] });
+    res.json({ content: [{ text: "Error: " + e.message }] });
   }
 }
