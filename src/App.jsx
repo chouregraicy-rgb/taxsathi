@@ -1473,7 +1473,7 @@ async function handleUpgrade(planId) {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ summary, profile, plan }) {
+function Dashboard({ summary, profile, plan, setPage }) {
   const { totalSales, totalPurchase, cgstTotal, sgstTotal, igstTotal, itcAvailable, netTaxPayable } = summary;
   const stats = [
     { label:"Total Sales", value:fmt(totalSales), color:C.primary, icon:"📈" },
@@ -5707,7 +5707,7 @@ export default function App() {
           </div>
         </div>
         <div style={{ flex:1, overflowY:"auto", maxHeight:"100dvh", padding:page==="ai"?20:24 }}>
-          {page==="dashboard"  && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} />}
+          {page==="dashboard"  && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} setPage={setPage} />}
           {page==="invoice"    && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} />}
           {page==="upload"     && <UploadPage data={data} />}
           {page==="reports"    && <ReportsPage data={data} summary={summary} />}
