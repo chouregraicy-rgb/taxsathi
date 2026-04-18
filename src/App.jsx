@@ -1486,7 +1486,7 @@ function Dashboard({ summary, profile, plan }) {
     <div>
       <div style={{ marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
-          <div style={{ fontSize:22, fontWeight:800 }}>{new Date().getHours()<12?"Good Morning":new Date().getHours()<17?"Good Afternoon":"Good Evening"}, {profile?.name?.split(" ")[0] || auth?.user?.email?.split("@")[0] || "User"} 👋</div>
+          <div style={{ fontSize:22, fontWeight:800 }}>{new Date().getHours()<12?"Good Morning":new Date().getHours()<17?"Good Afternoon":"Good Evening"}, {profile?.name?.split(" ")[0] || "User"} 👋</div>
           <div style={{ fontSize:14, color:C.textMuted, marginTop:4 }}>{`GST compliance overview for ${new Date().toLocaleString("en-IN",{month:"long",year:"numeric"})}`}</div>
         </div>
         <span style={badge(plan==="pro"?C.primary:plan==="starter"?C.primaryLight:plan==="enterprise"?C.purple:C.textMuted)}>
@@ -1509,10 +1509,10 @@ function Dashboard({ summary, profile, plan }) {
           <div style={{ fontWeight:700, fontSize:15, marginBottom:16 }}>⚡ Quick Actions</div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
             {[
-              {label:"Create Invoice", icon:"\uD83E\uDDFE", color:C.primary, page:"invoice"},
-              {label:"Upload Sales", icon:"\uD83D\uDCE4", color:C.primaryLight, page:"upload"},
-              {label:"Ask AI Assistant", icon:"\uD83E\uDD16", color:C.purple, page:"ai"},
-              {label:"Find CA", icon:"\uD83D\uDC68\u200D\uD83D\uDCBC", color:C.success, page:"ca"},
+              {label:"Create Invoice", icon:"🧾", color:C.primary, page:"invoice"},
+              {label:"Upload Sales", icon:"📤", color:C.primaryLight, page:"upload"},
+              {label:"Ask AI Assistant", icon:"🤖", color:C.purple, page:"ai"},
+              {label:"Find CA", icon:"👨‍💼", color:C.success, page:"ca"},
             ].map((a,i) => (
               <button key={i} onClick={()=>setPage(a.page)} style={{ padding:"14px", borderRadius:8, background:a.color+"12", border:`1.5px solid ${a.color}30`, cursor:"pointer", textAlign:"left" }}>
                 <div style={{ fontSize:22, marginBottom:6 }}>{a.icon}</div>
@@ -1520,6 +1520,7 @@ function Dashboard({ summary, profile, plan }) {
               </button>
             ))}
           </div>
+        </div>
         <div style={card}>
           <div style={{ fontWeight:700, fontSize:15, marginBottom:14 }}>⏰ Upcoming Deadlines</div>
           {(() => {
