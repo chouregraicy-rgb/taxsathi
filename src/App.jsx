@@ -398,6 +398,7 @@ function useAuth() {
   const [activeCompany, setActiveCompany] = useState(null);
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState("free");
+  const [courseAccess, setCourseAccess] = useState(() => localStorage.getItem("ts_course_access") === "1");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -468,7 +469,7 @@ function useAuth() {
     await supabase.from("users").update({ plan: planId }).eq("id", user.id);
     setPlan(planId);
   }
-  return { user, profile, companies, activeCompany, setActiveCompany, loading, plan, signUp, signIn, signOut, resetPassword, addCompany, updateProfile, updateCompany, upgradePlan };
+  return { user, profile, companies, activeCompany, setActiveCompany, loading, plan, courseAccess, setCourseAccess, signUp, signIn, signOut, resetPassword, addCompany, updateProfile, updateCompany, upgradePlan };
 }
 
 // ─── useData ──────────────────────────────────────────────────────────────────
@@ -1243,15 +1244,13 @@ function MultiCompany({ companies, activeCompany, setActiveCompany, addCompany, 
 // ─── SUBSCRIPTION / BILLING ───────────────────────────────────────────────────
 // ─── COUPON CODES ─────────────────────────────────────────────────────────────
 const COUPONS = {
-  "TAXFREE2026":   { discount:100, type:"percent", plan:"pro",        desc:"100% off — Pro Plan FREE forever!" },
-  "TAXSAATHI100":  { discount:100, type:"percent", plan:"enterprise", desc:"100% off — Enterprise Plan FREE!" },
-  "CASPECIAL":     { discount:100, type:"percent", plan:"pro",        desc:"100% off — Pro Plan FREE for CAs!" },
-  "LAUNCH50":      { discount:50,  type:"percent", plan:"starter",    desc:"50% off — Starter Plan" },
-  "WELCOME299":    { discount:100, type:"percent", plan:"starter",    desc:"100% off — Starter Plan FREE!" },
-  "ENTERPRISE99":  { discount:100, type:"percent", plan:"enterprise", desc:"100% off — Enterprise Plan FREE!" },
+  "LAUNCH50":    { discount:50, type:"percent", plan:"starter",    desc:"50% off your first month — Starter Plan!", courseAccess:false },
+  "COURSE2026":  { discount:0,  type:"percent", plan:"free",       desc:"Course access unlocked! Enjoy all 6 FREE courses.", courseAccess:true },
+  "CALEARN":     { discount:0,  type:"percent", plan:"free",       desc:"CA Course access unlocked! All courses are now FREE for you.", courseAccess:true },
+  "ENTFREE":     { discount:100, type:"percent", plan:"enterprise", desc:"Enterprise Plan unlocked! Welcome to TaxSaathi Enterprise.", courseAccess:true },
 };
 
-function Subscription({ plan, upgradePlan, user }) {
+function Subscription({ plan, upgradePlan, user, auth }) {
   const [loading, setLoading] = useState(null);
   const [success, setSuccess] = useState("");
   const [coupon, setCoupon]   = useState("");
@@ -1276,8 +1275,22 @@ function Subscription({ plan, upgradePlan, user }) {
   async function activateWithCoupon() {
     if (!couponMsg?.valid) return;
     const planId = couponMsg.planId;
-    await upgradePlan(planId);
-    setSuccess(`🎉 ${PLANS.find(p=>p.id===planId)?.name} Plan activated for FREE using coupon ${couponMsg.code}!`);
+    const couponData = COUPONS[couponMsg.code];
+
+    // Grant course access if coupon has courseAccess:true
+    if (couponData?.courseAccess) {
+      localStorage.setItem("ts_course_access", "1");
+      if (auth?.setCourseAccess) auth.setCourseAccess(true);
+    }
+
+    // Only upgrade plan if discount > 0 (not a course-only coupon)
+    if (couponData?.discount > 0) {
+      await upgradePlan(planId);
+      setSuccess(`🎉 ${PLANS.find(p=>p.id===planId)?.name} Plan — 50% off applied!${couponData.courseAccess ? " Course access also unlocked! 🎓" : ""}`);
+    } else {
+      // Course-only coupon — just unlock courses, no plan change
+      setSuccess(`🎓 Course access unlocked! You can now access all 6 FREE courses from CA Enrollment section.`);
+    }
     setCoupon(""); setCouponMsg(null);
   }
 
@@ -5707,40 +5720,115 @@ export default function App() {
           </div>
         </div>
         <div style={{ flex:1, overflowY:"auto", maxHeight:"100dvh", padding:page==="ai"?20:24 }}>
-          {page==="dashboard"  && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} setPage={setPage} />}
-          {page==="invoice"    && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} />}
-          {page==="upload"     && <UploadPage data={data} />}
-          {page==="reports"    && <ReportsPage data={data} summary={summary} />}
-          {page==="ai"         && <AIAssistant summary={summary} company={auth.activeCompany} />}
-          {page==="ca"         && <CAMarketplace />}
-          {page==="companies"  && <MultiCompany companies={auth.companies} activeCompany={auth.activeCompany} setActiveCompany={auth.setActiveCompany} addCompany={auth.addCompany} plan={auth.plan} />}
-          {page==="calendar"   && <CalendarPage />}
-          {page==="clients"    && <ClientsPage data={data} auth={auth} />}
-          {page==="einvoice"   && <EInvoice company={auth.activeCompany} sales={data.sales} />}
-          {page==="ewaybill"   && <EWayBill company={auth.activeCompany} sales={data.sales} />}
-          {page==="whatsapp"   && <WhatsAppNotifications clients={data.clients} company={auth.activeCompany} />}
-          {page==="ca_enroll"  && <CAEnrollment />}
-          {page==="billing"    && <Subscription plan={auth.plan} upgradePlan={auth.upgradePlan} user={auth.user} />}
-          {page==="settings"      && <SettingsPage auth={auth} />}
-          {page==="expenses"      && <ExpensePage data={data} auth={auth} />}
-          {page==="purchase_orders" && <PurchaseOrders auth={auth} data={data} />}
-          {page==="bank_recon"    && <BankReconciliation data={data} />}
-          {page==="gstr2b"        && <GSTR2BReconciliation data={data} />}
-          {page==="tds"           && <TDSManager auth={auth} />}
-          {page==="financials"    && <FinancialReports data={data} auth={auth} />}
-          {page==="audit"         && <AuditTrail auth={auth} />}
-          {page==="client_portal" && <ClientPortal data={data} auth={auth} />}
-          {page==="payments"      && <PaymentGateway data={data} auth={auth} />}
-          {page==="tally"         && <TallyImport data={data} />}
-          {page==="inventory"     && <InventoryPage data={data} />}
-          {page==="team"          && <TeamAccess auth={auth} />}
-          {page==="recurring"     && <RecurringInvoices auth={auth} data={data} />}
-          {page==="gst_health"    && <GSTHealthCheck auth={auth} data={data} />}
-          {page==="payroll"       && <PayrollPage auth={auth} />}
-          {page==="form16"        && <Form16Generator auth={auth} />}
-          {page==="gst_filing"    && <DirectGSTFiling data={data} auth={auth} />}
-          {page==="etds"          && <ETDSFiling auth={auth} />}
-          {page==="itr"           && <ITRFiling auth={auth} data={data} />}
+          {(() => {
+            // ── PLAN ACCESS RULES ──
+            const FREE_PAGES    = ["dashboard","invoice","upload","reports","calendar","clients","settings","billing","ca","companies"];
+            const STARTER_PAGES = [...FREE_PAGES,"ai","whatsapp","einvoice","expenses","recurring","gst_health","client_portal","payments"];
+            const PRO_PAGES     = [...STARTER_PAGES,"financials","purchase_orders","bank_recon","gstr2b","tds","tally","inventory","team","payroll","form16","gst_filing","etds","itr","audit","ewaybill"];
+            // ca_enroll (courses) needs paid plan OR course coupon
+
+            const currentPlan = auth.plan || "free";
+            const hasCourseAccess = ["starter","pro","enterprise"].includes(currentPlan) || auth.courseAccess === true;
+
+            const getRequiredPlan = (p) => {
+              if (FREE_PAGES.includes(p))    return "free";
+              if (STARTER_PAGES.includes(p)) return "starter";
+              if (PRO_PAGES.includes(p))     return "pro";
+              return "enterprise";
+            };
+
+            const planOrder = ["free","starter","pro","enterprise"];
+            const userPlanIndex = planOrder.indexOf(currentPlan);
+            const requiredPlanIndex = planOrder.indexOf(getRequiredPlan(page));
+            const hasAccess = userPlanIndex >= requiredPlanIndex;
+
+            // Course page special lock screen
+            if (page === "ca_enroll" && !hasCourseAccess) return (
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"60vh" }}>
+                <div style={{ textAlign:"center", padding:48, background:C.white, borderRadius:16, border:`2px solid ${C.accent}40`, maxWidth:500 }}>
+                  <div style={{ fontSize:60, marginBottom:16 }}>🎓</div>
+                  <div style={{ fontSize:22, fontWeight:900, marginBottom:8 }}>Courses Locked</div>
+                  <div style={{ color:C.textMuted, fontSize:14, marginBottom:20, lineHeight:1.8 }}>
+                    Free courses are available to:<br/>
+                    ✅ <strong>Starter, Pro & Enterprise</strong> plan users<br/>
+                    ✅ Users with a valid <strong>course coupon code</strong>
+                  </div>
+                  <div style={{ background:"#FFF9E6", borderRadius:8, padding:"12px 16px", marginBottom:20, fontSize:13, color:C.warning }}>
+                    💡 Have a course coupon? Enter it in <strong>Plans & Billing → Coupon Code</strong> section
+                  </div>
+                  <div style={{ display:"flex", gap:10, justifyContent:"center" }}>
+                    <button style={{ ...btn("accent"), padding:"11px 24px", fontSize:14, justifyContent:"center" }} onClick={()=>setPage("billing")}>
+                      ⚡ Upgrade — From ₹299/mo
+                    </button>
+                    <button style={{ ...btn("outline"), padding:"11px 24px", fontSize:14 }} onClick={()=>setPage("billing")}>
+                      🎟️ Enter Coupon
+                    </button>
+                  </div>
+                  <div style={{ fontSize:12, color:C.textMuted, marginTop:12 }}>Current plan: <strong>{currentPlan.toUpperCase()}</strong></div>
+                </div>
+              </div>
+            );
+
+            // Normal feature lock screen
+            if (!hasAccess && page !== "ca_enroll") return (
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"60vh" }}>
+                <div style={{ textAlign:"center", padding:48, background:C.white, borderRadius:16, border:`2px solid ${C.accent}40`, maxWidth:480 }}>
+                  <div style={{ fontSize:60, marginBottom:16 }}>🔒</div>
+                  <div style={{ fontSize:22, fontWeight:900, marginBottom:8 }}>
+                    {getRequiredPlan(page).charAt(0).toUpperCase()+getRequiredPlan(page).slice(1)} Plan Required
+                  </div>
+                  <div style={{ color:C.textMuted, fontSize:14, marginBottom:24, lineHeight:1.7 }}>
+                    This feature is available on the <strong>{getRequiredPlan(page).charAt(0).toUpperCase()+getRequiredPlan(page).slice(1)}</strong> plan and above.<br/>
+                    Upgrade now to unlock all features!
+                  </div>
+                  <button style={{ ...btn("accent"), padding:"12px 32px", fontSize:15, justifyContent:"center", width:"100%" }} onClick={()=>setPage("billing")}>
+                    ⚡ Upgrade Plan — Starting ₹299/mo
+                  </button>
+                  <div style={{ fontSize:12, color:C.textMuted, marginTop:12 }}>Current plan: <strong>{currentPlan.toUpperCase()}</strong></div>
+                </div>
+              </div>
+            );
+
+            // Render the actual page
+            return (
+              <>
+                {page==="dashboard"       && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} setPage={setPage} />}
+                {page==="invoice"         && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} />}
+                {page==="upload"          && <UploadPage data={data} />}
+                {page==="reports"         && <ReportsPage data={data} summary={summary} />}
+                {page==="ai"              && <AIAssistant summary={summary} company={auth.activeCompany} />}
+                {page==="ca"              && <CAMarketplace />}
+                {page==="companies"       && <MultiCompany companies={auth.companies} activeCompany={auth.activeCompany} setActiveCompany={auth.setActiveCompany} addCompany={auth.addCompany} plan={auth.plan} />}
+                {page==="calendar"        && <CalendarPage />}
+                {page==="clients"         && <ClientsPage data={data} auth={auth} />}
+                {page==="einvoice"        && <EInvoice company={auth.activeCompany} sales={data.sales} />}
+                {page==="ewaybill"        && <EWayBill company={auth.activeCompany} sales={data.sales} />}
+                {page==="whatsapp"        && <WhatsAppNotifications clients={data.clients} company={auth.activeCompany} />}
+                {page==="ca_enroll"       && <CAEnrollment />}
+                {page==="billing"         && <Subscription plan={auth.plan} upgradePlan={auth.upgradePlan} user={auth.user} auth={auth} />}
+                {page==="settings"        && <SettingsPage auth={auth} />}
+                {page==="expenses"        && <ExpensePage data={data} auth={auth} />}
+                {page==="purchase_orders" && <PurchaseOrders auth={auth} data={data} />}
+                {page==="bank_recon"      && <BankReconciliation data={data} />}
+                {page==="gstr2b"          && <GSTR2BReconciliation data={data} />}
+                {page==="tds"             && <TDSManager auth={auth} />}
+                {page==="financials"      && <FinancialReports data={data} auth={auth} />}
+                {page==="audit"           && <AuditTrail auth={auth} />}
+                {page==="client_portal"   && <ClientPortal data={data} auth={auth} />}
+                {page==="payments"        && <PaymentGateway data={data} auth={auth} />}
+                {page==="tally"           && <TallyImport data={data} />}
+                {page==="inventory"       && <InventoryPage data={data} />}
+                {page==="team"            && <TeamAccess auth={auth} />}
+                {page==="recurring"       && <RecurringInvoices auth={auth} data={data} />}
+                {page==="gst_health"      && <GSTHealthCheck auth={auth} data={data} />}
+                {page==="payroll"         && <PayrollPage auth={auth} />}
+                {page==="form16"          && <Form16Generator auth={auth} />}
+                {page==="gst_filing"      && <DirectGSTFiling data={data} auth={auth} />}
+                {page==="etds"            && <ETDSFiling auth={auth} />}
+                {page==="itr"             && <ITRFiling auth={auth} data={data} />}
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>
