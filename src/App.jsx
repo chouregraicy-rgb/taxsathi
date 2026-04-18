@@ -1509,18 +1509,17 @@ function Dashboard({ summary, profile, plan }) {
           <div style={{ fontWeight:700, fontSize:15, marginBottom:16 }}>⚡ Quick Actions</div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
             {[
-              {label:"Create Invoice",icon:"🧾",color:C.primary},
-              {label:"Upload Sales",icon:"📤",color:C.primaryLight},
-              {label:"Ask AI Assistant",icon:"🤖",color:C.purple},
-              {label:"Find CA",icon:"👨‍💼",color:C.success},
+              {label:"Create Invoice", icon:"\uD83E\uDDFE", color:C.primary, page:"invoice"},
+              {label:"Upload Sales", icon:"\uD83D\uDCE4", color:C.primaryLight, page:"upload"},
+              {label:"Ask AI Assistant", icon:"\uD83E\uDD16", color:C.purple, page:"ai"},
+              {label:"Find CA", icon:"\uD83D\uDC68\u200D\uD83D\uDCBC", color:C.success, page:"ca"},
             ].map((a,i) => (
-              <button key={i} style={{ padding:"14px", borderRadius:8, background:a.color+"12", border:`1.5px solid ${a.color}30`, cursor:"pointer", textAlign:"left" }}>
+              <button key={i} onClick={()=>setPage(a.page)} style={{ padding:"14px", borderRadius:8, background:a.color+"12", border:`1.5px solid ${a.color}30`, cursor:"pointer", textAlign:"left" }}>
                 <div style={{ fontSize:22, marginBottom:6 }}>{a.icon}</div>
                 <div style={{ fontSize:13, fontWeight:600 }}>{a.label}</div>
               </button>
             ))}
           </div>
-        </div>
         <div style={card}>
           <div style={{ fontWeight:700, fontSize:15, marginBottom:14 }}>⏰ Upcoming Deadlines</div>
           {(() => {
