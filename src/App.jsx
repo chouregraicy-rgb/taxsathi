@@ -554,6 +554,7 @@ function useData(companyId) {
   }
 
   async function saveInvoice(inv) {
+    if (!companyId) throw new Error("No company found. Please go to Settings and set up your company first.");
     const { data, error } = await supabase.from("gst_invoices").insert({ ...inv, company_id: companyId }).select().single();
     if (error) throw new Error(error.message);
     setInvoices(i => [data || inv, ...i]);
@@ -971,14 +972,17 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
   }
 
   async function handleSave() {
+    if (!company?.id) {
+      alert("⚠️ Please complete your company setup first!\n\nSteps:\n1. Go to Settings\n2. Fill Company Name & GSTIN\n3. Click Save\n4. Come back to create invoice");
+      return;
+    }
     setSaving(true);
     try {
-      // Save without 'lines' column — store line items in invoice_data only
       const { lines, ...invWithoutLines } = inv;
       await saveInvoice({ ...invWithoutLines, ...totals, invoice_data: JSON.stringify(lines) });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch(e) { alert("Error: " + e.message); }
+    } catch(e) { alert("Error saving: " + e.message); }
     setSaving(false);
   }
 
@@ -1082,9 +1086,16 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
       </div>
 
       {/* Company details warning */}
-      {(!company?.address || !company?.gstin) && (
+      {!company?.id ? (
+        <div style={{ padding:"14px 16px", background:"#FFF5F5", border:`1.5px solid ${C.danger}40`, borderRadius:8, marginBottom:16, fontSize:13, color:C.danger, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span>🚫 <strong>No company found!</strong> You must set up your company before creating invoices.</span>
+          <button style={{ ...btn("danger"), fontSize:12, padding:"6px 14px" }} onClick={() => window.location.hash = "settings"}>
+            ⚙️ Go to Settings
+          </button>
+        </div>
+      ) : (!company?.address || !company?.gstin) && (
         <div style={{ padding:"10px 16px", background:"#FFF9E6", border:`1px solid ${C.accent}40`, borderRadius:8, marginBottom:16, fontSize:13, color:C.warning, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <span>⚠️ Your company details are incomplete — <strong>GSTIN, address</strong> will show blank on invoice</span>
+          <span>⚠️ Company details incomplete — <strong>GSTIN/address</strong> will show blank on invoice</span>
           <span style={{ fontSize:12, color:C.primary, fontWeight:600 }}>👉 Go to Settings to update</span>
         </div>
       )}
