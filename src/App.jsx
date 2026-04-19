@@ -876,82 +876,36 @@ const HSN_DATA = [
 
 // ─── HSN SEARCH COMPONENT ─────────────────────────────────────────────────────
 function HSNSearch({ value, onHsnChange, onSelect }) {
-  const [query, setQuery] = useState(value || "");
-  const [results, setResults] = useState([]);
-  const [show, setShow] = useState(false);
-  const [dropPos, setDropPos] = useState({ top:0, left:0, width:0 });
-  const inputRef = useRef(null);
-  const wrapRef = useRef(null);
+  const listId = useRef("hsn_list_" + Math.random().toString(36).slice(2));
 
-  useEffect(() => {
-    function handleOutsideClick(e) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setShow(false);
-    }
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, []);
-
-  useEffect(() => { setQuery(value || ""); }, [value]);
-
-  function handleInput(q) {
-    setQuery(q);
+  function handleChange(e) {
+    const q = e.target.value;
     onHsnChange(q);
-    if (!q || q.length < 2) { setResults([]); setShow(false); return; }
-    const lower = q.toLowerCase();
-    const found = HSN_DATA.filter(h =>
-      h.hsn.startsWith(q) ||
-      h.desc.toLowerCase().includes(lower) ||
-      h.category.toLowerCase().includes(lower)
-    ).slice(0, 10);
-    setResults(found);
-    // Calculate position for fixed dropdown
-    if (inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
-      setDropPos({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: Math.max(rect.width, 320) });
-    }
-    setShow(found.length > 0);
-  }
-
-  function pick(item) {
-    setQuery(item.hsn);
-    setShow(false);
-    onSelect(item);
+    // Check if user selected from datalist (exact match on hsn or "HSN — desc")
+    const match = HSN_DATA.find(h =>
+      q === h.hsn ||
+      q === `${h.hsn} — ${h.desc}`
+    );
+    if (match) onSelect(match);
   }
 
   return (
-    <div ref={wrapRef} style={{ position:"relative", width:"100%" }}>
+    <div style={{ position:"relative", width:"100%" }}>
       <input
-        ref={inputRef}
         style={{ ...inp, padding:"6px 8px", fontSize:12, width:"100%", boxSizing:"border-box" }}
-        value={query}
+        value={value}
+        list={listId.current}
         placeholder="Type HSN or product..."
-        onChange={e => handleInput(e.target.value)}
-        onFocus={() => { if (query.length >= 2 && results.length > 0) setShow(true); }}
+        onChange={handleChange}
         autoComplete="off"
       />
-      {show && results.length > 0 && (
-        <div style={{ position:"fixed", top: dropPos.top + 4, left: dropPos.left, width: dropPos.width, zIndex:999999, background:C.white, border:`1.5px solid ${C.primaryLight}`, borderRadius:8, boxShadow:"0 8px 24px rgba(0,0,0,0.22)", maxHeight:300, overflowY:"auto" }}>
-          {results.map((item, idx) => (
-            <div
-              key={idx}
-              onMouseDown={e => { e.preventDefault(); pick(item); }}
-              style={{ padding:"9px 14px", cursor:"pointer", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center", background:C.white }}
-              onMouseEnter={e => e.currentTarget.style.background = C.primaryLighter}
-              onMouseLeave={e => e.currentTarget.style.background = C.white}
-            >
-              <div>
-                <div style={{ fontWeight:700, fontSize:13, color:C.primary }}>{item.hsn}</div>
-                <div style={{ fontSize:12, color:C.text, marginTop:1 }}>{item.desc}</div>
-                <div style={{ fontSize:10, color:C.textMuted }}>{item.category}</div>
-              </div>
-              <span style={{ ...badge(C.success), fontSize:11, marginLeft:8, whiteSpace:"nowrap" }}>{item.gst}% GST</span>
-            </div>
-          ))}
-          <div style={{ padding:"6px 14px", fontSize:10, color:C.textMuted, background:C.bg, borderTop:`1px solid ${C.border}` }}>
-            💡 {results.length} results — click to auto-fill HSN & GST rate
-          </div>
-        </div>
-      )}
+      <datalist id={listId.current}>
+        {HSN_DATA.map((h, i) => (
+          <option key={i} value={`${h.hsn} — ${h.desc}`}>
+            {h.gst}% GST | {h.category}
+          </option>
+        ))}
+      </datalist>
     </div>
   );
 }
@@ -1181,7 +1135,11 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
                   <td style={{...TD,minWidth:160}}>
                     <HSNSearch
                       value={l.hsn}
-                      onHsnChange={val => updateLine(i,"hsn",val)}
+                      onHsnChange={val => {
+                        // Extract just HSN code if user picked from datalist
+                        const clean = val.includes(" — ") ? val.split(" — ")[0].trim() : val;
+                        updateLine(i,"hsn",clean);
+                      }}
                       onSelect={item => {
                         const lines = [...inv.lines];
                         lines[i] = { ...lines[i], hsn: item.hsn, gst_rate: item.gst };
