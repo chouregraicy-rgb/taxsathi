@@ -973,8 +973,11 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
   async function handleSave() {
     setSaving(true);
     try {
-      await saveInvoice({ ...inv, ...totals, invoice_data: JSON.stringify(inv.lines) });
+      // Save without 'lines' column — store line items in invoice_data only
+      const { lines, ...invWithoutLines } = inv;
+      await saveInvoice({ ...invWithoutLines, ...totals, invoice_data: JSON.stringify(lines) });
       setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     } catch(e) { alert("Error: " + e.message); }
     setSaving(false);
   }
@@ -1048,7 +1051,14 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
       ${inv.notes ? `<p><strong>Notes:</strong> ${inv.notes}</p>` : ""}
       ${inv.terms ? `<p><strong>Terms:</strong> ${inv.terms}</p>` : ""}
       <div class="footer">
-        <div><strong>Bank Details:</strong><br>Pay via UPI or Bank Transfer</div>
+        <div>
+          <strong>Bank Details:</strong><br>
+          ${company?.bank_name ? `Bank: ${company.bank_name}<br>` : ""}
+          ${company?.account_number ? `A/C No: ${company.account_number}<br>` : ""}
+          ${company?.ifsc ? `IFSC: ${company.ifsc}<br>` : ""}
+          ${company?.upi_id ? `UPI: ${company.upi_id}` : ""}
+          ${!company?.bank_name && !company?.upi_id ? "Pay via UPI or Bank Transfer" : ""}
+        </div>
         <div style="text-align:center"><div style="border-top:1px solid #000; margin-top:40px; padding-top:5px">Authorised Signatory</div></div>
       </div>
       <script>window.onload = () => { window.print(); }</script>
@@ -1076,6 +1086,113 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
         <div style={{ padding:"10px 16px", background:"#FFF9E6", border:`1px solid ${C.accent}40`, borderRadius:8, marginBottom:16, fontSize:13, color:C.warning, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <span>⚠️ Your company details are incomplete — <strong>GSTIN, address</strong> will show blank on invoice</span>
           <span style={{ fontSize:12, color:C.primary, fontWeight:600 }}>👉 Go to Settings to update</span>
+        </div>
+      )}
+
+      {/* ── PREVIEW MODAL ── */}
+      {preview && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
+          onClick={e => { if(e.target===e.currentTarget) setPreview(false); }}>
+          <div style={{ background:C.white, borderRadius:12, width:"100%", maxWidth:860, maxHeight:"92vh", overflowY:"auto", padding:32, fontFamily:"Arial, sans-serif" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+              <div style={{ fontSize:16, fontWeight:800, color:C.primary }}>👁 Invoice Preview</div>
+              <div style={{ display:"flex", gap:10 }}>
+                <button style={btn()} onClick={printInvoice}>🖨️ Print / PDF</button>
+                <button style={{ ...btn("outline") }} onClick={() => setPreview(false)}>✕ Close</button>
+              </div>
+            </div>
+            {/* Header */}
+            <div style={{ display:"flex", justifyContent:"space-between", borderBottom:`2px solid ${C.primary}`, paddingBottom:16, marginBottom:20 }}>
+              <div>
+                <div style={{ fontSize:22, fontWeight:900, color:C.primary }}>{company?.company_name || "Your Company"}</div>
+                <div style={{ fontSize:12, color:"#555", marginTop:3 }}>GSTIN: {company?.gstin || "—"}</div>
+                {company?.address && <div style={{ fontSize:12, color:"#555" }}>{company.address}</div>}
+                <div style={{ fontSize:12, color:"#555" }}>{company?.state || ""}</div>
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontSize:28, fontWeight:900, color:C.primary }}>TAX INVOICE</div>
+                <div style={{ fontSize:12, marginTop:6 }}><strong>Invoice #:</strong> {inv.invoice_number}</div>
+                <div style={{ fontSize:12 }}><strong>Date:</strong> {inv.invoice_date}</div>
+                <div style={{ fontSize:12 }}><strong>Due Date:</strong> {inv.due_date}</div>
+                <div style={{ fontSize:12 }}><strong>Place of Supply:</strong> {inv.place_of_supply}</div>
+              </div>
+            </div>
+            {/* Bill To / From */}
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:20 }}>
+              <div style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:14 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", marginBottom:6 }}>Bill To</div>
+                <div style={{ fontWeight:700 }}>{inv.customer_name || "—"}</div>
+                <div style={{ fontSize:12, color:"#555" }}>GSTIN: {inv.customer_gstin || "Unregistered"}</div>
+                {inv.customer_address && <div style={{ fontSize:12, color:"#555" }}>{inv.customer_address}</div>}
+                <div style={{ fontSize:12, color:"#555" }}>{inv.customer_state}</div>
+              </div>
+              <div style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:14 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.textMuted, textTransform:"uppercase", marginBottom:6 }}>From</div>
+                <div style={{ fontWeight:700 }}>{company?.company_name || "Your Company"}</div>
+                <div style={{ fontSize:12, color:"#555" }}>GSTIN: {company?.gstin || "—"}</div>
+                {company?.address && <div style={{ fontSize:12, color:"#555" }}>{company.address}</div>}
+                <div style={{ fontSize:12, color:"#555" }}>{company?.state || ""}</div>
+              </div>
+            </div>
+            {/* Items Table */}
+            <table style={{ width:"100%", borderCollapse:"collapse", marginBottom:16 }}>
+              <thead>
+                <tr style={{ background:C.primary }}>
+                  {["#","Description","HSN","Qty","Unit","Rate","Taxable","GST%",isInterstate?"IGST":"CGST",isInterstate?"":"SGST","Total"].filter(Boolean).map(h => (
+                    <th key={h} style={{ color:C.white, padding:"8px 10px", textAlign:"left", fontSize:11 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {inv.lines.map((l,i) => (
+                  <tr key={i} style={{ borderBottom:`1px solid ${C.border}` }}>
+                    <td style={{ padding:"8px 10px", fontSize:12 }}>{i+1}</td>
+                    <td style={{ padding:"8px 10px", fontSize:12 }}>{l.description}</td>
+                    <td style={{ padding:"8px 10px", fontSize:12 }}>{l.hsn}</td>
+                    <td style={{ padding:"8px 10px", fontSize:12 }}>{l.qty}</td>
+                    <td style={{ padding:"8px 10px", fontSize:12 }}>{l.unit}</td>
+                    <td style={{ padding:"8px 10px", fontSize:12 }}>{fmt(l.rate)}</td>
+                    <td style={{ padding:"8px 10px", fontSize:12 }}>{fmt(l.amount)}</td>
+                    <td style={{ padding:"8px 10px", fontSize:12 }}>{l.gst_rate}%</td>
+                    <td style={{ padding:"8px 10px", fontSize:12 }}>{fmt(isInterstate ? l.igst : l.cgst)}</td>
+                    {!isInterstate && <td style={{ padding:"8px 10px", fontSize:12 }}>{fmt(l.sgst)}</td>}
+                    <td style={{ padding:"8px 10px", fontSize:12, fontWeight:700 }}>{fmt(l.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {/* Totals */}
+            <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:16 }}>
+              <div style={{ width:280 }}>
+                {[
+                  ["Taxable Amount", fmt(totals.taxable)],
+                  ...(isInterstate ? [["IGST", fmt(totals.igst)]] : [["CGST", fmt(totals.cgst)],["SGST", fmt(totals.sgst)]]),
+                ].map(([k,v]) => (
+                  <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"5px 0", borderBottom:`1px solid ${C.border}`, fontSize:13 }}>
+                    <span>{k}</span><span>{v}</span>
+                  </div>
+                ))}
+                <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 12px", background:C.primary, color:C.white, borderRadius:6, marginTop:6, fontWeight:800, fontSize:15 }}>
+                  <span>GRAND TOTAL</span><span>{fmt(totals.total)}</span>
+                </div>
+                <div style={{ fontSize:11, color:C.textMuted, fontStyle:"italic", marginTop:6 }}>{numToWords(totals.total)}</div>
+              </div>
+            </div>
+            {/* Bank Details */}
+            {(company?.bank_name || company?.account_number || company?.upi_id) && (
+              <div style={{ background:C.bg, borderRadius:8, padding:14, marginBottom:16 }}>
+                <div style={{ fontWeight:700, fontSize:13, marginBottom:8 }}>🏦 Bank Details</div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, fontSize:12 }}>
+                  {company?.bank_name && <div><span style={{ color:C.textMuted }}>Bank: </span><strong>{company.bank_name}</strong></div>}
+                  {company?.account_number && <div><span style={{ color:C.textMuted }}>A/C No: </span><strong>{company.account_number}</strong></div>}
+                  {company?.ifsc && <div><span style={{ color:C.textMuted }}>IFSC: </span><strong>{company.ifsc}</strong></div>}
+                  {company?.upi_id && <div><span style={{ color:C.textMuted }}>UPI: </span><strong>{company.upi_id}</strong></div>}
+                </div>
+              </div>
+            )}
+            {inv.notes && <div style={{ fontSize:12, marginBottom:8 }}><strong>Notes:</strong> {inv.notes}</div>}
+            {inv.terms && <div style={{ fontSize:12 }}><strong>Terms:</strong> {inv.terms}</div>}
+          </div>
         </div>
       )}
 
@@ -3159,12 +3276,13 @@ function ClientsPage({ data, auth }) {
 
 function SettingsPage({ auth }) {
   const [pf, setPf] = useState({ name:auth.profile?.name||"", email:auth.profile?.email||"", mobile:auth.profile?.mobile||"" });
-  const [co, setCo] = useState({ company_name:auth.activeCompany?.company_name||"", gstin:auth.activeCompany?.gstin||"", address:auth.activeCompany?.address||"", state:auth.activeCompany?.state||"Maharashtra" });
+  const [co, setCo] = useState({ company_name:auth.activeCompany?.company_name||"", gstin:auth.activeCompany?.gstin||"", address:auth.activeCompany?.address||"", state:auth.activeCompany?.state||"Maharashtra", bank_name:auth.activeCompany?.bank_name||"", account_number:auth.activeCompany?.account_number||"", ifsc:auth.activeCompany?.ifsc||"", upi_id:auth.activeCompany?.upi_id||"" });
   const [saved, setSaved] = useState(false);
+  const [bankSaved, setBankSaved] = useState(false);
   return (
     <div>
       <div style={{ fontSize:20, fontWeight:800, marginBottom:20 }}>⚙️ Settings</div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:20 }}>
         <div style={card}>
           <div style={{ fontWeight:700, fontSize:15, marginBottom:14, borderBottom:`1px solid ${C.border}`, paddingBottom:10 }}>👤 Profile</div>
           <div style={{ marginBottom:12 }}><div style={lbl}>Name</div><input style={inp} value={pf.name} onChange={e=>setPf({...pf,name:e.target.value})} /></div>
@@ -3178,7 +3296,27 @@ function SettingsPage({ auth }) {
           <div style={{ marginBottom:12 }}><div style={lbl}>GSTIN</div><input style={inp} value={co.gstin} onChange={e=>setCo({...co,gstin:e.target.value})} /></div>
           <div style={{ marginBottom:12 }}><div style={lbl}>Address</div><input style={inp} value={co.address} onChange={e=>setCo({...co,address:e.target.value})} /></div>
           <div style={{ marginBottom:16 }}><div style={lbl}>State</div><select style={inp} value={co.state} onChange={e=>setCo({...co,state:e.target.value})}>{STATES.map(s=><option key={s}>{s}</option>)}</select></div>
-          <button style={btn()} onClick={()=>auth.updateCompany(co)}>Update Company</button>
+          <button style={btn()} onClick={()=>{ auth.updateCompany(co); setSaved(true); setTimeout(()=>setSaved(false),2500); }}>{saved?"✓ Saved!":"Update Company"}</button>
+        </div>
+      </div>
+
+      {/* Bank Details */}
+      <div style={card}>
+        <div style={{ fontWeight:700, fontSize:15, marginBottom:4, borderBottom:`1px solid ${C.border}`, paddingBottom:10 }}>🏦 Bank Details — Printed on Every Invoice</div>
+        <div style={{ fontSize:12, color:C.textMuted, marginBottom:16, marginTop:8 }}>These details will automatically appear on all your invoices so clients know where to pay.</div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+          <div><div style={lbl}>Bank Name</div><input style={inp} placeholder="e.g. State Bank of India" value={co.bank_name} onChange={e=>setCo({...co,bank_name:e.target.value})} /></div>
+          <div><div style={lbl}>Account Number</div><input style={inp} placeholder="e.g. 1234567890" value={co.account_number} onChange={e=>setCo({...co,account_number:e.target.value})} /></div>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:20 }}>
+          <div><div style={lbl}>IFSC Code</div><input style={inp} placeholder="e.g. SBIN0001234" value={co.ifsc} onChange={e=>setCo({...co,ifsc:e.target.value.toUpperCase()})} /></div>
+          <div><div style={lbl}>UPI ID</div><input style={inp} placeholder="e.g. yourname@upi" value={co.upi_id} onChange={e=>setCo({...co,upi_id:e.target.value})} /></div>
+        </div>
+        <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+          <button style={btn("success")} onClick={()=>{ auth.updateCompany(co); setBankSaved(true); setTimeout(()=>setBankSaved(false),2500); }}>
+            💾 {bankSaved ? "✓ Bank Details Saved!" : "Save Bank Details"}
+          </button>
+          {bankSaved && <span style={{ fontSize:13, color:C.success, fontWeight:600 }}>✅ Will now appear on all invoices!</span>}
         </div>
       </div>
     </div>
