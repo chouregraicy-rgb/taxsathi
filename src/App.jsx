@@ -1002,14 +1002,16 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
       </style></head><body>
       <div class="header">
         <div>
-          <div class="company-name">🇮🇳 ${company?.company_name || "Your Company"}</div>
-          <div>GSTIN: ${company?.gstin || "—"}</div>
-          <div>${company?.address || ""}</div>
-          <div>${company?.state || ""}</div>
+          <div class="company-name">${company?.company_name || "Your Company"}</div>
+          <div style="font-size:11px; color:#555; margin-top:3px">GSTIN: <strong>${company?.gstin || "Not Set"}</strong></div>
+          ${company?.address ? `<div style="font-size:11px; color:#555; margin-top:2px">${company.address}</div>` : ""}
+          <div style="font-size:11px; color:#555; margin-top:2px">${company?.state || ""}</div>
+          ${company?.mobile ? `<div style="font-size:11px; color:#555; margin-top:2px">📱 ${company.mobile}</div>` : ""}
+          ${company?.email ? `<div style="font-size:11px; color:#555; margin-top:2px">✉ ${company.email}</div>` : ""}
         </div>
         <div style="text-align:right">
           <div class="invoice-title">TAX INVOICE</div>
-          <div><strong>Invoice #:</strong> ${inv.invoice_number}</div>
+          <div style="margin-top:6px"><strong>Invoice #:</strong> ${inv.invoice_number}</div>
           <div><strong>Date:</strong> ${inv.invoice_date}</div>
           <div><strong>Due Date:</strong> ${inv.due_date}</div>
           <div><strong>Place of Supply:</strong> ${inv.place_of_supply}</div>
@@ -1018,16 +1020,16 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
       <div class="grid2">
         <div class="party-box">
           <div class="party-label">Bill To</div>
-          <strong>${inv.customer_name}</strong><br>
+          <strong>${inv.customer_name || "—"}</strong><br>
           GSTIN: ${inv.customer_gstin || "Unregistered"}<br>
-          ${inv.customer_address || ""}<br>
+          ${inv.customer_address ? inv.customer_address + "<br>" : ""}
           ${inv.customer_state}
         </div>
         <div class="party-box">
-          <div class="party-label">From</div>
+          <div class="party-label">Seller / From</div>
           <strong>${company?.company_name || "Your Company"}</strong><br>
           GSTIN: ${company?.gstin || "—"}<br>
-          ${company?.address || ""}<br>
+          ${company?.address ? company.address + "<br>" : ""}
           ${company?.state || ""}
         </div>
       </div>
@@ -1068,6 +1070,14 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
           <button style={btn()} onClick={printInvoice}>🖨️ Print / PDF</button>
         </div>
       </div>
+
+      {/* Company details warning */}
+      {(!company?.address || !company?.gstin) && (
+        <div style={{ padding:"10px 16px", background:"#FFF9E6", border:`1px solid ${C.accent}40`, borderRadius:8, marginBottom:16, fontSize:13, color:C.warning, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span>⚠️ Your company details are incomplete — <strong>GSTIN, address</strong> will show blank on invoice</span>
+          <span style={{ fontSize:12, color:C.primary, fontWeight:600 }}>👉 Go to Settings to update</span>
+        </div>
+      )}
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:20 }}>
         {/* Invoice Details */}
@@ -1131,7 +1141,34 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
               {inv.lines.map((l,i) => (
                 <tr key={i}>
                   <td style={{...TD,width:30,color:C.textMuted}}>{i+1}</td>
-                  <td style={{...TD,minWidth:180}}><input style={{...inp,padding:"6px 8px",fontSize:12}} value={l.description} placeholder="Product or service" onChange={e=>updateLine(i,"description",e.target.value)} /></td>
+                  <td style={{...TD,minWidth:180}}>
+                    <input
+                      style={{...inp,padding:"6px 8px",fontSize:12}}
+                      value={l.description}
+                      placeholder="Product or service"
+                      list={`desc_list_${i}`}
+                      onChange={e => {
+                        const val = e.target.value;
+                        updateLine(i,"description",val);
+                        // if matches an HSN desc, auto-fill HSN+GST
+                        const match = HSN_DATA.find(h => h.desc === val);
+                        if (match) {
+                          const lines = [...inv.lines];
+                          lines[i] = { ...lines[i], description: match.desc, hsn: match.hsn, gst_rate: match.gst };
+                          const taxable = Number(lines[i].qty||0) * Number(lines[i].rate||0);
+                          if (isInterstate) { lines[i].igst=+(taxable*match.gst/100).toFixed(2); lines[i].cgst=0; lines[i].sgst=0; }
+                          else { lines[i].cgst=+(taxable*match.gst/200).toFixed(2); lines[i].sgst=+(taxable*match.gst/200).toFixed(2); lines[i].igst=0; }
+                          lines[i].amount=+taxable.toFixed(2);
+                          lines[i].total=+(taxable+lines[i].cgst+lines[i].sgst+lines[i].igst).toFixed(2);
+                          setInv({...inv, lines});
+                        }
+                      }}
+                      autoComplete="off"
+                    />
+                    <datalist id={`desc_list_${i}`}>
+                      {HSN_DATA.map((h,j) => <option key={j} value={h.desc}>{h.hsn} | {h.gst}% GST</option>)}
+                    </datalist>
+                  </td>
                   <td style={{...TD,minWidth:160}}>
                     <HSNSearch
                       value={l.hsn}
