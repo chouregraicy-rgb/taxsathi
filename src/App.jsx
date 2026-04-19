@@ -879,6 +879,8 @@ function HSNSearch({ value, onHsnChange, onSelect }) {
   const [query, setQuery] = useState(value || "");
   const [results, setResults] = useState([]);
   const [show, setShow] = useState(false);
+  const [dropPos, setDropPos] = useState({ top:0, left:0, width:0 });
+  const inputRef = useRef(null);
   const wrapRef = useRef(null);
 
   useEffect(() => {
@@ -889,7 +891,6 @@ function HSNSearch({ value, onHsnChange, onSelect }) {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  // sync external value
   useEffect(() => { setQuery(value || ""); }, [value]);
 
   function handleInput(q) {
@@ -903,6 +904,11 @@ function HSNSearch({ value, onHsnChange, onSelect }) {
       h.category.toLowerCase().includes(lower)
     ).slice(0, 10);
     setResults(found);
+    // Calculate position for fixed dropdown
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropPos({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX, width: Math.max(rect.width, 320) });
+    }
     setShow(found.length > 0);
   }
 
@@ -915,6 +921,7 @@ function HSNSearch({ value, onHsnChange, onSelect }) {
   return (
     <div ref={wrapRef} style={{ position:"relative", width:"100%" }}>
       <input
+        ref={inputRef}
         style={{ ...inp, padding:"6px 8px", fontSize:12, width:"100%", boxSizing:"border-box" }}
         value={query}
         placeholder="Type HSN or product..."
@@ -923,7 +930,7 @@ function HSNSearch({ value, onHsnChange, onSelect }) {
         autoComplete="off"
       />
       {show && results.length > 0 && (
-        <div style={{ position:"absolute", top:"100%", left:0, zIndex:99999, background:C.white, border:`1.5px solid ${C.primaryLight}`, borderRadius:8, boxShadow:"0 8px 24px rgba(0,0,0,0.18)", minWidth:340, maxHeight:300, overflowY:"auto" }}>
+        <div style={{ position:"fixed", top: dropPos.top + 4, left: dropPos.left, width: dropPos.width, zIndex:999999, background:C.white, border:`1.5px solid ${C.primaryLight}`, borderRadius:8, boxShadow:"0 8px 24px rgba(0,0,0,0.22)", maxHeight:300, overflowY:"auto" }}>
           {results.map((item, idx) => (
             <div
               key={idx}
@@ -1159,8 +1166,8 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
       {/* Line Items */}
       <div style={{ ...card, marginBottom:20 }}>
         <div style={{ fontWeight:700, fontSize:14, marginBottom:14, color:C.primary }}>📦 Items / Services</div>
-        <div style={{ overflowX:"auto" }}>
-          <table style={{ width:"100%", borderCollapse:"collapse", minWidth:900 }}>
+        <div style={{ overflowX:"visible" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", minWidth:900, overflow:"visible" }}>
             <thead>
               <tr>
                 {["#","Description","HSN/SAC","Qty","Unit","Rate (₹)","GST %","Taxable","Tax","Total",""].map(h=><th key={h} style={{...TH,padding:"8px 10px"}}>{h}</th>)}
