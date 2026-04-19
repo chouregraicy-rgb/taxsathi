@@ -39,10 +39,10 @@ const COMPLIANCE = [  { task:"GSTR-1 Filing", due:"11 Apr 2026", period:"Mar 202
   { task:"Income Tax Return", due:"31 Jul 2026", period:"FY 2025-26", color:"#C0392B", type:"ITR" },
 ];
 const PLANS = [
-  { id:"free", name:"Free", price:0, color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","Compliance Calendar","5 Clients","Community Support"], limit:"Free forever" },
-  { id:"starter", name:"Starter", price:299, color:"#2E86C1", popular:false, features:["3 GSTINs","Unlimited Invoices","All GST Reports","Excel Upload","50 Clients","AI Assistant (50 queries/mo)","WhatsApp Deadline Reminders","Email Support (48hr response)"], limit:"Per month" },
-  { id:"pro", name:"Pro", price:599, color:"#1B4F72", popular:true, features:["10 GSTINs","Everything in Starter","AI Assistant Unlimited","CA Marketplace Access","E-Invoice & E-Way Bill","Bank Reconciliation","Multi-user (5 seats)","WhatsApp Support (Mon-Sat, 10AM-7PM)"], limit:"Per month" },
-  { id:"enterprise", name:"Enterprise", price:799, color:"#7D3C98", popular:false, features:["Unlimited GSTINs","Everything in Pro","Unlimited Users","Tally/Busy Import","Priority Feature Requests","Dedicated Onboarding Call","White-label Option (your brand, your domain)","CA Marketplace — Assisted CA Matching"], limit:"Per month" },
+  { id:"free", name:"Free", price:0, color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","Compliance Calendar","5 Clients","Email Support"], limit:"Free forever" },
+  { id:"starter", name:"Starter", price:299, color:"#2E86C1", popular:false, features:["3 GSTINs","Unlimited Invoices","All GST Reports","Excel Upload","50 Clients","AI Assistant (50 queries/mo)","WhatsApp Reminders","Priority Support"], limit:"Per month" },
+  { id:"pro", name:"Pro", price:599, color:"#1B4F72", popular:true, features:["10 GSTINs","Everything in Starter","AI Assistant Unlimited","CA Marketplace Access","E-Invoice Generation","E-Way Bill","Bank Reconciliation","Multi-user (5 seats)","API Access","24/7 Support"], limit:"Per month" },
+  { id:"enterprise", name:"Enterprise", price:799, color:"#7D3C98", popular:false, features:["Unlimited GSTINs","Everything in Pro","Unlimited Users","White-label Option","Dedicated CA Manager","Custom Integrations","Tally/Busy Import","Offline Mode","SLA Guarantee"], limit:"Per month" },
 ];
 
 const CA_PROFESSIONALS = [];
@@ -398,7 +398,6 @@ function useAuth() {
   const [activeCompany, setActiveCompany] = useState(null);
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState("free");
-  const [courseAccess, setCourseAccess] = useState(() => localStorage.getItem("ts_course_access") === "1");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -469,7 +468,7 @@ function useAuth() {
     await supabase.from("users").update({ plan: planId }).eq("id", user.id);
     setPlan(planId);
   }
-  return { user, profile, companies, activeCompany, setActiveCompany, loading, plan, courseAccess, setCourseAccess, signUp, signIn, signOut, resetPassword, addCompany, updateProfile, updateCompany, upgradePlan };
+  return { user, profile, companies, activeCompany, setActiveCompany, loading, plan, signUp, signIn, signOut, resetPassword, addCompany, updateProfile, updateCompany, upgradePlan };
 }
 
 // ─── useData ──────────────────────────────────────────────────────────────────
@@ -784,6 +783,217 @@ function AuthScreen({ onLogin, onSignup, onReset }) {
   );
 }
 
+// ─── HSN DATABASE ─────────────────────────────────────────────────────────────
+const HSN_DATA = [
+  // ── SERVICES (SAC) ──
+  { hsn:"9983", desc:"IT Software Services", gst:18, category:"IT & Software" },
+  { hsn:"9984", desc:"Telecom & Internet Services", gst:18, category:"IT & Software" },
+  { hsn:"9985", desc:"Web Development Services", gst:18, category:"IT & Software" },
+  { hsn:"9982", desc:"Legal & Consultancy Services", gst:18, category:"Professional Services" },
+  { hsn:"9981", desc:"Research & Development Services", gst:18, category:"Professional Services" },
+  { hsn:"9971", desc:"Financial & Banking Services", gst:18, category:"Professional Services" },
+  { hsn:"9972", desc:"Real Estate Services", gst:18, category:"Professional Services" },
+  { hsn:"9973", desc:"Leasing & Rental Services", gst:18, category:"Professional Services" },
+  { hsn:"9991", desc:"Education & Training Services", gst:18, category:"Professional Services" },
+  { hsn:"9992", desc:"Healthcare & Medical Services", gst:5, category:"Healthcare" },
+  { hsn:"9954", desc:"Construction & Building Services", gst:18, category:"Construction" },
+  { hsn:"9961", desc:"Retail Trade Services", gst:18, category:"Trade" },
+  { hsn:"9962", desc:"Wholesale Trade Services", gst:18, category:"Trade" },
+  { hsn:"9963", desc:"Hotel & Restaurant Services", gst:5, category:"Hospitality" },
+  { hsn:"9964", desc:"Transport of Passengers", gst:5, category:"Transport" },
+  { hsn:"9965", desc:"Goods Transport Services", gst:5, category:"Transport" },
+  { hsn:"9966", desc:"Vehicle Rental Services", gst:18, category:"Transport" },
+  { hsn:"9967", desc:"Courier & Postal Services", gst:18, category:"Transport" },
+  { hsn:"9968", desc:"Electricity Distribution Services", gst:0, category:"Utilities" },
+  { hsn:"9969", desc:"Water Supply Services", gst:0, category:"Utilities" },
+  { hsn:"9985", desc:"Support & Maintenance Services", gst:18, category:"IT & Software" },
+  { hsn:"9986", desc:"Agricultural Support Services", gst:0, category:"Agriculture" },
+  { hsn:"9987", desc:"Repair & Maintenance Services", gst:18, category:"Maintenance" },
+  { hsn:"9988", desc:"Manufacturing Services on Physical Inputs", gst:12, category:"Manufacturing" },
+  { hsn:"9993", desc:"Social & Community Services", gst:0, category:"Social" },
+  { hsn:"9994", desc:"Sewage & Waste Management", gst:18, category:"Utilities" },
+  { hsn:"9995", desc:"Arts & Entertainment Services", gst:18, category:"Entertainment" },
+  { hsn:"9996", desc:"Sporting & Recreational Services", gst:18, category:"Entertainment" },
+  { hsn:"9997", desc:"Other Personal Services (Salon, Spa)", gst:18, category:"Personal Services" },
+  { hsn:"9998", desc:"Domestic Services", gst:0, category:"Personal Services" },
+  { hsn:"9999", desc:"Services by Government / NGO", gst:0, category:"Government" },
+  // CA / Accounting
+  { hsn:"9980", desc:"CA / Accounting / Audit Services", gst:18, category:"Professional Services" },
+  { hsn:"9983", desc:"Tax Consulting & Filing Services", gst:18, category:"Professional Services" },
+  { hsn:"9982", desc:"Company Secretary Services", gst:18, category:"Professional Services" },
+  // ── GOODS ──
+  // Electronics
+  { hsn:"8471", desc:"Computer / Laptop / Desktop", gst:18, category:"Electronics" },
+  { hsn:"8473", desc:"Computer Parts & Accessories", gst:18, category:"Electronics" },
+  { hsn:"8517", desc:"Mobile Phone / Smartphone", gst:12, category:"Electronics" },
+  { hsn:"8518", desc:"Microphone / Speaker / Headphone", gst:18, category:"Electronics" },
+  { hsn:"8528", desc:"Television / Monitor / Display", gst:18, category:"Electronics" },
+  { hsn:"8504", desc:"UPS / Inverter / Transformer", gst:18, category:"Electronics" },
+  { hsn:"8507", desc:"Battery / Electric Accumulator", gst:18, category:"Electronics" },
+  { hsn:"8544", desc:"Electric Wires & Cables", gst:18, category:"Electronics" },
+  { hsn:"8536", desc:"Switches / Sockets / MCB", gst:18, category:"Electronics" },
+  { hsn:"8539", desc:"LED Bulb / Tube Light / Lamp", gst:12, category:"Electronics" },
+  { hsn:"8543", desc:"Electric Machinery & Equipment", gst:18, category:"Electronics" },
+  // Textile & Clothing
+  { hsn:"6101", desc:"Men's Jacket / Coat / Blazer", gst:5, category:"Clothing" },
+  { hsn:"6105", desc:"Men's Shirt (Cotton)", gst:5, category:"Clothing" },
+  { hsn:"6109", desc:"T-Shirt / Vest / Inner wear", gst:5, category:"Clothing" },
+  { hsn:"6201", desc:"Women's Coat / Jacket", gst:5, category:"Clothing" },
+  { hsn:"6211", desc:"Track Suit / Sportswear", gst:5, category:"Clothing" },
+  { hsn:"5208", desc:"Cotton Fabric / Cloth", gst:5, category:"Textile" },
+  { hsn:"5407", desc:"Synthetic Fabric / Polyester", gst:5, category:"Textile" },
+  { hsn:"5515", desc:"Mixed Fabric / Blended Cloth", gst:5, category:"Textile" },
+  { hsn:"6301", desc:"Blanket / Quilt / Bedsheet", gst:5, category:"Textile" },
+  { hsn:"6302", desc:"Bed Linen / Towel / Curtain", gst:5, category:"Textile" },
+  // Food & Beverages
+  { hsn:"1001", desc:"Wheat / Atta / Maida / Suji", gst:0, category:"Food" },
+  { hsn:"1006", desc:"Rice (Branded)", gst:5, category:"Food" },
+  { hsn:"1701", desc:"Sugar / Gur / Jaggery", gst:5, category:"Food" },
+  { hsn:"1511", desc:"Palm Oil / Edible Oil", gst:5, category:"Food" },
+  { hsn:"1512", desc:"Sunflower Oil / Groundnut Oil", gst:5, category:"Food" },
+  { hsn:"0401", desc:"Milk / Cream / Dairy Products", gst:0, category:"Food" },
+  { hsn:"0406", desc:"Cheese / Paneer", gst:12, category:"Food" },
+  { hsn:"1905", desc:"Bread / Biscuit / Cake / Pastry", gst:0, category:"Food" },
+  { hsn:"2009", desc:"Fruit Juice / Vegetable Juice", gst:12, category:"Food" },
+  { hsn:"2202", desc:"Packaged Water / Soft Drinks", gst:12, category:"Food" },
+  { hsn:"0901", desc:"Coffee / Tea / Spices", gst:5, category:"Food" },
+  { hsn:"2106", desc:"Food Supplement / Health Drink", gst:18, category:"Food" },
+  // Pharma & Healthcare
+  { hsn:"3004", desc:"Medicine / Tablets / Capsules", gst:12, category:"Pharma" },
+  { hsn:"3005", desc:"Surgical Dressing / Bandage", gst:12, category:"Pharma" },
+  { hsn:"3006", desc:"Pharmaceutical Preparations", gst:12, category:"Pharma" },
+  { hsn:"9018", desc:"Medical Instruments / Equipment", gst:12, category:"Healthcare" },
+  { hsn:"9019", desc:"Physiotherapy Equipment", gst:12, category:"Healthcare" },
+  { hsn:"3401", desc:"Soap / Sanitizer / Hand wash", gst:18, category:"Personal Care" },
+  { hsn:"3304", desc:"Beauty Products / Cosmetics", gst:18, category:"Personal Care" },
+  { hsn:"3305", desc:"Shampoo / Hair Oil / Conditioner", gst:18, category:"Personal Care" },
+  { hsn:"3307", desc:"Perfume / Deodorant", gst:18, category:"Personal Care" },
+  // Furniture & Household
+  { hsn:"9401", desc:"Chair / Sofa / Seating Furniture", gst:18, category:"Furniture" },
+  { hsn:"9403", desc:"Table / Desk / Cabinet / Shelf", gst:18, category:"Furniture" },
+  { hsn:"9404", desc:"Mattress / Pillow / Cushion", gst:18, category:"Furniture" },
+  { hsn:"7323", desc:"Utensils / Cookware (Steel/Iron)", gst:12, category:"Household" },
+  { hsn:"3924", desc:"Plastic Kitchen Items / Containers", gst:18, category:"Household" },
+  { hsn:"8516", desc:"Electric Iron / Kettle / Geyser", gst:18, category:"Household" },
+  { hsn:"8415", desc:"Air Conditioner / Cooler", gst:28, category:"Household" },
+  { hsn:"8418", desc:"Refrigerator / Freezer", gst:18, category:"Household" },
+  { hsn:"8450", desc:"Washing Machine", gst:18, category:"Household" },
+  { hsn:"8516", desc:"Microwave / OTG / Mixer Grinder", gst:18, category:"Household" },
+  // Automobile
+  { hsn:"8703", desc:"Car / Passenger Vehicle", gst:28, category:"Automobile" },
+  { hsn:"8711", desc:"Motorcycle / Scooter", gst:28, category:"Automobile" },
+  { hsn:"8714", desc:"Bicycle / Cycle Parts", gst:12, category:"Automobile" },
+  { hsn:"8708", desc:"Auto Parts & Accessories", gst:28, category:"Automobile" },
+  { hsn:"4011", desc:"Tyre / Tube (Rubber)", gst:28, category:"Automobile" },
+  { hsn:"2710", desc:"Petrol / Diesel / Lubricant", gst:0, category:"Fuel" },
+  // Construction & Hardware
+  { hsn:"7213", desc:"Steel Rod / Bar / Wire", gst:18, category:"Construction" },
+  { hsn:"7217", desc:"Steel Wire / Mesh", gst:18, category:"Construction" },
+  { hsn:"7308", desc:"Steel Structure / Fabrication", gst:18, category:"Construction" },
+  { hsn:"6810", desc:"Cement / Concrete Products", gst:28, category:"Construction" },
+  { hsn:"6901", desc:"Bricks / Tiles / Ceramic", gst:5, category:"Construction" },
+  { hsn:"3208", desc:"Paint / Varnish / Lacquer", gst:28, category:"Construction" },
+  { hsn:"3214", desc:"Putty / Sealant / Adhesive", gst:28, category:"Construction" },
+  { hsn:"8301", desc:"Lock / Key / Hardware Fitting", gst:18, category:"Hardware" },
+  { hsn:"7415", desc:"Nut / Bolt / Screw (Copper)", gst:18, category:"Hardware" },
+  { hsn:"7318", desc:"Nut / Bolt / Screw (Steel)", gst:18, category:"Hardware" },
+  // Stationery & Office
+  { hsn:"4802", desc:"Paper / Writing Paper / Copier Paper", gst:12, category:"Stationery" },
+  { hsn:"4820", desc:"Notebook / Register / Diary", gst:12, category:"Stationery" },
+  { hsn:"9608", desc:"Pen / Pencil / Marker", gst:12, category:"Stationery" },
+  { hsn:"9612", desc:"Ink / Toner / Ribbon", gst:18, category:"Stationery" },
+  { hsn:"8443", desc:"Printer / Copier / Scanner", gst:18, category:"Office Equipment" },
+  { hsn:"8470", desc:"Calculator / Cash Register", gst:18, category:"Office Equipment" },
+  // Agriculture
+  { hsn:"8432", desc:"Agricultural Machinery / Tractor", gst:12, category:"Agriculture" },
+  { hsn:"3101", desc:"Fertilizer / Manure", gst:0, category:"Agriculture" },
+  { hsn:"3808", desc:"Pesticide / Insecticide", gst:18, category:"Agriculture" },
+  { hsn:"0601", desc:"Seeds / Plants / Bulbs", gst:0, category:"Agriculture" },
+  // Packaging
+  { hsn:"3923", desc:"Plastic Bag / Container / Box", gst:18, category:"Packaging" },
+  { hsn:"4819", desc:"Carton / Paper Box / Packaging", gst:12, category:"Packaging" },
+  { hsn:"6305", desc:"Jute / Woven Bag / Gunny Bag", gst:5, category:"Packaging" },
+  // Jewellery
+  { hsn:"7113", desc:"Gold Jewellery / Ornaments", gst:3, category:"Jewellery" },
+  { hsn:"7114", desc:"Silver Jewellery / Articles", gst:3, category:"Jewellery" },
+  { hsn:"7116", desc:"Imitation Jewellery", gst:3, category:"Jewellery" },
+  // Education
+  { hsn:"4901", desc:"Books / Printed Material", gst:0, category:"Education" },
+  { hsn:"4902", desc:"Newspaper / Journal / Magazine", gst:0, category:"Education" },
+  { hsn:"9021", desc:"Spectacles / Contact Lens", gst:12, category:"Healthcare" },
+  // Misc
+  { hsn:"9503", desc:"Toys / Games / Puzzles", gst:12, category:"Toys" },
+  { hsn:"9506", desc:"Sports Equipment / Fitness", gst:12, category:"Sports" },
+  { hsn:"3926", desc:"Plastic Articles / Misc Plastic", gst:18, category:"Misc" },
+  { hsn:"6911", desc:"Crockery / Porcelain / Ceramic", gst:12, category:"Household" },
+];
+
+// ─── HSN SEARCH COMPONENT ─────────────────────────────────────────────────────
+function HSNSearch({ value, onChange, onSelect }) {
+  const [query, setQuery] = useState(value || "");
+  const [results, setResults] = useState([]);
+  const [show, setShow] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setShow(false); }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function search(q) {
+    setQuery(q);
+    onChange(q);
+    if (!q || q.length < 2) { setResults([]); setShow(false); return; }
+    const lower = q.toLowerCase();
+    const found = HSN_DATA.filter(h =>
+      h.hsn.includes(q) ||
+      h.desc.toLowerCase().includes(lower) ||
+      h.category.toLowerCase().includes(lower)
+    ).slice(0, 8);
+    setResults(found);
+    setShow(found.length > 0);
+  }
+
+  function pick(item) {
+    setQuery(item.hsn);
+    setShow(false);
+    onSelect(item);
+  }
+
+  return (
+    <div ref={ref} style={{ position:"relative" }}>
+      <input
+        style={{ ...inp, padding:"6px 8px", fontSize:12 }}
+        value={query}
+        placeholder="HSN/SAC or product"
+        onChange={e => search(e.target.value)}
+        onFocus={() => query.length >= 2 && results.length > 0 && setShow(true)}
+      />
+      {show && (
+        <div style={{ position:"absolute", top:"100%", left:0, zIndex:9999, background:C.white, border:`1.5px solid ${C.primaryLight}`, borderRadius:8, boxShadow:"0 8px 24px rgba(0,0,0,0.15)", minWidth:320, maxHeight:280, overflowY:"auto" }}>
+          {results.map((item, i) => (
+            <div key={i} onClick={() => pick(item)}
+              style={{ padding:"8px 12px", cursor:"pointer", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}
+              onMouseEnter={e => e.currentTarget.style.background = C.primaryLighter}
+              onMouseLeave={e => e.currentTarget.style.background = C.white}>
+              <div>
+                <div style={{ fontWeight:700, fontSize:12, color:C.primary }}>{item.hsn}</div>
+                <div style={{ fontSize:11, color:C.text }}>{item.desc}</div>
+                <div style={{ fontSize:10, color:C.textMuted }}>{item.category}</div>
+              </div>
+              <span style={{ ...badge(C.success), fontSize:10, whiteSpace:"nowrap" }}>{item.gst}% GST</span>
+            </div>
+          ))}
+          <div style={{ padding:"6px 12px", fontSize:10, color:C.textMuted, background:C.bg }}>
+            💡 Type product name or HSN code to search
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function InvoiceGenerator({ company, clients, saveInvoice }) {
   const emptyLine = () => ({ description:"", hsn:"", qty:1, unit:"Nos", rate:0, gst_rate:18, amount:0, cgst:0, sgst:0, igst:0, total:0 });
   const [inv, setInv] = useState({
@@ -1006,7 +1216,25 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
                 <tr key={i}>
                   <td style={{...TD,width:30,color:C.textMuted}}>{i+1}</td>
                   <td style={{...TD,minWidth:180}}><input style={{...inp,padding:"6px 8px",fontSize:12}} value={l.description} placeholder="Product or service" onChange={e=>updateLine(i,"description",e.target.value)} /></td>
-                  <td style={{...TD,width:80}}><input style={{...inp,padding:"6px 8px",fontSize:12}} value={l.hsn} placeholder="9983" onChange={e=>updateLine(i,"hsn",e.target.value)} /></td>
+                  <td style={{...TD,width:160}}>
+                    <HSNSearch
+                      value={l.hsn}
+                      onChange={val => updateLine(i,"hsn",val)}
+                      onSelect={item => {
+                        const lines = [...inv.lines];
+                        lines[i] = { ...lines[i], hsn: item.hsn, gst_rate: item.gst };
+                        if (!lines[i].description) lines[i].description = item.desc;
+                        // recalculate tax
+                        const taxable = Number(lines[i].qty||0) * Number(lines[i].rate||0);
+                        const rate = item.gst;
+                        if (isInterstate) { lines[i].igst = +(taxable*rate/100).toFixed(2); lines[i].cgst=0; lines[i].sgst=0; }
+                        else { lines[i].cgst = +(taxable*rate/200).toFixed(2); lines[i].sgst = +(taxable*rate/200).toFixed(2); lines[i].igst=0; }
+                        lines[i].amount = +taxable.toFixed(2);
+                        lines[i].total = +(taxable+lines[i].cgst+lines[i].sgst+lines[i].igst).toFixed(2);
+                        setInv({...inv, lines});
+                      }}
+                    />
+                  </td>
                   <td style={{...TD,width:60}}><input style={{...inp,padding:"6px 8px",fontSize:12,textAlign:"right"}} type="number" value={l.qty} onChange={e=>updateLine(i,"qty",e.target.value)} /></td>
                   <td style={{...TD,width:70}}>
                     <select style={{...inp,padding:"6px 8px",fontSize:12}} value={l.unit} onChange={e=>updateLine(i,"unit",e.target.value)}>
@@ -1244,13 +1472,15 @@ function MultiCompany({ companies, activeCompany, setActiveCompany, addCompany, 
 // ─── SUBSCRIPTION / BILLING ───────────────────────────────────────────────────
 // ─── COUPON CODES ─────────────────────────────────────────────────────────────
 const COUPONS = {
-  "LAUNCH50":    { discount:50, type:"percent", plan:"starter",    desc:"50% off your first month — Starter Plan!", courseAccess:false },
-  "COURSE2026":  { discount:0,  type:"percent", plan:"free",       desc:"Course access unlocked! Enjoy all 6 FREE courses.", courseAccess:true },
-  "CALEARN":     { discount:0,  type:"percent", plan:"free",       desc:"CA Course access unlocked! All courses are now FREE for you.", courseAccess:true },
-  "ENTFREE":     { discount:100, type:"percent", plan:"enterprise", desc:"Enterprise Plan unlocked! Welcome to TaxSaathi Enterprise.", courseAccess:true },
+  "TAXFREE2026":   { discount:100, type:"percent", plan:"pro",        desc:"100% off — Pro Plan FREE forever!" },
+  "TAXSAATHI100":  { discount:100, type:"percent", plan:"enterprise", desc:"100% off — Enterprise Plan FREE!" },
+  "CASPECIAL":     { discount:100, type:"percent", plan:"pro",        desc:"100% off — Pro Plan FREE for CAs!" },
+  "LAUNCH50":      { discount:50,  type:"percent", plan:"starter",    desc:"50% off — Starter Plan" },
+  "WELCOME299":    { discount:100, type:"percent", plan:"starter",    desc:"100% off — Starter Plan FREE!" },
+  "ENTERPRISE99":  { discount:100, type:"percent", plan:"enterprise", desc:"100% off — Enterprise Plan FREE!" },
 };
 
-function Subscription({ plan, upgradePlan, user, auth }) {
+function Subscription({ plan, upgradePlan, user }) {
   const [loading, setLoading] = useState(null);
   const [success, setSuccess] = useState("");
   const [coupon, setCoupon]   = useState("");
@@ -1275,22 +1505,8 @@ function Subscription({ plan, upgradePlan, user, auth }) {
   async function activateWithCoupon() {
     if (!couponMsg?.valid) return;
     const planId = couponMsg.planId;
-    const couponData = COUPONS[couponMsg.code];
-
-    // Grant course access if coupon has courseAccess:true
-    if (couponData?.courseAccess) {
-      localStorage.setItem("ts_course_access", "1");
-      if (auth?.setCourseAccess) auth.setCourseAccess(true);
-    }
-
-    // Only upgrade plan if discount > 0 (not a course-only coupon)
-    if (couponData?.discount > 0) {
-      await upgradePlan(planId);
-      setSuccess(`🎉 ${PLANS.find(p=>p.id===planId)?.name} Plan — 50% off applied!${couponData.courseAccess ? " Course access also unlocked! 🎓" : ""}`);
-    } else {
-      // Course-only coupon — just unlock courses, no plan change
-      setSuccess(`🎓 Course access unlocked! You can now access all 6 FREE courses from CA Enrollment section.`);
-    }
+    await upgradePlan(planId);
+    setSuccess(`🎉 ${PLANS.find(p=>p.id===planId)?.name} Plan activated for FREE using coupon ${couponMsg.code}!`);
     setCoupon(""); setCouponMsg(null);
   }
 
@@ -5720,115 +5936,40 @@ export default function App() {
           </div>
         </div>
         <div style={{ flex:1, overflowY:"auto", maxHeight:"100dvh", padding:page==="ai"?20:24 }}>
-          {(() => {
-            // ── PLAN ACCESS RULES ──
-            const FREE_PAGES    = ["dashboard","invoice","upload","reports","calendar","clients","settings","billing","ca","companies"];
-            const STARTER_PAGES = [...FREE_PAGES,"ai","whatsapp","einvoice","expenses","recurring","gst_health","client_portal","payments"];
-            const PRO_PAGES     = [...STARTER_PAGES,"financials","purchase_orders","bank_recon","gstr2b","tds","tally","inventory","team","payroll","form16","gst_filing","etds","itr","audit","ewaybill"];
-            // ca_enroll (courses) needs paid plan OR course coupon
-
-            const currentPlan = auth.plan || "free";
-            const hasCourseAccess = ["starter","pro","enterprise"].includes(currentPlan) || auth.courseAccess === true;
-
-            const getRequiredPlan = (p) => {
-              if (FREE_PAGES.includes(p))    return "free";
-              if (STARTER_PAGES.includes(p)) return "starter";
-              if (PRO_PAGES.includes(p))     return "pro";
-              return "enterprise";
-            };
-
-            const planOrder = ["free","starter","pro","enterprise"];
-            const userPlanIndex = planOrder.indexOf(currentPlan);
-            const requiredPlanIndex = planOrder.indexOf(getRequiredPlan(page));
-            const hasAccess = userPlanIndex >= requiredPlanIndex;
-
-            // Course page special lock screen
-            if (page === "ca_enroll" && !hasCourseAccess) return (
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"60vh" }}>
-                <div style={{ textAlign:"center", padding:48, background:C.white, borderRadius:16, border:`2px solid ${C.accent}40`, maxWidth:500 }}>
-                  <div style={{ fontSize:60, marginBottom:16 }}>🎓</div>
-                  <div style={{ fontSize:22, fontWeight:900, marginBottom:8 }}>Courses Locked</div>
-                  <div style={{ color:C.textMuted, fontSize:14, marginBottom:20, lineHeight:1.8 }}>
-                    Free courses are available to:<br/>
-                    ✅ <strong>Starter, Pro & Enterprise</strong> plan users<br/>
-                    ✅ Users with a valid <strong>course coupon code</strong>
-                  </div>
-                  <div style={{ background:"#FFF9E6", borderRadius:8, padding:"12px 16px", marginBottom:20, fontSize:13, color:C.warning }}>
-                    💡 Have a course coupon? Enter it in <strong>Plans & Billing → Coupon Code</strong> section
-                  </div>
-                  <div style={{ display:"flex", gap:10, justifyContent:"center" }}>
-                    <button style={{ ...btn("accent"), padding:"11px 24px", fontSize:14, justifyContent:"center" }} onClick={()=>setPage("billing")}>
-                      ⚡ Upgrade — From ₹299/mo
-                    </button>
-                    <button style={{ ...btn("outline"), padding:"11px 24px", fontSize:14 }} onClick={()=>setPage("billing")}>
-                      🎟️ Enter Coupon
-                    </button>
-                  </div>
-                  <div style={{ fontSize:12, color:C.textMuted, marginTop:12 }}>Current plan: <strong>{currentPlan.toUpperCase()}</strong></div>
-                </div>
-              </div>
-            );
-
-            // Normal feature lock screen
-            if (!hasAccess && page !== "ca_enroll") return (
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"60vh" }}>
-                <div style={{ textAlign:"center", padding:48, background:C.white, borderRadius:16, border:`2px solid ${C.accent}40`, maxWidth:480 }}>
-                  <div style={{ fontSize:60, marginBottom:16 }}>🔒</div>
-                  <div style={{ fontSize:22, fontWeight:900, marginBottom:8 }}>
-                    {getRequiredPlan(page).charAt(0).toUpperCase()+getRequiredPlan(page).slice(1)} Plan Required
-                  </div>
-                  <div style={{ color:C.textMuted, fontSize:14, marginBottom:24, lineHeight:1.7 }}>
-                    This feature is available on the <strong>{getRequiredPlan(page).charAt(0).toUpperCase()+getRequiredPlan(page).slice(1)}</strong> plan and above.<br/>
-                    Upgrade now to unlock all features!
-                  </div>
-                  <button style={{ ...btn("accent"), padding:"12px 32px", fontSize:15, justifyContent:"center", width:"100%" }} onClick={()=>setPage("billing")}>
-                    ⚡ Upgrade Plan — Starting ₹299/mo
-                  </button>
-                  <div style={{ fontSize:12, color:C.textMuted, marginTop:12 }}>Current plan: <strong>{currentPlan.toUpperCase()}</strong></div>
-                </div>
-              </div>
-            );
-
-            // Render the actual page
-            return (
-              <>
-                {page==="dashboard"       && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} setPage={setPage} />}
-                {page==="invoice"         && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} />}
-                {page==="upload"          && <UploadPage data={data} />}
-                {page==="reports"         && <ReportsPage data={data} summary={summary} />}
-                {page==="ai"              && <AIAssistant summary={summary} company={auth.activeCompany} />}
-                {page==="ca"              && <CAMarketplace />}
-                {page==="companies"       && <MultiCompany companies={auth.companies} activeCompany={auth.activeCompany} setActiveCompany={auth.setActiveCompany} addCompany={auth.addCompany} plan={auth.plan} />}
-                {page==="calendar"        && <CalendarPage />}
-                {page==="clients"         && <ClientsPage data={data} auth={auth} />}
-                {page==="einvoice"        && <EInvoice company={auth.activeCompany} sales={data.sales} />}
-                {page==="ewaybill"        && <EWayBill company={auth.activeCompany} sales={data.sales} />}
-                {page==="whatsapp"        && <WhatsAppNotifications clients={data.clients} company={auth.activeCompany} />}
-                {page==="ca_enroll"       && <CAEnrollment />}
-                {page==="billing"         && <Subscription plan={auth.plan} upgradePlan={auth.upgradePlan} user={auth.user} auth={auth} />}
-                {page==="settings"        && <SettingsPage auth={auth} />}
-                {page==="expenses"        && <ExpensePage data={data} auth={auth} />}
-                {page==="purchase_orders" && <PurchaseOrders auth={auth} data={data} />}
-                {page==="bank_recon"      && <BankReconciliation data={data} />}
-                {page==="gstr2b"          && <GSTR2BReconciliation data={data} />}
-                {page==="tds"             && <TDSManager auth={auth} />}
-                {page==="financials"      && <FinancialReports data={data} auth={auth} />}
-                {page==="audit"           && <AuditTrail auth={auth} />}
-                {page==="client_portal"   && <ClientPortal data={data} auth={auth} />}
-                {page==="payments"        && <PaymentGateway data={data} auth={auth} />}
-                {page==="tally"           && <TallyImport data={data} />}
-                {page==="inventory"       && <InventoryPage data={data} />}
-                {page==="team"            && <TeamAccess auth={auth} />}
-                {page==="recurring"       && <RecurringInvoices auth={auth} data={data} />}
-                {page==="gst_health"      && <GSTHealthCheck auth={auth} data={data} />}
-                {page==="payroll"         && <PayrollPage auth={auth} />}
-                {page==="form16"          && <Form16Generator auth={auth} />}
-                {page==="gst_filing"      && <DirectGSTFiling data={data} auth={auth} />}
-                {page==="etds"            && <ETDSFiling auth={auth} />}
-                {page==="itr"             && <ITRFiling auth={auth} data={data} />}
-              </>
-            );
-          })()}
+          {page==="dashboard"  && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} setPage={setPage} />}
+          {page==="invoice"    && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} />}
+          {page==="upload"     && <UploadPage data={data} />}
+          {page==="reports"    && <ReportsPage data={data} summary={summary} />}
+          {page==="ai"         && <AIAssistant summary={summary} company={auth.activeCompany} />}
+          {page==="ca"         && <CAMarketplace />}
+          {page==="companies"  && <MultiCompany companies={auth.companies} activeCompany={auth.activeCompany} setActiveCompany={auth.setActiveCompany} addCompany={auth.addCompany} plan={auth.plan} />}
+          {page==="calendar"   && <CalendarPage />}
+          {page==="clients"    && <ClientsPage data={data} auth={auth} />}
+          {page==="einvoice"   && <EInvoice company={auth.activeCompany} sales={data.sales} />}
+          {page==="ewaybill"   && <EWayBill company={auth.activeCompany} sales={data.sales} />}
+          {page==="whatsapp"   && <WhatsAppNotifications clients={data.clients} company={auth.activeCompany} />}
+          {page==="ca_enroll"  && <CAEnrollment />}
+          {page==="billing"    && <Subscription plan={auth.plan} upgradePlan={auth.upgradePlan} user={auth.user} />}
+          {page==="settings"      && <SettingsPage auth={auth} />}
+          {page==="expenses"      && <ExpensePage data={data} auth={auth} />}
+          {page==="purchase_orders" && <PurchaseOrders auth={auth} data={data} />}
+          {page==="bank_recon"    && <BankReconciliation data={data} />}
+          {page==="gstr2b"        && <GSTR2BReconciliation data={data} />}
+          {page==="tds"           && <TDSManager auth={auth} />}
+          {page==="financials"    && <FinancialReports data={data} auth={auth} />}
+          {page==="audit"         && <AuditTrail auth={auth} />}
+          {page==="client_portal" && <ClientPortal data={data} auth={auth} />}
+          {page==="payments"      && <PaymentGateway data={data} auth={auth} />}
+          {page==="tally"         && <TallyImport data={data} />}
+          {page==="inventory"     && <InventoryPage data={data} />}
+          {page==="team"          && <TeamAccess auth={auth} />}
+          {page==="recurring"     && <RecurringInvoices auth={auth} data={data} />}
+          {page==="gst_health"    && <GSTHealthCheck auth={auth} data={data} />}
+          {page==="payroll"       && <PayrollPage auth={auth} />}
+          {page==="form16"        && <Form16Generator auth={auth} />}
+          {page==="gst_filing"    && <DirectGSTFiling data={data} auth={auth} />}
+          {page==="etds"          && <ETDSFiling auth={auth} />}
+          {page==="itr"           && <ITRFiling auth={auth} data={data} />}
         </div>
       </div>
     </div>
