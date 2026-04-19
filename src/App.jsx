@@ -562,6 +562,11 @@ function useData(companyId) {
     return data || inv;
   }
 
+  async function deleteInvoice(id) {
+    await supabase.from("gst_invoices").delete().eq("id", id);
+    setInvoices(i => i.filter(inv => inv.id !== id));
+  }
+
   function computeSummary() {
     const sum = (arr, f) => arr.reduce((a,r) => a + Number(r[f]||0), 0);
     const cgst = sum(sales,"cgst"), sgst = sum(sales,"sgst"), igst = sum(sales,"igst");
@@ -587,7 +592,7 @@ function useData(companyId) {
     setClients(c => c.filter(cl => cl.id !== id));
   }
 
-  return { sales, purchases, clients, invoices, uploading, uploadExcel, saveInvoice, computeSummary, addClient, deleteClient };
+  return { sales, purchases, clients, invoices, uploading, uploadExcel, saveInvoice, deleteInvoice, computeSummary, addClient, deleteClient };
 }
 
 // ─── AUTH SCREEN ──────────────────────────────────────────────────────────────
@@ -912,7 +917,7 @@ function HSNSearch({ value, onHsnChange, onSelect }) {
   );
 }
 
-function InvoiceGenerator({ company, clients, saveInvoice, setPage }) {
+function InvoiceGenerator({ company, clients, saveInvoice, setPage, invoices, deleteInvoice }) {
   const emptyLine = () => ({ description:"", hsn:"", qty:1, unit:"Nos", rate:0, gst_rate:18, amount:0, cgst:0, sgst:0, igst:0, total:0 });
   const [inv, setInv] = useState({
     invoice_number: "INV-" + Date.now().toString().slice(-6),
@@ -1087,17 +1092,18 @@ function InvoiceGenerator({ company, clients, saveInvoice, setPage }) {
       </div>
 
       {/* Company details warning */}
-      {!company?.id ? (
+      {!company?.id && (
         <div style={{ padding:"14px 16px", background:"#FFF5F5", border:`1.5px solid ${C.danger}40`, borderRadius:8, marginBottom:16, fontSize:13, color:C.danger, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <span>🚫 <strong>No company found!</strong> You must set up your company before creating invoices.</span>
+          <span>🚫 <strong>No company linked!</strong> Go to Settings → fill Company Name & GSTIN → Save.</span>
           <button style={{ ...btn("danger"), fontSize:12, padding:"6px 14px" }} onClick={() => setPage("settings")}>
             ⚙️ Go to Settings
           </button>
         </div>
-      ) : !company?.gstin && (
+      )}
+      {company?.id && !company?.gstin && (
         <div style={{ padding:"10px 16px", background:"#FFF9E6", border:`1px solid ${C.accent}40`, borderRadius:8, marginBottom:16, fontSize:13, color:C.warning, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <span>⚠️ GSTIN is missing — will show blank on invoice</span>
-          <button style={{ ...btn("outline"), fontSize:12, padding:"5px 12px" }} onClick={() => setPage("settings")}>Update Settings</button>
+          <span>⚠️ GSTIN missing — add it in Settings for GST-compliant invoices</span>
+          <button style={{ ...btn("outline"), fontSize:12, padding:"5px 12px" }} onClick={() => setPage("settings")}>Update GSTIN</button>
         </div>
       )}
 
@@ -1490,6 +1496,48 @@ GSTIN: ${company?.gstin || "—"}`;
           </div>
         </div>
       </div>
+
+      {/* ── SAVED INVOICES LIST ── */}
+      {invoices && invoices.length > 0 && (
+        <div style={{ ...card, marginTop:24 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+            <div style={{ fontWeight:700, fontSize:15, color:C.primary }}>📋 Saved Invoices ({invoices.length})</div>
+            <div style={{ fontSize:12, color:C.textMuted }}>Click to reprint or delete</div>
+          </div>
+          <table style={{ width:"100%", borderCollapse:"collapse" }}>
+            <thead>
+              <tr>
+                {["Invoice #","Customer","Date","Due Date","Total","Action"].map(h => (
+                  <th key={h} style={TH}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {invoices.map((inv, i) => (
+                <tr key={i}>
+                  <td style={{ ...TD, fontWeight:700, color:C.primary }}>{inv.invoice_number}</td>
+                  <td style={TD}>{inv.customer_name || "—"}</td>
+                  <td style={TD}>{inv.invoice_date}</td>
+                  <td style={TD}>{inv.due_date}</td>
+                  <td style={{ ...TD, fontWeight:700 }}>{fmt(inv.total)}</td>
+                  <td style={TD}>
+                    <button
+                      style={{ ...btn("danger"), fontSize:11, padding:"4px 10px" }}
+                      onClick={() => {
+                        if (window.confirm(`Delete invoice ${inv.invoice_number}? This cannot be undone.`)) {
+                          deleteInvoice(inv.id);
+                        }
+                      }}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -1876,7 +1924,7 @@ async function handleUpgrade(planId) {
 
       {/* Feature Comparison */}
       <div style={card}>
-        <div style={{ fontWeight:700, fontSize:16, marginBottom:16 }}>📊 Why TaxSaathi beats Zoho Books</div>
+        <div style={{ fontWeight:700, fontSize:16, marginBottom:16 }}>📊 TaxSaathi vs Other Platforms</div>
         <div style={{ overflowX:"auto" }}>
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead>
@@ -1884,7 +1932,7 @@ async function handleUpgrade(planId) {
                 <th style={TH}>Feature</th>
                 <th style={{...TH,textAlign:"center"}}>TaxSaathi Free</th>
                 <th style={{...TH,textAlign:"center",color:C.primary}}>TaxSaathi Pro</th>
-                <th style={{...TH,textAlign:"center",color:C.danger}}>Zoho Books</th>
+                <th style={{...TH,textAlign:"center",color:C.danger}}>Other Platforms</th>
               </tr>
             </thead>
             <tbody>
@@ -1896,8 +1944,8 @@ async function handleUpgrade(planId) {
                 ["Tally/Busy Import","❌","✅","❌ Limited"],
                 ["WhatsApp Reminders","❌","✅","❌ Email only"],
                 ["GSTR-2B Auto-Reconciliation","✅","✅","💰 Paid add-on"],
-                ["Offline Mode","❌","✅","❌"],
-                ["Price","₹0","₹799/mo","₹1,799/mo"],
+                ["Send Invoice via WhatsApp","✅","✅","❌ Not available"],
+                ["Price","₹0","₹799/mo","₹1,799/mo+"],
               ].map(([feat,...vals])=>(
                 <tr key={feat}>
                   <td style={{...TD,fontWeight:600}}>{feat}</td>
@@ -6121,7 +6169,7 @@ export default function App() {
       <div id="taxs-sidebar" style={{ width:220, background:C.sidebar, display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto" }}>
         <div style={{ padding:"18px 16px 14px", borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
           <div style={{ fontSize:18, fontWeight:900, color:C.white }}>🇮🇳 TaxSaathi</div>
-          <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", marginTop:2, letterSpacing:1, textTransform:"uppercase" }}>2.0 — Beyond Zoho</div>
+          <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", marginTop:2, letterSpacing:1, textTransform:"uppercase" }}>India's GST & Tax Platform</div>
         </div>
 
         {/* Company Switcher */}
@@ -6221,7 +6269,7 @@ export default function App() {
             return (
               <>
                 {page==="dashboard"       && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} setPage={setPage} />}
-                {page==="invoice"         && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} setPage={setPage} />}
+                {page==="invoice"         && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} setPage={setPage} invoices={data.invoices} deleteInvoice={data.deleteInvoice} />}
                 {page==="upload"          && <UploadPage data={data} />}
                 {page==="reports"         && <ReportsPage data={data} summary={summary} />}
                 {page==="ai"              && <AIAssistant summary={summary} company={auth.activeCompany} />}
