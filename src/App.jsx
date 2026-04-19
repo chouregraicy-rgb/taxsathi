@@ -911,7 +911,7 @@ function HSNSearch({ value, onHsnChange, onSelect }) {
   );
 }
 
-function InvoiceGenerator({ company, clients, saveInvoice }) {
+function InvoiceGenerator({ company, clients, saveInvoice, setPage }) {
   const emptyLine = () => ({ description:"", hsn:"", qty:1, unit:"Nos", rate:0, gst_rate:18, amount:0, cgst:0, sgst:0, igst:0, total:0 });
   const [inv, setInv] = useState({
     invoice_number: "INV-" + Date.now().toString().slice(-6),
@@ -1089,7 +1089,7 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
       {!company?.id ? (
         <div style={{ padding:"14px 16px", background:"#FFF5F5", border:`1.5px solid ${C.danger}40`, borderRadius:8, marginBottom:16, fontSize:13, color:C.danger, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <span>🚫 <strong>No company found!</strong> You must set up your company before creating invoices.</span>
-          <button style={{ ...btn("danger"), fontSize:12, padding:"6px 14px" }} onClick={() => window.location.hash = "settings"}>
+          <button style={{ ...btn("danger"), fontSize:12, padding:"6px 14px" }} onClick={() => setPage("settings")}>
             ⚙️ Go to Settings
           </button>
         </div>
@@ -1360,7 +1360,7 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
       </div>
 
       {/* Notes */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:20 }}>
         <div style={card}>
           <div style={lbl}>Notes to Customer</div>
           <textarea style={{...inp,height:80,resize:"none"}} value={inv.notes} onChange={e=>setInv({...inv,notes:e.target.value})} />
@@ -1368,6 +1368,79 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
         <div style={card}>
           <div style={lbl}>Terms & Conditions</div>
           <textarea style={{...inp,height:80,resize:"none"}} value={inv.terms} onChange={e=>setInv({...inv,terms:e.target.value})} />
+        </div>
+      </div>
+
+      {/* ── SEND INVOICE ── */}
+      <div style={{ ...card, background:`linear-gradient(135deg, ${C.primaryLighter}, #fff)`, border:`1.5px solid ${C.primaryLight}40` }}>
+        <div style={{ fontWeight:700, fontSize:15, marginBottom:4, color:C.primary }}>📤 Send Invoice to Client</div>
+        <div style={{ fontSize:13, color:C.textMuted, marginBottom:16 }}>Send via WhatsApp, Email or download as PDF</div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14 }}>
+
+          {/* WhatsApp */}
+          <div style={{ ...card, padding:18, border:`1.5px solid #25D366`, background:"#F0FFF4" }}>
+            <div style={{ fontSize:22, marginBottom:8 }}>💬</div>
+            <div style={{ fontWeight:700, fontSize:14, marginBottom:4, color:"#128C7E" }}>Send via WhatsApp</div>
+            <div style={{ fontSize:12, color:C.textMuted, marginBottom:12 }}>Opens WhatsApp with invoice details pre-filled</div>
+            <button style={{ ...btn("success"), width:"100%", justifyContent:"center", fontSize:13 }}
+              onClick={() => {
+                const mobile = (inv.customer_mobile || "").replace(/\D/g,"");
+                const msg = `🧾 *TAX INVOICE*\n\nFrom: *${company?.company_name || "Our Company"}*\nGSTIN: ${company?.gstin || "—"}\n\nInvoice #: *${inv.invoice_number}*\nDate: ${inv.invoice_date}\nDue Date: ${inv.due_date}\n\nBill To: *${inv.customer_name || "—"}*\n\n📦 *Items:*\n${inv.lines.map(l=>`• ${l.description} | Qty: ${l.qty} | Rate: ₹${l.rate} | Total: ₹${l.total}`).join("\n")}\n\n💰 *Taxable:* ₹${totals.taxable.toLocaleString("en-IN")}\n🧾 *GST:* ₹${(totals.cgst+totals.sgst+totals.igst).toLocaleString("en-IN")}\n✅ *Grand Total: ₹${totals.total.toLocaleString("en-IN")}*\n\n${inv.notes ? `📝 ${inv.notes}\n` : ""}${company?.upi_id ? `💳 UPI: ${company.upi_id}` : company?.account_number ? `🏦 A/C: ${company.account_number}` : "Pay via UPI or Bank Transfer"}\n\n_Powered by TaxSaathi_`;
+                const encoded = encodeURIComponent(msg);
+                const num = mobile ? (mobile.startsWith("91") ? mobile : "91"+mobile) : "";
+                window.open(`https://wa.me/${num}?text=${encoded}`, "_blank");
+              }}>
+              💬 Send on WhatsApp
+            </button>
+            <div style={{ fontSize:11, color:C.textMuted, marginTop:8, textAlign:"center" }}>
+              Add client mobile in Bill To for direct send
+            </div>
+          </div>
+
+          {/* Email */}
+          <div style={{ ...card, padding:18, border:`1.5px solid ${C.primaryLight}`, background:C.primaryLighter }}>
+            <div style={{ fontSize:22, marginBottom:8 }}>📧</div>
+            <div style={{ fontWeight:700, fontSize:14, marginBottom:4, color:C.primary }}>Send via Email</div>
+            <div style={{ fontSize:12, color:C.textMuted, marginBottom:12 }}>Opens your email client with invoice details</div>
+            <button style={{ ...btn(), width:"100%", justifyContent:"center", fontSize:13 }}
+              onClick={() => {
+                const subject = `Invoice ${inv.invoice_number} from ${company?.company_name || "Us"} — ₹${totals.total.toLocaleString("en-IN")}`;
+                const body = `Dear ${inv.customer_name || "Sir/Madam"},\n\nPlease find below your invoice details:\n\nInvoice Number: ${inv.invoice_number}\nDate: ${inv.invoice_date}\nDue Date: ${inv.due_date}\n\nItems:\n${inv.lines.map(l=>`- ${l.description} | Qty: ${l.qty} | Rate: ₹${l.rate} | GST: ${l.gst_rate}% | Total: ₹${l.total}`).join("\n")}\n\nTaxable Amount: ₹${totals.taxable.toLocaleString("en-IN")}\nGST: ₹${(totals.cgst+totals.sgst+totals.igst).toLocaleString("en-IN")}\nGrand Total: ₹${totals.total.toLocaleString("en-IN")}\n\n${inv.notes ? `Notes: ${inv.notes}\n\n` : ""}Payment Details:\n${company?.bank_name ? `Bank: ${company.bank_name}\n` : ""}${company?.account_number ? `A/C: ${company.account_number}\n` : ""}${company?.ifsc ? `IFSC: ${company.ifsc}\n` : ""}${company?.upi_id ? `UPI: ${company.upi_id}\n` : ""}\nThank you for your business!\n\nRegards,\n${company?.company_name || "Our Company"}\nGSTIN: ${company?.gstin || "—"}`;
+                const email = inv.customer_email || "";
+                window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
+              }}>
+              📧 Send via Email
+            </button>
+            <div style={{ fontSize:11, color:C.textMuted, marginTop:8, textAlign:"center" }}>
+              Add client email in Bill To for direct send
+            </div>
+          </div>
+
+          {/* Download PDF */}
+          <div style={{ ...card, padding:18, border:`1.5px solid ${C.accent}40`, background:"#FFF9E6" }}>
+            <div style={{ fontSize:22, marginBottom:8 }}>📄</div>
+            <div style={{ fontWeight:700, fontSize:14, marginBottom:4, color:C.accent }}>Download / Print PDF</div>
+            <div style={{ fontSize:12, color:C.textMuted, marginBottom:12 }}>Save as PDF or print — share anywhere</div>
+            <button style={{ ...btn("accent"), width:"100%", justifyContent:"center", fontSize:13 }}
+              onClick={printInvoice}>
+              🖨️ Print / Save as PDF
+            </button>
+            <div style={{ fontSize:11, color:C.textMuted, marginTop:8, textAlign:"center" }}>
+              In print dialog → Save as PDF
+            </div>
+          </div>
+        </div>
+
+        {/* Customer mobile + email quick fill */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginTop:16, padding:"14px 16px", background:C.white, borderRadius:8, border:`1px solid ${C.border}` }}>
+          <div>
+            <div style={lbl}>Client Mobile (for WhatsApp)</div>
+            <input style={inp} placeholder="9876543210" value={inv.customer_mobile||""} onChange={e=>setInv({...inv,customer_mobile:e.target.value.replace(/\D/g,"")})} maxLength={10} />
+          </div>
+          <div>
+            <div style={lbl}>Client Email (for Email)</div>
+            <input style={inp} type="email" placeholder="client@email.com" value={inv.customer_email||""} onChange={e=>setInv({...inv,customer_email:e.target.value})} />
+          </div>
         </div>
       </div>
     </div>
@@ -6042,7 +6115,7 @@ export default function App() {
         </div>
         <div style={{ flex:1, overflowY:"auto", maxHeight:"100dvh", padding:page==="ai"?20:24 }}>
           {page==="dashboard"  && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} setPage={setPage} />}
-          {page==="invoice"    && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} />}
+          {page==="invoice"    && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} setPage={setPage} />}
           {page==="upload"     && <UploadPage data={data} />}
           {page==="reports"    && <ReportsPage data={data} summary={summary} />}
           {page==="ai"         && <AIAssistant summary={summary} company={auth.activeCompany} />}
