@@ -1094,10 +1094,10 @@ function InvoiceGenerator({ company, clients, saveInvoice, setPage }) {
             ⚙️ Go to Settings
           </button>
         </div>
-      ) : (!company?.address || !company?.gstin) && (
+      ) : !company?.gstin && (
         <div style={{ padding:"10px 16px", background:"#FFF9E6", border:`1px solid ${C.accent}40`, borderRadius:8, marginBottom:16, fontSize:13, color:C.warning, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <span>⚠️ Company details incomplete — <strong>GSTIN/address</strong> will show blank on invoice</span>
-          <span style={{ fontSize:12, color:C.primary, fontWeight:600 }}>👉 Go to Settings to update</span>
+          <span>⚠️ GSTIN is missing — will show blank on invoice</span>
+          <button style={{ ...btn("outline"), fontSize:12, padding:"5px 12px" }} onClick={() => setPage("settings")}>Update Settings</button>
         </div>
       )}
 
@@ -1402,18 +1402,64 @@ function InvoiceGenerator({ company, clients, saveInvoice, setPage }) {
           <div style={{ ...card, padding:18, border:`1.5px solid ${C.primaryLight}`, background:C.primaryLighter }}>
             <div style={{ fontSize:22, marginBottom:8 }}>📧</div>
             <div style={{ fontWeight:700, fontSize:14, marginBottom:4, color:C.primary }}>Send via Email</div>
-            <div style={{ fontSize:12, color:C.textMuted, marginBottom:12 }}>Opens your email client with invoice details</div>
+            <div style={{ fontSize:12, color:C.textMuted, marginBottom:12 }}>Opens email app with invoice details + PDF opens separately to attach</div>
             <button style={{ ...btn(), width:"100%", justifyContent:"center", fontSize:13 }}
               onClick={() => {
-                const subject = `Invoice ${inv.invoice_number} from ${company?.company_name || "Us"} — ₹${totals.total.toLocaleString("en-IN")}`;
-                const body = `Dear ${inv.customer_name || "Sir/Madam"},\n\nPlease find below your invoice details:\n\nInvoice Number: ${inv.invoice_number}\nDate: ${inv.invoice_date}\nDue Date: ${inv.due_date}\n\nItems:\n${inv.lines.map(l=>`- ${l.description} | Qty: ${l.qty} | Rate: ₹${l.rate} | GST: ${l.gst_rate}% | Total: ₹${l.total}`).join("\n")}\n\nTaxable Amount: ₹${totals.taxable.toLocaleString("en-IN")}\nGST: ₹${(totals.cgst+totals.sgst+totals.igst).toLocaleString("en-IN")}\nGrand Total: ₹${totals.total.toLocaleString("en-IN")}\n\n${inv.notes ? `Notes: ${inv.notes}\n\n` : ""}Payment Details:\n${company?.bank_name ? `Bank: ${company.bank_name}\n` : ""}${company?.account_number ? `A/C: ${company.account_number}\n` : ""}${company?.ifsc ? `IFSC: ${company.ifsc}\n` : ""}${company?.upi_id ? `UPI: ${company.upi_id}\n` : ""}\nThank you for your business!\n\nRegards,\n${company?.company_name || "Our Company"}\nGSTIN: ${company?.gstin || "—"}`;
+                const co = company?.company_name || "Us";
+                const total = `Rs.${totals.total.toLocaleString("en-IN")}`;
+                const subject = `Invoice ${inv.invoice_number} from ${co} - ${total}`;
+                // Short clean body (under 2000 chars to work in all email clients)
+                const lines = inv.lines.filter(l=>l.description).map(l=>
+                  `  ${l.description} | Qty:${l.qty} | Rate:Rs.${l.rate} | ${l.gst_rate}% GST | Total:Rs.${l.total}`
+                ).join("\n");
+                const payment = [
+                  company?.bank_name   ? `Bank: ${company.bank_name}` : "",
+                  company?.account_number ? `A/C No: ${company.account_number}` : "",
+                  company?.ifsc        ? `IFSC: ${company.ifsc}` : "",
+                  company?.upi_id      ? `UPI: ${company.upi_id}` : "",
+                ].filter(Boolean).join(" | ") || "Pay via UPI or Bank Transfer";
+                const body =
+`Dear ${inv.customer_name || "Sir/Madam"},
+
+Please find your invoice details below.
+
+------------------------------------------
+INVOICE: ${inv.invoice_number}
+Date: ${inv.invoice_date}  |  Due: ${inv.due_date}
+From: ${co} (GSTIN: ${company?.gstin || "—"})
+------------------------------------------
+
+ITEMS:
+${lines}
+
+------------------------------------------
+Taxable Amount : Rs.${totals.taxable.toLocaleString("en-IN")}
+GST            : Rs.${(totals.cgst+totals.sgst+totals.igst).toLocaleString("en-IN")}
+GRAND TOTAL    : ${total}
+------------------------------------------
+
+PAYMENT DETAILS:
+${payment}
+
+${inv.notes ? `Note: ${inv.notes}\n` : ""}
+(PDF invoice is being opened in a separate window — please save it and attach to this email)
+
+Thank you for your business!
+
+Regards,
+${co}
+GSTIN: ${company?.gstin || "—"}`;
+
                 const email = inv.customer_email || "";
+                // Open email with short body
                 window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
+                // Also open PDF after short delay so user can attach it
+                setTimeout(() => printInvoice(), 800);
               }}>
-              📧 Send via Email
+              📧 Send via Email + Open PDF
             </button>
             <div style={{ fontSize:11, color:C.textMuted, marginTop:8, textAlign:"center" }}>
-              Add client email in Bill To for direct send
+              Email opens + PDF opens to save & attach
             </div>
           </div>
 
@@ -3388,7 +3434,7 @@ function SettingsPage({ auth }) {
           <div style={{ marginBottom:12 }}><div style={lbl}>GSTIN</div><input style={inp} value={co.gstin} onChange={e=>setCo({...co,gstin:e.target.value})} /></div>
           <div style={{ marginBottom:12 }}><div style={lbl}>Address</div><input style={inp} value={co.address} onChange={e=>setCo({...co,address:e.target.value})} /></div>
           <div style={{ marginBottom:16 }}><div style={lbl}>State</div><select style={inp} value={co.state} onChange={e=>setCo({...co,state:e.target.value})}>{STATES.map(s=><option key={s}>{s}</option>)}</select></div>
-          <button style={btn()} onClick={()=>{ auth.updateCompany(co); setSaved(true); setTimeout(()=>setSaved(false),2500); }}>{saved?"✓ Saved!":"Update Company"}</button>
+          <button style={btn()} onClick={async()=>{ await auth.updateCompany(co); setSaved(true); setTimeout(()=>setSaved(false),2500); }}>{saved?"✓ Saved!":"Update Company"}</button>
         </div>
       </div>
 
