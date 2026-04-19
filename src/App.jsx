@@ -785,44 +785,25 @@ function AuthScreen({ onLogin, onSignup, onReset }) {
 
 // ─── HSN DATABASE ─────────────────────────────────────────────────────────────
 const HSN_DATA = [
-  // ── SERVICES (SAC) ──
-  { hsn:"9983", desc:"IT Software Services", gst:18, category:"IT & Software" },
+  { hsn:"9983", desc:"IT Software / App Development Services", gst:18, category:"IT & Software" },
   { hsn:"9984", desc:"Telecom & Internet Services", gst:18, category:"IT & Software" },
-  { hsn:"9985", desc:"Web Development Services", gst:18, category:"IT & Software" },
   { hsn:"9982", desc:"Legal & Consultancy Services", gst:18, category:"Professional Services" },
-  { hsn:"9981", desc:"Research & Development Services", gst:18, category:"Professional Services" },
+  { hsn:"9980", desc:"CA / Accounting / Audit Services", gst:18, category:"Professional Services" },
   { hsn:"9971", desc:"Financial & Banking Services", gst:18, category:"Professional Services" },
   { hsn:"9972", desc:"Real Estate Services", gst:18, category:"Professional Services" },
   { hsn:"9973", desc:"Leasing & Rental Services", gst:18, category:"Professional Services" },
   { hsn:"9991", desc:"Education & Training Services", gst:18, category:"Professional Services" },
   { hsn:"9992", desc:"Healthcare & Medical Services", gst:5, category:"Healthcare" },
   { hsn:"9954", desc:"Construction & Building Services", gst:18, category:"Construction" },
-  { hsn:"9961", desc:"Retail Trade Services", gst:18, category:"Trade" },
-  { hsn:"9962", desc:"Wholesale Trade Services", gst:18, category:"Trade" },
   { hsn:"9963", desc:"Hotel & Restaurant Services", gst:5, category:"Hospitality" },
   { hsn:"9964", desc:"Transport of Passengers", gst:5, category:"Transport" },
   { hsn:"9965", desc:"Goods Transport Services", gst:5, category:"Transport" },
   { hsn:"9966", desc:"Vehicle Rental Services", gst:18, category:"Transport" },
   { hsn:"9967", desc:"Courier & Postal Services", gst:18, category:"Transport" },
-  { hsn:"9968", desc:"Electricity Distribution Services", gst:0, category:"Utilities" },
-  { hsn:"9969", desc:"Water Supply Services", gst:0, category:"Utilities" },
-  { hsn:"9985", desc:"Support & Maintenance Services", gst:18, category:"IT & Software" },
-  { hsn:"9986", desc:"Agricultural Support Services", gst:0, category:"Agriculture" },
   { hsn:"9987", desc:"Repair & Maintenance Services", gst:18, category:"Maintenance" },
-  { hsn:"9988", desc:"Manufacturing Services on Physical Inputs", gst:12, category:"Manufacturing" },
-  { hsn:"9993", desc:"Social & Community Services", gst:0, category:"Social" },
-  { hsn:"9994", desc:"Sewage & Waste Management", gst:18, category:"Utilities" },
+  { hsn:"9997", desc:"Salon / Spa / Personal Services", gst:18, category:"Personal Services" },
   { hsn:"9995", desc:"Arts & Entertainment Services", gst:18, category:"Entertainment" },
   { hsn:"9996", desc:"Sporting & Recreational Services", gst:18, category:"Entertainment" },
-  { hsn:"9997", desc:"Other Personal Services (Salon, Spa)", gst:18, category:"Personal Services" },
-  { hsn:"9998", desc:"Domestic Services", gst:0, category:"Personal Services" },
-  { hsn:"9999", desc:"Services by Government / NGO", gst:0, category:"Government" },
-  // CA / Accounting
-  { hsn:"9980", desc:"CA / Accounting / Audit Services", gst:18, category:"Professional Services" },
-  { hsn:"9983", desc:"Tax Consulting & Filing Services", gst:18, category:"Professional Services" },
-  { hsn:"9982", desc:"Company Secretary Services", gst:18, category:"Professional Services" },
-  // ── GOODS ──
-  // Electronics
   { hsn:"8471", desc:"Computer / Laptop / Desktop", gst:18, category:"Electronics" },
   { hsn:"8473", desc:"Computer Parts & Accessories", gst:18, category:"Electronics" },
   { hsn:"8517", desc:"Mobile Phone / Smartphone", gst:12, category:"Electronics" },
@@ -831,126 +812,96 @@ const HSN_DATA = [
   { hsn:"8504", desc:"UPS / Inverter / Transformer", gst:18, category:"Electronics" },
   { hsn:"8507", desc:"Battery / Electric Accumulator", gst:18, category:"Electronics" },
   { hsn:"8544", desc:"Electric Wires & Cables", gst:18, category:"Electronics" },
-  { hsn:"8536", desc:"Switches / Sockets / MCB", gst:18, category:"Electronics" },
   { hsn:"8539", desc:"LED Bulb / Tube Light / Lamp", gst:12, category:"Electronics" },
-  { hsn:"8543", desc:"Electric Machinery & Equipment", gst:18, category:"Electronics" },
-  // Textile & Clothing
+  { hsn:"8443", desc:"Printer / Copier / Scanner", gst:18, category:"Office Equipment" },
+  { hsn:"8415", desc:"Air Conditioner / Cooler", gst:28, category:"Household" },
+  { hsn:"8418", desc:"Refrigerator / Freezer", gst:18, category:"Household" },
+  { hsn:"8450", desc:"Washing Machine", gst:18, category:"Household" },
+  { hsn:"8516", desc:"Microwave / Mixer Grinder / Electric Iron", gst:18, category:"Household" },
+  { hsn:"9401", desc:"Chair / Sofa / Seating Furniture", gst:18, category:"Furniture" },
+  { hsn:"9403", desc:"Table / Desk / Cabinet / Shelf", gst:18, category:"Furniture" },
+  { hsn:"9404", desc:"Mattress / Pillow / Cushion", gst:18, category:"Furniture" },
   { hsn:"6101", desc:"Men's Jacket / Coat / Blazer", gst:5, category:"Clothing" },
   { hsn:"6105", desc:"Men's Shirt (Cotton)", gst:5, category:"Clothing" },
-  { hsn:"6109", desc:"T-Shirt / Vest / Inner wear", gst:5, category:"Clothing" },
+  { hsn:"6109", desc:"T-Shirt / Vest / Innerwear", gst:5, category:"Clothing" },
   { hsn:"6201", desc:"Women's Coat / Jacket", gst:5, category:"Clothing" },
-  { hsn:"6211", desc:"Track Suit / Sportswear", gst:5, category:"Clothing" },
   { hsn:"5208", desc:"Cotton Fabric / Cloth", gst:5, category:"Textile" },
-  { hsn:"5407", desc:"Synthetic Fabric / Polyester", gst:5, category:"Textile" },
-  { hsn:"5515", desc:"Mixed Fabric / Blended Cloth", gst:5, category:"Textile" },
   { hsn:"6301", desc:"Blanket / Quilt / Bedsheet", gst:5, category:"Textile" },
-  { hsn:"6302", desc:"Bed Linen / Towel / Curtain", gst:5, category:"Textile" },
-  // Food & Beverages
   { hsn:"1001", desc:"Wheat / Atta / Maida / Suji", gst:0, category:"Food" },
   { hsn:"1006", desc:"Rice (Branded)", gst:5, category:"Food" },
   { hsn:"1701", desc:"Sugar / Gur / Jaggery", gst:5, category:"Food" },
-  { hsn:"1511", desc:"Palm Oil / Edible Oil", gst:5, category:"Food" },
-  { hsn:"1512", desc:"Sunflower Oil / Groundnut Oil", gst:5, category:"Food" },
+  { hsn:"1511", desc:"Edible Oil / Palm Oil", gst:5, category:"Food" },
   { hsn:"0401", desc:"Milk / Cream / Dairy Products", gst:0, category:"Food" },
   { hsn:"0406", desc:"Cheese / Paneer", gst:12, category:"Food" },
   { hsn:"1905", desc:"Bread / Biscuit / Cake / Pastry", gst:0, category:"Food" },
   { hsn:"2009", desc:"Fruit Juice / Vegetable Juice", gst:12, category:"Food" },
   { hsn:"2202", desc:"Packaged Water / Soft Drinks", gst:12, category:"Food" },
-  { hsn:"0901", desc:"Coffee / Tea / Spices", gst:5, category:"Food" },
   { hsn:"2106", desc:"Food Supplement / Health Drink", gst:18, category:"Food" },
-  // Pharma & Healthcare
   { hsn:"3004", desc:"Medicine / Tablets / Capsules", gst:12, category:"Pharma" },
   { hsn:"3005", desc:"Surgical Dressing / Bandage", gst:12, category:"Pharma" },
-  { hsn:"3006", desc:"Pharmaceutical Preparations", gst:12, category:"Pharma" },
   { hsn:"9018", desc:"Medical Instruments / Equipment", gst:12, category:"Healthcare" },
-  { hsn:"9019", desc:"Physiotherapy Equipment", gst:12, category:"Healthcare" },
-  { hsn:"3401", desc:"Soap / Sanitizer / Hand wash", gst:18, category:"Personal Care" },
+  { hsn:"3401", desc:"Soap / Sanitizer / Hand Wash", gst:18, category:"Personal Care" },
   { hsn:"3304", desc:"Beauty Products / Cosmetics", gst:18, category:"Personal Care" },
   { hsn:"3305", desc:"Shampoo / Hair Oil / Conditioner", gst:18, category:"Personal Care" },
   { hsn:"3307", desc:"Perfume / Deodorant", gst:18, category:"Personal Care" },
-  // Furniture & Household
-  { hsn:"9401", desc:"Chair / Sofa / Seating Furniture", gst:18, category:"Furniture" },
-  { hsn:"9403", desc:"Table / Desk / Cabinet / Shelf", gst:18, category:"Furniture" },
-  { hsn:"9404", desc:"Mattress / Pillow / Cushion", gst:18, category:"Furniture" },
   { hsn:"7323", desc:"Utensils / Cookware (Steel/Iron)", gst:12, category:"Household" },
-  { hsn:"3924", desc:"Plastic Kitchen Items / Containers", gst:18, category:"Household" },
-  { hsn:"8516", desc:"Electric Iron / Kettle / Geyser", gst:18, category:"Household" },
-  { hsn:"8415", desc:"Air Conditioner / Cooler", gst:28, category:"Household" },
-  { hsn:"8418", desc:"Refrigerator / Freezer", gst:18, category:"Household" },
-  { hsn:"8450", desc:"Washing Machine", gst:18, category:"Household" },
-  { hsn:"8516", desc:"Microwave / OTG / Mixer Grinder", gst:18, category:"Household" },
-  // Automobile
-  { hsn:"8703", desc:"Car / Passenger Vehicle", gst:28, category:"Automobile" },
-  { hsn:"8711", desc:"Motorcycle / Scooter", gst:28, category:"Automobile" },
-  { hsn:"8714", desc:"Bicycle / Cycle Parts", gst:12, category:"Automobile" },
-  { hsn:"8708", desc:"Auto Parts & Accessories", gst:28, category:"Automobile" },
-  { hsn:"4011", desc:"Tyre / Tube (Rubber)", gst:28, category:"Automobile" },
-  { hsn:"2710", desc:"Petrol / Diesel / Lubricant", gst:0, category:"Fuel" },
-  // Construction & Hardware
   { hsn:"7213", desc:"Steel Rod / Bar / Wire", gst:18, category:"Construction" },
-  { hsn:"7217", desc:"Steel Wire / Mesh", gst:18, category:"Construction" },
-  { hsn:"7308", desc:"Steel Structure / Fabrication", gst:18, category:"Construction" },
   { hsn:"6810", desc:"Cement / Concrete Products", gst:28, category:"Construction" },
   { hsn:"6901", desc:"Bricks / Tiles / Ceramic", gst:5, category:"Construction" },
   { hsn:"3208", desc:"Paint / Varnish / Lacquer", gst:28, category:"Construction" },
-  { hsn:"3214", desc:"Putty / Sealant / Adhesive", gst:28, category:"Construction" },
   { hsn:"8301", desc:"Lock / Key / Hardware Fitting", gst:18, category:"Hardware" },
-  { hsn:"7415", desc:"Nut / Bolt / Screw (Copper)", gst:18, category:"Hardware" },
   { hsn:"7318", desc:"Nut / Bolt / Screw (Steel)", gst:18, category:"Hardware" },
-  // Stationery & Office
   { hsn:"4802", desc:"Paper / Writing Paper / Copier Paper", gst:12, category:"Stationery" },
   { hsn:"4820", desc:"Notebook / Register / Diary", gst:12, category:"Stationery" },
   { hsn:"9608", desc:"Pen / Pencil / Marker", gst:12, category:"Stationery" },
-  { hsn:"9612", desc:"Ink / Toner / Ribbon", gst:18, category:"Stationery" },
-  { hsn:"8443", desc:"Printer / Copier / Scanner", gst:18, category:"Office Equipment" },
-  { hsn:"8470", desc:"Calculator / Cash Register", gst:18, category:"Office Equipment" },
-  // Agriculture
+  { hsn:"8703", desc:"Car / Passenger Vehicle", gst:28, category:"Automobile" },
+  { hsn:"8711", desc:"Motorcycle / Scooter", gst:28, category:"Automobile" },
+  { hsn:"8708", desc:"Auto Parts & Accessories", gst:28, category:"Automobile" },
+  { hsn:"4011", desc:"Tyre / Tube (Rubber)", gst:28, category:"Automobile" },
   { hsn:"8432", desc:"Agricultural Machinery / Tractor", gst:12, category:"Agriculture" },
   { hsn:"3101", desc:"Fertilizer / Manure", gst:0, category:"Agriculture" },
   { hsn:"3808", desc:"Pesticide / Insecticide", gst:18, category:"Agriculture" },
-  { hsn:"0601", desc:"Seeds / Plants / Bulbs", gst:0, category:"Agriculture" },
-  // Packaging
   { hsn:"3923", desc:"Plastic Bag / Container / Box", gst:18, category:"Packaging" },
   { hsn:"4819", desc:"Carton / Paper Box / Packaging", gst:12, category:"Packaging" },
-  { hsn:"6305", desc:"Jute / Woven Bag / Gunny Bag", gst:5, category:"Packaging" },
-  // Jewellery
   { hsn:"7113", desc:"Gold Jewellery / Ornaments", gst:3, category:"Jewellery" },
   { hsn:"7114", desc:"Silver Jewellery / Articles", gst:3, category:"Jewellery" },
   { hsn:"7116", desc:"Imitation Jewellery", gst:3, category:"Jewellery" },
-  // Education
   { hsn:"4901", desc:"Books / Printed Material", gst:0, category:"Education" },
   { hsn:"4902", desc:"Newspaper / Journal / Magazine", gst:0, category:"Education" },
-  { hsn:"9021", desc:"Spectacles / Contact Lens", gst:12, category:"Healthcare" },
-  // Misc
   { hsn:"9503", desc:"Toys / Games / Puzzles", gst:12, category:"Toys" },
   { hsn:"9506", desc:"Sports Equipment / Fitness", gst:12, category:"Sports" },
-  { hsn:"3926", desc:"Plastic Articles / Misc Plastic", gst:18, category:"Misc" },
+  { hsn:"9021", desc:"Spectacles / Contact Lens", gst:12, category:"Healthcare" },
   { hsn:"6911", desc:"Crockery / Porcelain / Ceramic", gst:12, category:"Household" },
 ];
 
 // ─── HSN SEARCH COMPONENT ─────────────────────────────────────────────────────
-function HSNSearch({ value, onChange, onSelect }) {
+function HSNSearch({ value, onHsnChange, onSelect }) {
   const [query, setQuery] = useState(value || "");
   const [results, setResults] = useState([]);
   const [show, setShow] = useState(false);
-  const ref = useRef(null);
+  const wrapRef = useRef(null);
 
   useEffect(() => {
-    function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setShow(false); }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    function handleOutsideClick(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setShow(false);
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  function search(q) {
+  // sync external value
+  useEffect(() => { setQuery(value || ""); }, [value]);
+
+  function handleInput(q) {
     setQuery(q);
-    onChange(q);
+    onHsnChange(q);
     if (!q || q.length < 2) { setResults([]); setShow(false); return; }
     const lower = q.toLowerCase();
     const found = HSN_DATA.filter(h =>
-      h.hsn.includes(q) ||
+      h.hsn.startsWith(q) ||
       h.desc.toLowerCase().includes(lower) ||
       h.category.toLowerCase().includes(lower)
-    ).slice(0, 8);
+    ).slice(0, 10);
     setResults(found);
     setShow(found.length > 0);
   }
@@ -962,31 +913,35 @@ function HSNSearch({ value, onChange, onSelect }) {
   }
 
   return (
-    <div ref={ref} style={{ position:"relative" }}>
+    <div ref={wrapRef} style={{ position:"relative", width:"100%" }}>
       <input
-        style={{ ...inp, padding:"6px 8px", fontSize:12 }}
+        style={{ ...inp, padding:"6px 8px", fontSize:12, width:"100%", boxSizing:"border-box" }}
         value={query}
-        placeholder="HSN/SAC or product"
-        onChange={e => search(e.target.value)}
-        onFocus={() => query.length >= 2 && results.length > 0 && setShow(true)}
+        placeholder="Type HSN or product..."
+        onChange={e => handleInput(e.target.value)}
+        onFocus={() => { if (query.length >= 2 && results.length > 0) setShow(true); }}
+        autoComplete="off"
       />
-      {show && (
-        <div style={{ position:"absolute", top:"100%", left:0, zIndex:9999, background:C.white, border:`1.5px solid ${C.primaryLight}`, borderRadius:8, boxShadow:"0 8px 24px rgba(0,0,0,0.15)", minWidth:320, maxHeight:280, overflowY:"auto" }}>
-          {results.map((item, i) => (
-            <div key={i} onClick={() => pick(item)}
-              style={{ padding:"8px 12px", cursor:"pointer", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}
+      {show && results.length > 0 && (
+        <div style={{ position:"absolute", top:"100%", left:0, zIndex:99999, background:C.white, border:`1.5px solid ${C.primaryLight}`, borderRadius:8, boxShadow:"0 8px 24px rgba(0,0,0,0.18)", minWidth:340, maxHeight:300, overflowY:"auto" }}>
+          {results.map((item, idx) => (
+            <div
+              key={idx}
+              onMouseDown={e => { e.preventDefault(); pick(item); }}
+              style={{ padding:"9px 14px", cursor:"pointer", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center", background:C.white }}
               onMouseEnter={e => e.currentTarget.style.background = C.primaryLighter}
-              onMouseLeave={e => e.currentTarget.style.background = C.white}>
+              onMouseLeave={e => e.currentTarget.style.background = C.white}
+            >
               <div>
-                <div style={{ fontWeight:700, fontSize:12, color:C.primary }}>{item.hsn}</div>
-                <div style={{ fontSize:11, color:C.text }}>{item.desc}</div>
+                <div style={{ fontWeight:700, fontSize:13, color:C.primary }}>{item.hsn}</div>
+                <div style={{ fontSize:12, color:C.text, marginTop:1 }}>{item.desc}</div>
                 <div style={{ fontSize:10, color:C.textMuted }}>{item.category}</div>
               </div>
-              <span style={{ ...badge(C.success), fontSize:10, whiteSpace:"nowrap" }}>{item.gst}% GST</span>
+              <span style={{ ...badge(C.success), fontSize:11, marginLeft:8, whiteSpace:"nowrap" }}>{item.gst}% GST</span>
             </div>
           ))}
-          <div style={{ padding:"6px 12px", fontSize:10, color:C.textMuted, background:C.bg }}>
-            💡 Type product name or HSN code to search
+          <div style={{ padding:"6px 14px", fontSize:10, color:C.textMuted, background:C.bg, borderTop:`1px solid ${C.border}` }}>
+            💡 {results.length} results — click to auto-fill HSN & GST rate
           </div>
         </div>
       )}
@@ -1216,26 +1171,25 @@ function InvoiceGenerator({ company, clients, saveInvoice }) {
                 <tr key={i}>
                   <td style={{...TD,width:30,color:C.textMuted}}>{i+1}</td>
                   <td style={{...TD,minWidth:180}}><input style={{...inp,padding:"6px 8px",fontSize:12}} value={l.description} placeholder="Product or service" onChange={e=>updateLine(i,"description",e.target.value)} /></td>
-                  <td style={{...TD,width:160}}>
+                  <td style={{...TD,minWidth:160}}>
                     <HSNSearch
                       value={l.hsn}
-                      onChange={val => updateLine(i,"hsn",val)}
+                      onHsnChange={val => updateLine(i,"hsn",val)}
                       onSelect={item => {
                         const lines = [...inv.lines];
                         lines[i] = { ...lines[i], hsn: item.hsn, gst_rate: item.gst };
-                        if (!lines[i].description) lines[i].description = item.desc;
-                        // recalculate tax
+                        if (!lines[i].description || lines[i].description === "") lines[i].description = item.desc;
                         const taxable = Number(lines[i].qty||0) * Number(lines[i].rate||0);
                         const rate = item.gst;
-                        if (isInterstate) { lines[i].igst = +(taxable*rate/100).toFixed(2); lines[i].cgst=0; lines[i].sgst=0; }
-                        else { lines[i].cgst = +(taxable*rate/200).toFixed(2); lines[i].sgst = +(taxable*rate/200).toFixed(2); lines[i].igst=0; }
-                        lines[i].amount = +taxable.toFixed(2);
-                        lines[i].total = +(taxable+lines[i].cgst+lines[i].sgst+lines[i].igst).toFixed(2);
+                        if (isInterstate) { lines[i].igst=+(taxable*rate/100).toFixed(2); lines[i].cgst=0; lines[i].sgst=0; }
+                        else { lines[i].cgst=+(taxable*rate/200).toFixed(2); lines[i].sgst=+(taxable*rate/200).toFixed(2); lines[i].igst=0; }
+                        lines[i].amount=+taxable.toFixed(2);
+                        lines[i].total=+(taxable+lines[i].cgst+lines[i].sgst+lines[i].igst).toFixed(2);
                         setInv({...inv, lines});
                       }}
                     />
                   </td>
-                  <td style={{...TD,width:60}}><input style={{...inp,padding:"6px 8px",fontSize:12,textAlign:"right"}} type="number" value={l.qty} onChange={e=>updateLine(i,"qty",e.target.value)} /></td>
+                  <td style={{...TD,width:70}}><input style={{...inp,padding:"6px 8px",fontSize:12,textAlign:"center"}} type="text" inputMode="numeric" value={l.qty} onChange={e=>updateLine(i,"qty",e.target.value.replace(/[^0-9.]/g,""))} /></td>
                   <td style={{...TD,width:70}}>
                     <select style={{...inp,padding:"6px 8px",fontSize:12}} value={l.unit} onChange={e=>updateLine(i,"unit",e.target.value)}>
                       {["Nos","Kg","Ltr","Mtr","Hrs","Pcs","Box","Set"].map(u=><option key={u}>{u}</option>)}
