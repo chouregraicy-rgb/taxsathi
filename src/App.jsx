@@ -39,10 +39,10 @@ const COMPLIANCE = [  { task:"GSTR-1 Filing", due:"11 Apr 2026", period:"Mar 202
   { task:"Income Tax Return", due:"31 Jul 2026", period:"FY 2025-26", color:"#C0392B", type:"ITR" },
 ];
 const PLANS = [
-  { id:"free", name:"Free", price:0, color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","Compliance Calendar","5 Clients","Email Support"], limit:"Free forever" },
-  { id:"starter", name:"Starter", price:299, color:"#2E86C1", popular:false, features:["3 GSTINs","Unlimited Invoices","All GST Reports","Excel Upload","50 Clients","AI Assistant (50 queries/mo)","WhatsApp Reminders","Priority Support"], limit:"Per month" },
-  { id:"pro", name:"Pro", price:599, color:"#1B4F72", popular:true, features:["10 GSTINs","Everything in Starter","AI Assistant Unlimited","CA Marketplace Access","E-Invoice Generation","E-Way Bill","Bank Reconciliation","Multi-user (5 seats)","API Access","24/7 Support"], limit:"Per month" },
-  { id:"enterprise", name:"Enterprise", price:799, color:"#7D3C98", popular:false, features:["Unlimited GSTINs","Everything in Pro","Unlimited Users","White-label Option","Dedicated CA Manager","Custom Integrations","Tally/Busy Import","Offline Mode","SLA Guarantee"], limit:"Per month" },
+  { id:"free", name:"Free", price:0, color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","Compliance Calendar","5 Clients","Community Support"], limit:"Free forever" },
+  { id:"starter", name:"Starter", price:299, color:"#2E86C1", popular:false, features:["3 GSTINs","Unlimited Invoices","All GST Reports","Excel Upload","50 Clients","AI Assistant (50 queries/mo)","WhatsApp Deadline Reminders","Email Support (48hr response)"], limit:"Per month" },
+  { id:"pro", name:"Pro", price:599, color:"#1B4F72", popular:true, features:["10 GSTINs","Everything in Starter","AI Assistant Unlimited","CA Marketplace Access","E-Invoice & E-Way Bill","Bank Reconciliation","Multi-user (5 seats)","WhatsApp Support (Mon-Sat, 10AM-7PM)"], limit:"Per month" },
+  { id:"enterprise", name:"Enterprise", price:799, color:"#7D3C98", popular:false, features:["Unlimited GSTINs","Everything in Pro","Unlimited Users","Tally/Busy Import","Priority Feature Requests","Dedicated Onboarding Call","White-label Option (your brand, your domain)","CA Marketplace — Assisted CA Matching"], limit:"Per month" },
 ];
 
 const CA_PROFESSIONALS = [];
