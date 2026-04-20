@@ -6365,7 +6365,7 @@ export default function App() {
                     This feature is available on <strong>{getRequired(page)}</strong> plan and above.
                   </div>
                   <button style={{ ...btn("accent"), padding:"12px 32px", fontSize:15, justifyContent:"center", width:"100%" }} onClick={()=>setPage("billing")}>
-                    ⚡ Upgrade — Starting ₹299/mo
+                    ⚡ Upgrade to {getRequired(page).charAt(0).toUpperCase()+getRequired(page).slice(1)} — ₹{getRequired(page)==="starter"?"299":getRequired(page)==="pro"?"599":"799"}/mo
                   </button>
                   <div style={{ fontSize:12, color:C.textMuted, marginTop:12 }}>Current plan: <strong>{currentPlan.toUpperCase()}</strong></div>
                 </div>
