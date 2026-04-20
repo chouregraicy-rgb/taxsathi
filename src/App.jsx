@@ -1457,10 +1457,12 @@ ${co}
 GSTIN: ${company?.gstin || "—"}`;
 
                 const email = inv.customer_email || "";
-                // Open email with short body
-                window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, "_blank");
-                // Also open PDF after short delay so user can attach it
-                setTimeout(() => printInvoice(), 800);
+                // Open email FIRST
+                const mailLink = document.createElement("a");
+                mailLink.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                mailLink.click();
+                // Then open PDF after 1.5 seconds
+                setTimeout(() => printInvoice(), 1500);
               }}>
               📧 Send via Email + Open PDF
             </button>
