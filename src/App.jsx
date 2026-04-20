@@ -39,10 +39,10 @@ const COMPLIANCE = [  { task:"GSTR-1 Filing", due:"11 Apr 2026", period:"Mar 202
   { task:"Income Tax Return", due:"31 Jul 2026", period:"FY 2025-26", color:"#C0392B", type:"ITR" },
 ];
 const PLANS = [
-  { id:"free", name:"Free", price:0, color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","Compliance Calendar","5 Clients","Email Support"], limit:"Free forever" },
-  { id:"starter", name:"Starter", price:299, color:"#2E86C1", popular:false, features:["3 GSTINs","Unlimited Invoices","All GST Reports","Excel Upload","50 Clients","AI Assistant (50 queries/mo)","WhatsApp Reminders","Priority Support"], limit:"Per month" },
-  { id:"pro", name:"Pro", price:599, color:"#1B4F72", popular:true, features:["10 GSTINs","Everything in Starter","AI Assistant Unlimited","CA Marketplace Access","E-Invoice Generation","E-Way Bill","Bank Reconciliation","Multi-user (5 seats)","API Access","24/7 Support"], limit:"Per month" },
-  { id:"enterprise", name:"Enterprise", price:799, color:"#7D3C98", popular:false, features:["Unlimited GSTINs","Everything in Pro","Unlimited Users","White-label Option","Dedicated CA Manager","Custom Integrations","Tally/Busy Import","Offline Mode","SLA Guarantee"], limit:"Per month" },
+  { id:"free", name:"Free", price:0, color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","Compliance Calendar","5 Clients","Community Support"], limit:"Free forever" },
+  { id:"starter", name:"Starter", price:299, color:"#2E86C1", popular:false, features:["3 GSTINs","Unlimited Invoices","All GST Reports","Excel Upload","50 Clients","AI Assistant (50 queries/mo)","WhatsApp Reminders","E-Invoice Generation","Email Support (48hr response)"], limit:"Per month" },
+  { id:"pro", name:"Pro", price:599, color:"#1B4F72", popular:true, features:["10 GSTINs","Everything in Starter","AI Assistant Unlimited","CA Marketplace Access","E-Way Bill","Bank Reconciliation","GSTR-2B Reconciliation","Multi-user (5 seats)","WhatsApp Support (Mon-Sat)"], limit:"Per month" },
+  { id:"enterprise", name:"Enterprise", price:799, color:"#7D3C98", popular:false, features:["Unlimited GSTINs","Everything in Pro","Unlimited Users","Tally/Busy Import","Priority Feature Requests","CA Marketplace — Assisted Matching","99% Uptime Commitment","Dedicated Onboarding Call","White-label Option (your brand, your domain)"], limit:"Per month" },
 ];
 
 const CA_PROFESSIONALS = [];
@@ -658,9 +658,9 @@ function AuthScreen({ onLogin, onSignup, onReset }) {
 
   const planList = [
     { name:"Free", price:"₹0", desc:"Forever free", color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","5 Clients"] },
-    { name:"Starter", price:"₹299/mo", desc:"For small business", color:"#2E86C1", features:["3 GSTINs","Excel Upload","50 Clients","AI Assistant"] },
-    { name:"Pro", price:"₹599/mo", desc:"Most Popular ⭐", color:"#1B4F72", popular:true, features:["10 GSTINs","E-Invoice","Bank Recon","Unlimited AI"] },
-    { name:"Enterprise", price:"₹799/mo", desc:"For large orgs", color:"#7D3C98", features:["Unlimited GSTINs","Dedicated CA","Custom Integration","SLA"] },
+    { name:"Starter", price:"₹299/mo", desc:"For small business", color:"#2E86C1", features:["3 GSTINs","Excel Upload","50 Clients","AI Assistant","E-Invoice"] },
+    { name:"Pro", price:"₹599/mo", desc:"Most Popular ⭐", color:"#1B4F72", popular:true, features:["10 GSTINs","CA Marketplace","Bank Recon","E-Way Bill","Unlimited AI"] },
+    { name:"Enterprise", price:"₹799/mo", desc:"For large orgs", color:"#7D3C98", features:["Unlimited GSTINs","White-label","Tally Import","Onboarding Call"] },
   ];
 
   return (
@@ -1964,21 +1964,25 @@ async function handleUpgrade(planId) {
               <tr>
                 <th style={TH}>Feature</th>
                 <th style={{...TH,textAlign:"center"}}>TaxSaathi Free</th>
-                <th style={{...TH,textAlign:"center",color:C.primary}}>TaxSaathi Pro</th>
+                <th style={{...TH,textAlign:"center",color:"#2E86C1"}}>Starter ₹299</th>
+                <th style={{...TH,textAlign:"center",color:C.primary}}>Pro ₹599</th>
                 <th style={{...TH,textAlign:"center",color:C.danger}}>Other Platforms</th>
               </tr>
             </thead>
             <tbody>
               {[
-                ["Unlimited Invoices","✅","✅","❌ (capped at plan limit)"],
-                ["AI Tax Assistant","❌","✅ Unlimited","❌ Not available"],
-                ["CA Marketplace","❌","✅","❌ Not available"],
-                ["Hindi Language UI","🔜","✅","❌ English only"],
-                ["Tally/Busy Import","❌","✅","❌ Limited"],
-                ["WhatsApp Reminders","❌","✅","❌ Email only"],
-                ["GSTR-2B Auto-Reconciliation","✅","✅","💰 Paid add-on"],
-                ["Send Invoice via WhatsApp","✅","✅","❌ Not available"],
-                ["Price","₹0","₹799/mo","₹1,799/mo+"],
+                ["Unlimited Invoices",         "✅","✅","✅","❌ Capped"],
+                ["GST Reports (GSTR-1, 3B)",   "✅","✅","✅","💰 Paid add-on"],
+                ["AI Tax Assistant",            "❌","✅ 50/mo","✅ Unlimited","❌ Not available"],
+                ["WhatsApp Reminders",          "❌","✅","✅","❌ Email only"],
+                ["E-Invoice Generation",        "❌","✅","✅","💰 Paid add-on"],
+                ["CA Marketplace",             "❌","❌","✅","❌ Not available"],
+                ["E-Way Bill",                 "❌","❌","✅","💰 Paid add-on"],
+                ["Bank Reconciliation",        "❌","❌","✅","💰 Paid add-on"],
+                ["Multi-user Access",          "❌","❌","✅ 5 seats","💰 Paid add-on"],
+                ["Send Invoice via WhatsApp",  "✅","✅","✅","❌ Not available"],
+                ["White-label Option",         "❌","❌","❌","❌"],
+                ["Price",                      "₹0","₹299/mo","₹599/mo","₹1,799/mo+"],
               ].map(([feat,...vals])=>(
                 <tr key={feat}>
                   <td style={{...TD,fontWeight:600}}>{feat}</td>
@@ -1987,6 +1991,75 @@ async function handleUpgrade(planId) {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* ── WHITE LABEL PRICING ── */}
+      <div style={{ ...card, background:`linear-gradient(135deg, #0D2137, #1B4F72)`, color:C.white }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+          <div>
+            <div style={{ fontWeight:900, fontSize:20, marginBottom:6 }}>🏷️ White-label TaxSaathi</div>
+            <div style={{ fontSize:13, opacity:0.8, maxWidth:560, lineHeight:1.7 }}>
+              Launch your own branded GST & Tax platform — your logo, your domain, your clients.<br/>
+              No coding needed. Setup in 24 hours. You earn recurring monthly revenue!
+            </div>
+          </div>
+          <div style={{ textAlign:"right", flexShrink:0, marginLeft:20 }}>
+            <div style={{ fontSize:11, opacity:0.6, textTransform:"uppercase", letterSpacing:1 }}>Starting from</div>
+            <div style={{ fontSize:28, fontWeight:900, color:"#F39C12" }}>₹799/mo</div>
+          </div>
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:20 }}>
+          {[
+            { type:"CA Firm (Small)", price:"₹799/mo", icon:"👨‍💼", desc:"Up to 50 clients\nYour own branded app\nCustom domain", color:"#2E86C1" },
+            { type:"CA Firm (Medium)", price:"₹1,500/mo", icon:"🏢", desc:"Up to 200 clients\nAll Pro features\nPriority support", color:"#1B4F72" },
+            { type:"Accounting Reseller", price:"₹3,000–5,000/mo", icon:"📊", desc:"Resell to your clients\nCustom pricing\nRevenue sharing", color:"#7D3C98" },
+            { type:"Bank / NBFC", price:"₹10,000+/mo", icon:"🏦", desc:"Enterprise deployment\nDedicated infra\nSLA guarantee", color:"#F39C12" },
+          ].map((w, i) => (
+            <div key={i} style={{ background:"rgba(255,255,255,0.08)", borderRadius:12, padding:20, border:`1px solid rgba(255,255,255,0.15)`, position:"relative" }}>
+              <div style={{ fontSize:28, marginBottom:8 }}>{w.icon}</div>
+              <div style={{ fontWeight:700, fontSize:14, marginBottom:4 }}>{w.type}</div>
+              <div style={{ fontSize:22, fontWeight:900, color:"#F39C12", marginBottom:8 }}>{w.price}</div>
+              <div style={{ fontSize:12, opacity:0.7, lineHeight:1.8, whiteSpace:"pre-line" }}>{w.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:20 }}>
+          <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:10, padding:16 }}>
+            <div style={{ fontWeight:700, fontSize:13, marginBottom:10, color:"#F39C12" }}>✅ What you get with White-label:</div>
+            {["Your own brand name & logo","Your own domain (e.g. sharma-tax.in)","All TaxSaathi features under your brand","Separate database for each client","All future updates automatically included","No coding or server management needed"].map((f,i) => (
+              <div key={i} style={{ fontSize:12, padding:"4px 0", opacity:0.85, display:"flex", gap:8 }}>
+                <span style={{ color:"#F39C12", flexShrink:0 }}>›</span>{f}
+              </div>
+            ))}
+          </div>
+          <div style={{ background:"rgba(255,255,255,0.06)", borderRadius:10, padding:16 }}>
+            <div style={{ fontWeight:700, fontSize:13, marginBottom:10, color:"#F39C12" }}>💰 Your Revenue Potential:</div>
+            {[
+              ["5 CA Firms × ₹799", "= ₹3,995/month"],
+              ["10 CA Firms × ₹799", "= ₹7,990/month"],
+              ["2 Medium Firms × ₹1,500", "= ₹3,000/month"],
+              ["1 Bank Partnership", "= ₹10,000+/month"],
+              ["Mixed portfolio", "= ₹25,000+/month"],
+            ].map(([k,v],i) => (
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"5px 0", borderBottom:"1px solid rgba(255,255,255,0.1)", opacity:0.85 }}>
+                <span>{k}</span><span style={{ color:"#F39C12", fontWeight:700 }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:13, opacity:0.7, marginBottom:12 }}>
+            Interested in white-labeling TaxSaathi for your firm?
+          </div>
+          <button style={{ background:"#F39C12", color:"#0D2137", padding:"12px 32px", borderRadius:10, fontWeight:800, fontSize:15, border:"none", cursor:"pointer" }}
+            onClick={() => window.open("mailto:contact@globalwebsaas.org?subject=White-label Inquiry&body=Hello, I am interested in white-labeling TaxSaathi for my firm. Please send me more details.", "_blank")}>
+            📧 Contact Us for White-label Setup
+          </button>
+          <div style={{ fontSize:11, opacity:0.5, marginTop:8 }}>contact@globalwebsaas.org • Setup in 24 hours</div>
         </div>
       </div>
     </div>
@@ -6250,9 +6323,9 @@ export default function App() {
         </div>
         <div style={{ flex:1, overflowY:"auto", maxHeight:"100dvh", padding:page==="ai"?20:24 }}>
           {(() => {
-            const FREE_PAGES    = ["dashboard","invoice","upload","reports","calendar","clients","settings","billing","ca","companies"];
+            const FREE_PAGES    = ["dashboard","invoice","upload","reports","calendar","clients","settings","billing","companies"];
             const STARTER_PAGES = [...FREE_PAGES,"ai","whatsapp","einvoice","expenses","recurring","gst_health","client_portal","payments"];
-            const PRO_PAGES     = [...STARTER_PAGES,"financials","purchase_orders","bank_recon","gstr2b","tds","tally","inventory","team","payroll","form16","gst_filing","etds","itr","audit","ewaybill"];
+            const PRO_PAGES     = [...STARTER_PAGES,"ca","financials","purchase_orders","bank_recon","gstr2b","tds","tally","inventory","team","payroll","form16","gst_filing","etds","itr","audit","ewaybill"];
             const currentPlan   = auth.plan || "free";
             const hasCourseAccess = ["starter","pro","enterprise"].includes(currentPlan) || auth.courseAccess === true;
             const planOrder     = ["free","starter","pro","enterprise"];
