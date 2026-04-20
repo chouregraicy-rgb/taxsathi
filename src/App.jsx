@@ -415,22 +415,41 @@ function useAuth() {
   }, []);
 
   async function fetchProfile(uid) {
-    const { data: p } = await supabase.from("users").select("*").eq("id", uid).single();
+    const { data: { user: au } } = await supabase.auth.getUser();
+    let { data: p } = await supabase.from("users").select("*").eq("id", uid).single();
     const { data: c } = await supabase.from("companies").select("*").eq("user_id", uid);
-    if (p && !p.name) {
-      const { data: { user: au } } = await supabase.auth.getUser();
-      const n = au?.user_metadata?.full_name || au?.user_metadata?.name || au?.email?.split("@")[0] || "";
-      if (n) { await supabase.from("users").upsert({ id: uid, name: n, email: au.email, plan: p?.plan||"free" }); p.name = n; }
-    }
+
+    // Auto-create user profile if missing (Google OAuth users)
     if (!p) {
-      const { data: { user: au } } = await supabase.auth.getUser();
       const n = au?.user_metadata?.full_name || au?.user_metadata?.name || au?.email?.split("@")[0] || "User";
-      await supabase.from("users").upsert({ id: uid, name: n, email: au?.email, plan: "free" });
-      setProfile({ id: uid, name: n, plan: "free" });
-    } else { setProfile(p); }
+      const { data: newP } = await supabase.from("users").upsert({ id: uid, name: n, email: au?.email, plan: "free" }).select().single();
+      p = newP || { id: uid, name: n, plan: "free" };
+    } else if (p && !p.name) {
+      const n = au?.user_metadata?.full_name || au?.user_metadata?.name || au?.email?.split("@")[0] || "";
+      if (n) {
+        await supabase.from("users").upsert({ id: uid, name: n, email: au?.email, plan: p?.plan || "free" });
+        p.name = n;
+      }
+    }
+    setProfile(p);
+
     const cos = c || [];
-    setCompanies(cos);
-    setActiveCompany(cos[0] || null);
+
+    // Auto-create company if user has none (fixes the "No company found" issue for all users)
+    if (cos.length === 0) {
+      const companyName = au?.user_metadata?.company || p?.name + "'s Business" || "My Company";
+      const { data: newCo } = await supabase.from("companies")
+        .insert({ user_id: uid, company_name: companyName, gstin: "", address: "", state: "Maharashtra" })
+        .select().single();
+      if (newCo) {
+        setCompanies([newCo]);
+        setActiveCompany(newCo);
+      }
+    } else {
+      setCompanies(cos);
+      setActiveCompany(cos[0]);
+    }
+
     setPlan(p?.plan || "free");
     setLoading(false);
   }
@@ -438,8 +457,20 @@ function useAuth() {
   async function signUp({ name, email, mobile, companyName, gstin, password }) {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
-    await supabase.from("users").insert({ id: data.user.id, name, email, mobile, plan: "free" });
-    await supabase.from("companies").insert({ user_id: data.user.id, company_name: companyName, gstin: gstin.toUpperCase() });
+    const uid = data.user.id;
+    // Insert user profile
+    await supabase.from("users").upsert({ id: uid, name, email, mobile, plan: "free" });
+    // Insert company — use upsert to avoid duplicates
+    const { data: existingCo } = await supabase.from("companies").select("id").eq("user_id", uid).single();
+    if (!existingCo) {
+      await supabase.from("companies").insert({
+        user_id: uid,
+        company_name: companyName || name + "'s Business",
+        gstin: (gstin || "").toUpperCase(),
+        address: "",
+        state: "Maharashtra"
+      });
+    }
     return data;
   }
   async function signIn({ email, password }) {
