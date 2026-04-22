@@ -6230,41 +6230,44 @@ export default function App() {
   const summary = data.computeSummary();
 
   const nav = [
-    { id:"dashboard", label:"Dashboard", icon:"🏠" },
-    { id:"invoice", label:"Invoice Generator", icon:"🧾" },
-    { id:"upload", label:"Upload Data", icon:"📤" },
-    { id:"reports", label:"GST Reports", icon:"📄" },
-    { id:"financials", label:"P&L / Balance Sheet", icon:"📊", badge:"NEW" },
-    { id:"expenses", label:"Expense Tracking", icon:"💸", badge:"NEW" },
-    { id:"purchase_orders", label:"Purchase Orders", icon:"📦", badge:"NEW" },
-    { id:"bank_recon", label:"Bank Reconciliation", icon:"🏦", badge:"NEW" },
-    { id:"gstr2b", label:"GSTR-2B Recon", icon:"📑", badge:"NEW" },
-    { id:"tds", label:"TDS Manager", icon:"📋", badge:"NEW" },
-    { id:"tally", label:"Tally Import", icon:"📥", badge:"NEW" },
-    { id:"inventory", label:"Inventory", icon:"📦", badge:"NEW" },
-    { id:"team", label:"Team Access", icon:"👥", badge:"NEW" },
-    { id:"recurring", label:"Recurring Invoices", icon:"🔁", badge:"NEW" },
-    { id:"gst_health", label:"GST Health Check", icon:"🏥", badge:"NEW" },
-    { id:"payroll", label:"Payroll", icon:"💼", badge:"NEW" },
-    { id:"form16", label:"Form 16", icon:"📋", badge:"NEW" },
-    { id:"gst_filing", label:"Direct GST Filing", icon:"🏛️", badge:"NEW" },
-    { id:"etds", label:"e-TDS Filing (FVU)", icon:"📤", badge:"NEW" },
-    { id:"itr", label:"ITR Filing", icon:"🏛️", badge:"NEW" },
-    { id:"payments", label:"Payment Collection", icon:"💳", badge:"NEW" },
-    { id:"client_portal", label:"Client Portal", icon:"🔗", badge:"NEW" },
-    { id:"ai", label:"AI Assistant", icon:"🤖", badge:"NEW" },
-    { id:"ca", label:"CA Marketplace", icon:"👨‍💼" },
-    { id:"companies", label:"My Companies", icon:"🏢" },
-    { id:"calendar", label:"Compliance", icon:"📅" },
-    { id:"clients", label:"Clients", icon:"👥" },
-    { id:"einvoice", label:"E-Invoice", icon:"🧾" },
-    { id:"ewaybill", label:"E-Way Bill", icon:"🚚" },
-    { id:"whatsapp", label:"WhatsApp Alerts", icon:"💬" },
-    { id:"ca_enroll", label:"CA Enrollment", icon:"🏅" },
-    { id:"audit", label:"Audit Trail", icon:"🔍", badge:"NEW" },
-    { id:"billing", label:"Plans & Billing", icon:"💳" },
-    { id:"settings", label:"Settings", icon:"⚙️" },
+    { id:"dashboard",       label:"Dashboard",           icon:"🏠" },
+    { id:"invoice",         label:"Invoice Generator",   icon:"🧾" },
+    { id:"upload",          label:"Upload Data",         icon:"📤" },
+    { id:"reports",         label:"GST Reports",         icon:"📄" },
+    { id:"financials",      label:"P&L / Balance Sheet", icon:"📊",  badge:"NEW", plan:"pro" },
+    { id:"expenses",        label:"Expense Tracking",    icon:"💸",  badge:"NEW", plan:"starter" },
+    { id:"purchase_orders", label:"Purchase Orders",     icon:"📦",  badge:"NEW", plan:"pro" },
+    { id:"bank_recon",      label:"Bank Reconciliation", icon:"🏦",  badge:"NEW", plan:"pro" },
+    { id:"gstr2b",          label:"GSTR-2B Recon",       icon:"📑",  badge:"NEW", plan:"pro" },
+    { id:"tds",             label:"TDS Manager",         icon:"📋",  badge:"NEW", plan:"pro" },
+    { id:"tally",           label:"Tally Import",        icon:"📥",  badge:"NEW", plan:"enterprise" },
+    { id:"inventory",       label:"Inventory",           icon:"📦",  badge:"NEW", plan:"pro" },
+    { id:"team",            label:"Team Access",         icon:"👥",  badge:"NEW", plan:"pro" },
+    { id:"recurring",       label:"Recurring Invoices",  icon:"🔁",  badge:"NEW", plan:"starter" },
+    { id:"gst_health",      label:"GST Health Check",    icon:"🏥",  badge:"NEW", plan:"starter" },
+    { id:"payroll",         label:"Payroll",             icon:"💼",  badge:"NEW", plan:"pro" },
+    { id:"form16",          label:"Form 16",             icon:"📋",  badge:"NEW", plan:"pro" },
+    { id:"gst_filing",      label:"Direct GST Filing",   icon:"🏛️",  badge:"NEW", plan:"pro" },
+    { id:"etds",            label:"e-TDS Filing (FVU)",  icon:"📤",  badge:"NEW", plan:"pro" },
+    { id:"itr",             label:"ITR Filing",          icon:"🏛️",  badge:"NEW", plan:"pro" },
+    { id:"payments",        label:"Payment Collection",  icon:"💳",  badge:"NEW", plan:"starter" },
+    { id:"client_portal",   label:"Client Portal",       icon:"🔗",  badge:"NEW", plan:"starter" },
+    { id:"ai",              label:"AI Assistant",        icon:"🤖",  badge:"NEW", plan:"starter" },
+    { id:"ca",              label:"CA Marketplace",      icon:"👨‍💼",  plan:"pro" },
+    { id:"companies",       label:"My Companies",        icon:"🏢" },
+    { id:"calendar",        label:"Compliance",          icon:"📅" },
+    { id:"clients",         label:"Clients",             icon:"👥" },
+    { id:"einvoice",        label:"E-Invoice",           icon:"🧾",  plan:"starter" },
+    { id:"ewaybill",        label:"E-Way Bill",          icon:"🚚",  plan:"pro" },
+    { id:"whatsapp",        label:"WhatsApp Alerts",     icon:"💬",  plan:"starter" },
+    { id:"ca_enroll",       label:"CA Enrollment",       icon:"🏅" },
+    { id:"audit",           label:"Audit Trail",         icon:"🔍",  badge:"NEW", plan:"pro" },
+    { id:"billing",         label:"Plans & Billing",     icon:"💳" },
+    { id:"settings",        label:"Settings",            icon:"⚙️" },
   ];
+
+  const planOrder = ["free","starter","pro","enterprise"];
+  const userPlanIdx = planOrder.indexOf(auth.plan || "free");
 
   // Pages are defined as top-level components below
 
@@ -6288,13 +6291,20 @@ export default function App() {
         )}
 
         <nav style={{ padding:"8px 0", flex:1 }}>
-          {nav.map(n => (
-            <div key={n.id} onClick={()=>setPage(n.id)} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", cursor:"pointer", background:page===n.id?"rgba(46,134,193,0.3)":"transparent", color:page===n.id?C.white:"rgba(255,255,255,0.55)", fontSize:13, fontWeight:page===n.id?600:400, borderLeft:`3px solid ${page===n.id?C.primaryLight:"transparent"}`, transition:"all 0.15s", position:"relative" }}>
-              <span style={{ fontSize:15 }}>{n.icon}</span>
-              <span style={{ flex:1 }}>{n.label}</span>
-              {n.badge && <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:10, background:n.badge==="NEW"?"#E74C3C":"#F39C12", color:C.white }}>{n.badge}</span>}
-            </div>
-          ))}
+          {nav.map(n => {
+            const isLocked = n.plan && planOrder.indexOf(n.plan) > userPlanIdx;
+            const planColor = n.plan === "starter" ? "#2E86C1" : n.plan === "pro" ? "#1B4F72" : n.plan === "enterprise" ? "#7D3C98" : "#E74C3C";
+            return (
+              <div key={n.id} onClick={()=>setPage(n.id)} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", cursor:"pointer", background:page===n.id?"rgba(46,134,193,0.3)":"transparent", color:page===n.id?C.white:isLocked?"rgba(255,255,255,0.3)":"rgba(255,255,255,0.55)", fontSize:13, fontWeight:page===n.id?600:400, borderLeft:`3px solid ${page===n.id?C.primaryLight:"transparent"}`, transition:"all 0.15s", position:"relative" }}>
+                <span style={{ fontSize:15 }}>{n.icon}</span>
+                <span style={{ flex:1 }}>{n.label}</span>
+                {isLocked
+                  ? <span style={{ fontSize:9, fontWeight:700, padding:"2px 5px", borderRadius:8, background:planColor, color:"#fff", opacity:0.9 }}>{n.plan?.toUpperCase()}</span>
+                  : n.badge && <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:10, background:"#E74C3C", color:C.white }}>{n.badge}</span>
+                }
+              </div>
+            );
+          })}
         </nav>
 
         <div style={{ padding:"12px 16px", borderTop:"1px solid rgba(255,255,255,0.08)", flexShrink:0 }}>
