@@ -390,6 +390,39 @@ function CAMarketplace() {
     </div>
   );
 }
+// ─── DEVICE FINGERPRINT (trial abuse prevention) ──────────────────────────────
+// Builds a stable browser fingerprint from non-PII signals.
+// Not 100% foolproof but blocks casual multi-email abuse.
+function getDeviceFingerprint() {
+  const nav = window.navigator;
+  const screen = window.screen;
+  const signals = [
+    nav.userAgent,
+    nav.language,
+    nav.hardwareConcurrency,
+    nav.platform,
+    screen.width + "x" + screen.height,
+    screen.colorDepth,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    nav.maxTouchPoints,
+  ].join("|");
+
+  // Simple hash
+  let hash = 0;
+  for (let i = 0; i < signals.length; i++) {
+    const chr = signals.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0;
+  }
+  // Combine with a localStorage device ID for extra stability
+  let deviceId = localStorage.getItem("ts_device_id");
+  if (!deviceId) {
+    deviceId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem("ts_device_id", deviceId);
+  }
+  return Math.abs(hash).toString(36) + "_" + deviceId;
+}
+
 // ─── useAuth ──────────────────────────────────────────────────────────────────
 function useAuth() {
   const [user, setUser] = useState(null);
@@ -398,6 +431,8 @@ function useAuth() {
   const [activeCompany, setActiveCompany] = useState(null);
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState("free");
+  const [planStatus, setPlanStatus] = useState("active"); // "active" | "trial" | "expired"
+  const [trialEndsAt, setTrialEndsAt] = useState(null);
   const [courseAccess, setCourseAccess] = useState(() => localStorage.getItem("ts_course_access") === "1");
 
   useEffect(() => {
@@ -451,6 +486,25 @@ function useAuth() {
     }
 
     setPlan(p?.plan || "free");
+
+    // ── TRIAL CHECK ────────────────────────────────────────────────
+    if (p?.plan_status === "trial" && p?.trial_ends_at) {
+      const trialEnd = new Date(p.trial_ends_at);
+      if (new Date() > trialEnd) {
+        // Trial expired — downgrade to free silently
+        await supabase.from("users").update({ plan: "free", plan_status: "expired" }).eq("id", uid);
+        setPlan("free");
+        setPlanStatus("expired");
+      } else {
+        setPlanStatus("trial");
+        setTrialEndsAt(trialEnd);
+      }
+    } else {
+      setPlanStatus(p?.plan_status || "active");
+      setTrialEndsAt(p?.trial_ends_at ? new Date(p.trial_ends_at) : null);
+    }
+    // ───────────────────────────────────────────────────────────────
+
     setLoading(false);
   }
 
@@ -458,9 +512,55 @@ function useAuth() {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
     const uid = data.user.id;
+
+    // ── DEVICE FINGERPRINT (abuse prevention) ─────────────────────
+    const fp = getDeviceFingerprint();
+
+    // Check if this device already used a trial
+    const { data: existingFP } = await supabase
+      .from("trial_fingerprints")
+      .select("id, email")
+      .eq("fingerprint", fp)
+      .maybeSingle();
+
+    let planToAssign = "pro";
+    let planStatusToAssign = "trial";
+    let trialStart = null;
+    let trialEnd = null;
+
+    if (existingFP) {
+      // Device already used a trial — give free plan only
+      planToAssign = "free";
+      planStatusToAssign = "active";
+    } else {
+      // Fresh device — give 7-day trial and record fingerprint
+      const now = new Date();
+      trialStart = now;
+      trialEnd = new Date(now);
+      trialEnd.setDate(trialEnd.getDate() + 7);
+
+      // Record this device so it can't get another trial
+      await supabase.from("trial_fingerprints").insert({
+        fingerprint: fp,
+        email,
+        user_id: uid,
+        created_at: now.toISOString(),
+      });
+    }
+    // ──────────────────────────────────────────────────────────────
+
     // Insert user profile
-    await supabase.from("users").upsert({ id: uid, name, email, mobile, plan: "free" });
-    // Insert company — use upsert to avoid duplicates
+    await supabase.from("users").upsert({
+      id: uid, name, email, mobile,
+      plan: planToAssign,
+      plan_status: planStatusToAssign,
+      ...(trialStart && {
+        trial_started_at: trialStart.toISOString(),
+        trial_ends_at: trialEnd.toISOString(),
+      }),
+    });
+
+    // Insert company
     const { data: existingCo } = await supabase.from("companies").select("id").eq("user_id", uid).single();
     if (!existingCo) {
       await supabase.from("companies").insert({
@@ -471,6 +571,12 @@ function useAuth() {
         state: "Maharashtra"
       });
     }
+
+    // Store flag locally so we can show "trial not available" message
+    if (existingFP) {
+      localStorage.setItem("ts_trial_used", "1");
+    }
+
     return data;
   }
   async function signIn({ email, password }) {
@@ -500,7 +606,7 @@ function useAuth() {
     await supabase.from("users").update({ plan: planId }).eq("id", user.id);
     setPlan(planId);
   }
-  return { user, profile, companies, activeCompany, setActiveCompany, loading, plan, courseAccess, setCourseAccess, signUp, signIn, signOut, resetPassword, addCompany, updateProfile, updateCompany, upgradePlan };
+  return { user, profile, companies, activeCompany, setActiveCompany, loading, plan, planStatus, trialEndsAt, courseAccess, setCourseAccess, signUp, signIn, signOut, resetPassword, addCompany, updateProfile, updateCompany, upgradePlan };
 }
 
 // ─── useData ──────────────────────────────────────────────────────────────────
@@ -733,8 +839,9 @@ function AuthScreen({ onLogin, onSignup, onReset }) {
                 ))}
               </ul>
               <button onClick={()=>{ setMode("signup"); setShowForm(true); }} style={{ width:"100%", padding:10, borderRadius:8, fontWeight:700, fontSize:13, cursor:"pointer", background:p.popular?"#F39C12":"transparent", color:p.popular?C.sidebar:C.accent, border:p.popular?"none":`1.5px solid ${C.accent}` }}>
-                {p.name==="Free"?"Start Free":"Get Started"}
+                {p.name==="Free" ? "Start Free" : "Start 7-Day Free Trial"}
               </button>
+              {p.name !== "Free" && <div style={{ textAlign:"center", fontSize:11, marginTop:7, color:p.popular?"rgba(255,255,255,0.55)":"#5D6D7E" }}>✅ No credit card required</div>}
             </div>
           ))}
         </div>
@@ -803,6 +910,18 @@ function AuthScreen({ onLogin, onSignup, onReset }) {
                 )}
                 {mode==="login" && <div style={{ textAlign:"right", marginBottom:12 }}><button onClick={()=>setMode("forgot")} style={{ background:"none", border:"none", color:C.accent, cursor:"pointer", fontSize:12 }}>Forgot Password?</button></div>}
                 {err && <div style={{ color:C.danger, fontSize:13, marginBottom:12, padding:"8px 12px", background:"#FDEDEC", borderRadius:6 }}>{err}</div>}
+                {mode === "signup" && (() => {
+                  const trialUsed = localStorage.getItem("ts_trial_used") === "1";
+                  return trialUsed ? (
+                    <div style={{ fontSize:12, color:"#7D6608", background:"#FEF9E7", border:"1px solid #F9E79F", borderRadius:6, padding:"8px 12px", marginBottom:12 }}>
+                      ⚠️ A free trial was already used on this device. You'll start on the Free plan. Upgrade anytime from Plans & Billing.
+                    </div>
+                  ) : (
+                    <div style={{ fontSize:12, color:C.success, background:"#EAFAF1", border:"1px solid #A9DFBF", borderRadius:6, padding:"8px 12px", marginBottom:12 }}>
+                      🎉 You'll get <strong>7 days of full Pro access</strong> — free, no credit card needed!
+                    </div>
+                  );
+                })()}
                 <button style={{ ...btn(), width:"100%", justifyContent:"center", padding:"12px", fontSize:15 }} onClick={submit} disabled={busy}>
                   {busy?"Please wait...":(mode==="login"?"Sign In":mode==="signup"?"Create Account":"Send Reset Email")}
                 </button>
@@ -1882,9 +2001,36 @@ async function handleUpgrade(planId) {
       <div style={{ marginBottom:24 }}>
         <div style={{ fontSize:20, fontWeight:800 }}>💳 Plans & Billing</div>
         <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>
-          Current plan: <strong style={{ color:C.primary }}>{PLANS.find(p=>p.id===plan)?.name || "Free"}</strong> — Cancel anytime, no hidden fees
+          Current plan: <strong style={{ color:C.primary }}>{PLANS.find(p=>p.id===plan)?.name || "Free"}</strong>
+          {auth.planStatus === "trial" && auth.trialEndsAt && (() => {
+            const daysLeft = Math.max(0, Math.ceil((auth.trialEndsAt - new Date()) / (1000 * 60 * 60 * 24)));
+            return <span style={{ marginLeft:10, background:"#EBF5FB", color:C.primaryLight, fontWeight:700, fontSize:12, padding:"2px 10px", borderRadius:12 }}>🎉 Pro Trial — {daysLeft} day{daysLeft===1?"":"s"} left</span>;
+          })()}
+          {auth.planStatus === "expired" && <span style={{ marginLeft:10, background:"#FDEDEC", color:C.danger, fontWeight:700, fontSize:12, padding:"2px 10px", borderRadius:12 }}>⚠️ Trial Expired</span>}
+          {!["trial","expired"].includes(auth.planStatus) && <span style={{ color:C.textMuted }}> — Cancel anytime, no hidden fees</span>}
         </div>
       </div>
+
+      {auth.planStatus === "trial" && auth.trialEndsAt && (() => {
+        const daysLeft = Math.max(0, Math.ceil((auth.trialEndsAt - new Date()) / (1000 * 60 * 60 * 24)));
+        const trialEndStr = auth.trialEndsAt.toLocaleDateString("en-IN", { day:"numeric", month:"long", year:"numeric" });
+        return (
+          <div style={{ background:"linear-gradient(135deg, #EBF5FB, #fff)", border:`1.5px solid ${C.primaryLight}50`, borderRadius:10, padding:"16px 20px", marginBottom:24, display:"flex", alignItems:"center", gap:16 }}>
+            <div style={{ fontSize:32 }}>🎉</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontWeight:700, fontSize:15, color:C.primary, marginBottom:4 }}>You're on a 7-day Pro Trial!</div>
+              <div style={{ fontSize:13, color:C.textMuted, lineHeight:1.7 }}>
+                Full Pro access is active until <strong>{trialEndStr}</strong> ({daysLeft} day{daysLeft===1?"":"s"} remaining).<br/>
+                After trial ends, you'll be moved to the Free plan unless you upgrade.
+              </div>
+            </div>
+            <div style={{ textAlign:"center" }}>
+              <div style={{ fontSize:28, fontWeight:900, color: daysLeft<=2 ? C.danger : C.primary }}>{daysLeft}</div>
+              <div style={{ fontSize:11, color:C.textMuted, fontWeight:600 }}>DAYS LEFT</div>
+            </div>
+          </div>
+        );
+      })()}
 
       {success && (
         <div style={{ background:C.successLight, border:`1px solid ${C.success}40`, borderRadius:8, padding:"14px 18px", marginBottom:20, color:C.success, fontWeight:600 }}>{success}</div>
@@ -6399,7 +6545,9 @@ export default function App() {
             </div>
             <div>
               <div style={{ fontSize:12, color:C.white, fontWeight:600, lineHeight:1.2 }}>{auth.profile?.name || auth.user?.email}</div>
-              <div style={{ fontSize:10, color:"rgba(255,255,255,0.4)" }}>{auth.plan?.toUpperCase()} PLAN</div>
+              <div style={{ fontSize:10, color:"rgba(255,255,255,0.4)" }}>
+                {auth.planStatus === "trial" ? "🎉 PRO TRIAL" : auth.plan?.toUpperCase() + " PLAN"}
+              </div>
             </div>
           </div>
           <button onClick={auth.signOut} style={{ color:"rgba(255,255,255,0.4)", fontSize:12, cursor:"pointer", background:"none", border:"none", padding:0 }}>↩ Sign Out</button>
@@ -6416,6 +6564,43 @@ export default function App() {
             <button onClick={()=>setDark(d=>!d)} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:20, padding:"4px 12px", cursor:"pointer", fontSize:13, color:C.textMuted }}>{dark?"☀️ Light":"🌙 Dark"}</button>
           </div>
         </div>
+
+        {/* ── 7-DAY TRIAL BANNER ── */}
+        {auth.planStatus === "trial" && auth.trialEndsAt && (() => {
+          const daysLeft = Math.max(0, Math.ceil((auth.trialEndsAt - new Date()) / (1000 * 60 * 60 * 24)));
+          const urgent = daysLeft <= 2;
+          return (
+            <div style={{ background: urgent ? "#C0392B" : "linear-gradient(90deg, #1B4F72, #2E86C1)", padding:"9px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:16 }}>{urgent ? "⚠️" : "🎉"}</span>
+                <span style={{ color:"#fff", fontSize:13, fontWeight:600 }}>
+                  {urgent
+                    ? `Trial ending soon — only ${daysLeft} day${daysLeft===1?"":"s"} left! Upgrade now to keep all Pro features.`
+                    : `You're on a 7-day Pro Trial — ${daysLeft} day${daysLeft===1?"":"s"} remaining. Explore all features for free!`
+                  }
+                </span>
+              </div>
+              <button
+                onClick={() => setPage("billing")}
+                style={{ background:"#F39C12", color:"#0D2137", border:"none", borderRadius:6, padding:"6px 16px", fontSize:12, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}
+              >
+                ⚡ Upgrade Now
+              </button>
+            </div>
+          );
+        })()}
+        {/* ── TRIAL EXPIRED BANNER ── */}
+        {auth.planStatus === "expired" && (
+          <div style={{ background:"#922B21", padding:"9px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ fontSize:16 }}>🔒</span>
+              <span style={{ color:"#fff", fontSize:13, fontWeight:600 }}>Your 7-day Pro trial has ended. Upgrade to continue using Pro features.</span>
+            </div>
+            <button onClick={() => setPage("billing")} style={{ background:"#F39C12", color:"#0D2137", border:"none", borderRadius:6, padding:"6px 16px", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+              ⚡ Choose a Plan
+            </button>
+          </div>
+        )}
         <div style={{ flex:1, overflowY:"auto", maxHeight:"100dvh", padding:page==="ai"?20:24 }}>
           {(() => {
             const FREE_PAGES    = ["dashboard","invoice","upload","reports","calendar","clients","settings","billing","companies"];
