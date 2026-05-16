@@ -504,9 +504,9 @@ footer{background:var(--navy);padding:50px 5% 30px;color:rgba(255,255,255,0.6);}
       <span class="nav-logo-text">Tax<span>Saathi</span></span>
       <p>India's smartest GST & Tax compliance platform. Built for Indian businesses, by Indians.</p>
       <div style="margin-top:16px;display:flex;gap:12px;">
-        <a href="#" style="color:rgba(255,255,255,0.5);font-size:20px;text-decoration:none;">📘</a>
-        <a href="#" style="color:rgba(255,255,255,0.5);font-size:20px;text-decoration:none;">📸</a>
-        <a href="#" style="color:rgba(255,255,255,0.5);font-size:20px;text-decoration:none;">💼</a>
+        <a href="https://www.facebook.com/profile.php?id=61568040885705" target="_blank" style="color:rgba(255,255,255,0.5);font-size:20px;text-decoration:none;">📘</a>
+        <a href="https://www.instagram.com/" target="_blank" style="color:rgba(255,255,255,0.5);font-size:20px;text-decoration:none;">📸</a>
+        <a href="https://www.linkedin.com/company/112488546/" target="_blank" style="color:rgba(255,255,255,0.5);font-size:20px;text-decoration:none;">💼</a>
       </div>
     </div>
     <div class="footer-col">
@@ -514,21 +514,21 @@ footer{background:var(--navy);padding:50px 5% 30px;color:rgba(255,255,255,0.6);}
       <a href="#features">Features</a>
       <a href="#pricing">Pricing</a>
       <a href="https://www.taxsaathi.online/#">Dashboard</a>
-      <a href="#">Android App</a>
+      <a href="https://wa.me/919981432648?text=Hi%2C%20I%20want%20the%20TaxSaathi%20Android%20App" target="_blank">Android App (Coming Soon)</a>
     </div>
     <div class="footer-col">
       <h4>Resources</h4>
-      <a href="#">GST Guide</a>
-      <a href="#">ITR Filing Help</a>
-      <a href="#">TDS Calculator</a>
-      <a href="#">Find a CA</a>
+      <a href="https://www.gst.gov.in/" target="_blank">GST Portal</a>
+      <a href="https://www.incometax.gov.in/" target="_blank">Income Tax Portal</a>
+      <a href="https://www.incometax.gov.in/iec/foportal/" target="_blank">TDS / ITR Filing</a>
+      <a href="https://www.taxsaathi.online/#" onclick="window.location.href='https://www.taxsaathi.online/';return false;">Find a CA</a>
     </div>
     <div class="footer-col">
       <h4>Company</h4>
-      <a href="#">About Us</a>
-      <a href="#">Contact</a>
+      <a href="#" onclick="document.getElementById('about-modal').style.display='flex';return false;">About Us</a>
+      <a href="https://wa.me/919981432648?text=Hi%20TaxSaathi%2C%20I%20have%20a%20query" target="_blank">Contact</a>
       <a href="/privacy-policy.html">Privacy Policy</a>
-      <a href="#">Terms of Service</a>
+      <a href="/privacy-policy.html">Terms of Service</a>
     </div>
   </div>
   <div class="footer-bottom">
@@ -693,5 +693,33 @@ document.querySelectorAll('.feature-card, .step, .plan, .testi-card, .stat-item'
   observer.observe(el);
 });
 </script>
+
+<!-- About Us Modal -->
+<div id="about-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)this.style.display='none';">
+  <div style="background:#fff;border-radius:16px;padding:36px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;position:relative;">
+    <button onclick="document.getElementById('about-modal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#5D6D7E;">&times;</button>
+    <div style="font-size:22px;font-weight:900;color:#1B4F72;margin-bottom:4px;">🇮🇳 TaxSaathi</div>
+    <div style="font-size:12px;color:#F39C12;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px;">A Product by Global Web SaaS</div>
+    <p style="font-size:14px;color:#5D6D7E;line-height:1.8;margin-bottom:16px;">
+      <strong style="color:#1A252F;">Global Web SaaS</strong> is an Indian technology company dedicated to building powerful, easy-to-use SaaS products for Indian businesses. We believe that world-class software should be accessible and affordable for every entrepreneur, CA, and SME in India.
+    </p>
+    <p style="font-size:14px;color:#5D6D7E;line-height:1.8;margin-bottom:20px;">
+      Our flagship product <strong style="color:#F39C12;">TaxSaathi</strong> simplifies GST compliance, invoicing, ITC reconciliation, and tax filing — powered by AI. Our mission: <em>"India ka compliance, aasan aur affordable."</em>
+    </p>
+    <div style="background:#F4F6F8;border-radius:10px;padding:16px;font-size:13px;color:#5D6D7E;line-height:2.2;margin-bottom:20px;">
+      <div>🏢 <strong style="color:#1A252F;">Company:</strong> Global Web SaaS</div>
+      <div>📍 <strong style="color:#1A252F;">HQ:</strong> Indore, Madhya Pradesh, India</div>
+      <div>📧 <strong style="color:#1A252F;">Email:</strong> <a href="mailto:contact@globalwebsaas.org" style="color:#2E86C1;">contact@globalwebsaas.org</a></div>
+      <div>💬 <strong style="color:#1A252F;">WhatsApp:</strong> <a href="https://wa.me/919981432648" target="_blank" style="color:#2E86C1;">+91 99814 32648</a></div>
+      <div>🚀 <strong style="color:#1A252F;">Founded:</strong> 2024</div>
+      <div>👥 <strong style="color:#1A252F;">Serving:</strong> 500+ businesses across India</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a href="https://wa.me/919981432648?text=Hi%20TaxSaathi%2C%20I%20want%20to%20know%20more" target="_blank" style="background:#25D366;color:#fff;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;">💬 WhatsApp Us</a>
+      <a href="mailto:contact@globalwebsaas.org" style="background:#1B4F72;color:#fff;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;">📧 Email Us</a>
+      <a href="https://www.linkedin.com/company/112488546/" target="_blank" style="background:#0077B5;color:#fff;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;">💼 LinkedIn</a>
+    </div>
+  </div>
+</div>
 </body>
 </html>
