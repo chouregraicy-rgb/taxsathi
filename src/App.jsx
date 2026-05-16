@@ -830,7 +830,7 @@ function AuthScreen({ onLogin, onSignup, onReset }) {
       </div>
 
       {/* PRICING */}
-      <div style={{ padding:"60px 5%", background:"#F4F6F8" }}>
+      <div id="pricing-section" style={{ padding:"60px 5%", background:"#F4F6F8" }}>
         <div style={{ textAlign:"center", marginBottom:40 }}>
           <div style={{ fontSize:11, fontWeight:700, color:C.accent, letterSpacing:2, textTransform:"uppercase", marginBottom:8 }}>Pricing</div>
           <h2 style={{ fontSize:"clamp(1.4rem, 3vw, 2rem)", fontWeight:900, color:C.text }}>Apne Business ke Liye Plan Chunein</h2>
@@ -868,8 +868,136 @@ function AuthScreen({ onLogin, onSignup, onReset }) {
       </div>
 
       {/* FOOTER */}
-      <div style={{ background:C.sidebar, padding:"20px 5%", textAlign:"center", color:"rgba(255,255,255,0.4)", fontSize:12 }}>
-        &copy; 2026 TaxSaathi &bull; Made with &#10084;&#65039; in India &bull; <a href="/privacy-policy.html" style={{ color:"rgba(255,255,255,0.4)", textDecoration:"none" }}>Privacy Policy</a>
+      <div style={{ background:C.sidebar }}>
+
+        {/* About + Links grid */}
+        <div style={{ padding:"48px 5% 32px", display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:36, maxWidth:1100, margin:"0 auto" }}>
+
+          {/* Brand + About */}
+          <div style={{ gridColumn:"span 2" }}>
+            <div style={{ fontSize:22, fontWeight:900, color:C.white, marginBottom:6 }}>
+              &#127470;&#127475; Tax<span style={{ color:"#F39C12" }}>Saathi</span>
+            </div>
+            <div style={{ fontSize:11, color:"#F39C12", fontWeight:700, letterSpacing:1.5, textTransform:"uppercase", marginBottom:12 }}>
+              A Product by Global Web SaaS
+            </div>
+            <p style={{ fontSize:13, color:"rgba(255,255,255,0.55)", lineHeight:1.8, maxWidth:380, marginBottom:16 }}>
+              TaxSaathi is built and operated by <strong style={{ color:"rgba(255,255,255,0.8)" }}>Global Web SaaS</strong> — an Indian SaaS company focused on building smart, affordable compliance and business tools for SMEs, CAs, and entrepreneurs across India.
+            </p>
+            <div style={{ fontSize:13, color:"rgba(255,255,255,0.55)", lineHeight:2 }}>
+              <div>🏢 <strong style={{ color:"rgba(255,255,255,0.75)" }}>Global Web SaaS</strong></div>
+              <div>📍 Indore, Madhya Pradesh, India</div>
+              <div>📧 <a href="mailto:contact@globalwebsaas.org" style={{ color:"#F39C12", textDecoration:"none" }}>contact@globalwebsaas.org</a></div>
+              <div>💬 <a href="https://wa.me/919981432648" target="_blank" rel="noreferrer" style={{ color:"#F39C12", textDecoration:"none" }}>WhatsApp: +91 99814 32648</a></div>
+            </div>
+          </div>
+
+          {/* Product */}
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:C.white, marginBottom:16, textTransform:"uppercase", letterSpacing:1 }}>Product</div>
+            {[
+              { label:"Features", action:"scroll" },
+              { label:"Pricing", action:"scroll-pricing" },
+              { label:"Dashboard", action:"login" },
+              { label:"AI Tax Assistant", action:"login" },
+            ].map((item, i) => (
+              <div key={i} style={{ marginBottom:10 }}>
+                <span
+                  onClick={() => {
+                    if (item.action === "login") { setMode("login"); setShowForm(true); }
+                    else if (item.action === "scroll-pricing") { document.getElementById("pricing-section")?.scrollIntoView({ behavior:"smooth" }); }
+                    else { window.scrollTo({ top:0, behavior:"smooth" }); }
+                  }}
+                  style={{ fontSize:13, color:"rgba(255,255,255,0.55)", cursor:"pointer", transition:"color 0.15s" }}
+                  onMouseEnter={e=>e.target.style.color="#F39C12"}
+                  onMouseLeave={e=>e.target.style.color="rgba(255,255,255,0.55)"}
+                >{item.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Resources */}
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:C.white, marginBottom:16, textTransform:"uppercase", letterSpacing:1 }}>Resources</div>
+            {[
+              { label:"GST Filing Guide",    href:"https://www.gst.gov.in/" },
+              { label:"GST Portal",          href:"https://www.gst.gov.in/" },
+              { label:"Income Tax Portal",   href:"https://www.incometax.gov.in/" },
+              { label:"MCA Portal",          href:"https://www.mca.gov.in/" },
+              { label:"TDS Calculator",      href:"https://www.incometax.gov.in/iec/foportal/" },
+            ].map((item, i) => (
+              <div key={i} style={{ marginBottom:10 }}>
+                <a href={item.href} target="_blank" rel="noreferrer"
+                  style={{ fontSize:13, color:"rgba(255,255,255,0.55)", textDecoration:"none" }}
+                  onMouseEnter={e=>e.target.style.color="#F39C12"}
+                  onMouseLeave={e=>e.target.style.color="rgba(255,255,255,0.55)"}
+                >{item.label}</a>
+              </div>
+            ))}
+          </div>
+
+          {/* Company */}
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:C.white, marginBottom:16, textTransform:"uppercase", letterSpacing:1 }}>Company</div>
+            {[
+              { label:"About Global Web SaaS", href:"#about" },
+              { label:"Contact Us",            href:"https://wa.me/919981432648?text=Hi%20TaxSaathi%2C%20I%20have%20a%20query" },
+              { label:"Privacy Policy",         href:"/privacy-policy.html" },
+              { label:"Terms of Service",       href:"/privacy-policy.html" },
+              { label:"WhatsApp Support",       href:"https://wa.me/919981432648" },
+            ].map((item, i) => (
+              <div key={i} style={{ marginBottom:10 }}>
+                <a href={item.href} target={item.href.startsWith("http")?"_blank":"_self"} rel="noreferrer"
+                  style={{ fontSize:13, color:"rgba(255,255,255,0.55)", textDecoration:"none" }}
+                  onMouseEnter={e=>e.target.style.color="#F39C12"}
+                  onMouseLeave={e=>e.target.style.color="rgba(255,255,255,0.55)"}
+                >{item.label}</a>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* About Global Web SaaS section */}
+        <div id="about" style={{ borderTop:"1px solid rgba(255,255,255,0.08)", padding:"32px 5%", maxWidth:1100, margin:"0 auto" }}>
+          <div style={{ fontSize:13, fontWeight:700, color:"#F39C12", marginBottom:14, textTransform:"uppercase", letterSpacing:1.5 }}>About Global Web SaaS</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap:24 }}>
+            <p style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.9, margin:0 }}>
+              <strong style={{ color:"rgba(255,255,255,0.8)" }}>Global Web SaaS</strong> is an Indian technology company dedicated to building powerful, easy-to-use SaaS products for Indian businesses. We believe that world-class software should be accessible and affordable for every entrepreneur, CA, and SME in India — not just large corporations.
+            </p>
+            <p style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:1.9, margin:0 }}>
+              Our flagship product <strong style={{ color:"#F39C12" }}>TaxSaathi</strong> simplifies GST compliance, invoicing, ITC reconciliation, and tax filing — powered by AI. We are headquartered in <strong style={{ color:"rgba(255,255,255,0.7)" }}>Indore, Madhya Pradesh</strong> and serve businesses across India. Our mission: <em style={{ color:"rgba(255,255,255,0.65)" }}>"India ka compliance, aasan aur affordable."</em>
+            </p>
+            <div style={{ fontSize:13, color:"rgba(255,255,255,0.5)", lineHeight:2 }}>
+              <div>🚀 <strong style={{ color:"rgba(255,255,255,0.7)" }}>Founded:</strong> 2024</div>
+              <div>🏙️ <strong style={{ color:"rgba(255,255,255,0.7)" }}>HQ:</strong> Indore, MP, India</div>
+              <div>🎯 <strong style={{ color:"rgba(255,255,255,0.7)" }}>Focus:</strong> GST, Tax & Compliance SaaS</div>
+              <div>👥 <strong style={{ color:"rgba(255,255,255,0.7)" }}>Serving:</strong> 500+ businesses across India</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Social + Bottom bar */}
+        <div style={{ borderTop:"1px solid rgba(255,255,255,0.08)", padding:"20px 5%", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+          <div style={{ fontSize:12, color:"rgba(255,255,255,0.35)" }}>
+            &copy; 2026 TaxSaathi by <strong style={{ color:"rgba(255,255,255,0.5)" }}>Global Web SaaS</strong> &bull; Made with &#10084;&#65039; in India &bull;{" "}
+            <a href="/privacy-policy.html" style={{ color:"rgba(255,255,255,0.35)", textDecoration:"none" }}>Privacy Policy</a>
+          </div>
+          <div style={{ display:"flex", gap:14 }}>
+            {[
+              { icon:"📘", label:"Facebook",  href:"https://www.facebook.com/profile.php?id=61568040885705" },
+              { icon:"📸", label:"Instagram", href:"https://www.instagram.com/" },
+              { icon:"💼", label:"LinkedIn",  href:"https://www.linkedin.com/company/112488546/" },
+              { icon:"💬", label:"WhatsApp",  href:"https://wa.me/919981432648" },
+            ].map((s,i) => (
+              <a key={i} href={s.href} target="_blank" rel="noreferrer" title={s.label}
+                style={{ fontSize:20, textDecoration:"none", opacity:0.5, transition:"opacity 0.15s" }}
+                onMouseEnter={e=>e.currentTarget.style.opacity="1"}
+                onMouseLeave={e=>e.currentTarget.style.opacity="0.5"}
+              >{s.icon}</a>
+            ))}
+          </div>
+        </div>
+
       </div>
 
       {/* AUTH MODAL */}
@@ -2003,7 +2131,7 @@ async function handleUpgrade(planId) {
           await upgradePlan(planId);
           setSuccess(`🎉 ${planName} Plan activated successfully! Welcome aboard!`);
         } else {
-          alert('Payment verification failed. Please contact support@taxsaathi.online');
+          alert('Payment verification failed. Please contact contact@globalwebsaas.org');
         }
       },
       prefill: {
