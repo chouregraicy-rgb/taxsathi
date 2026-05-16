@@ -525,7 +525,7 @@ footer{background:var(--navy);padding:50px 5% 30px;color:rgba(255,255,255,0.6);}
     </div>
     <div class="footer-col">
       <h4>Company</h4>
-      <a href="#" onclick="document.getElementById('about-modal').style.display='flex';return false;">About Us</a>
+      <a href="javascript:void(0)" onclick="showAboutModal()">About Us</a>
       <a href="https://wa.me/919981432648?text=Hi%20TaxSaathi%2C%20I%20have%20a%20query" target="_blank">Contact</a>
       <a href="/privacy-policy.html">Privacy Policy</a>
       <a href="/privacy-policy.html">Terms of Service</a>
@@ -677,7 +677,17 @@ async function handleSignUp(){
   btn.textContent = 'Create Free Account 🚀';
   btn.disabled = false;
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeModal();hideAboutModal();}
+});
+function showAboutModal(){
+  var m=document.getElementById('about-modal');
+  if(m){m.style.display='flex';}
+}
+function hideAboutModal(){
+  var m=document.getElementById('about-modal');
+  if(m){m.style.display='none';}
+}
 
 // Intersection Observer for scroll animations
 const observer = new IntersectionObserver((entries) => {
@@ -695,9 +705,9 @@ document.querySelectorAll('.feature-card, .step, .plan, .testi-card, .stat-item'
 </script>
 
 <!-- About Us Modal -->
-<div id="about-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)this.style.display='none';">
+<div id="about-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)hideAboutModal();">
   <div style="background:#fff;border-radius:16px;padding:36px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;position:relative;">
-    <button onclick="document.getElementById('about-modal').style.display='none'" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#5D6D7E;">&times;</button>
+    <button onclick="hideAboutModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#5D6D7E;">&times;</button>
     <div style="font-size:22px;font-weight:900;color:#1B4F72;margin-bottom:4px;">🇮🇳 TaxSaathi</div>
     <div style="font-size:12px;color:#F39C12;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px;">A Product by Global Web SaaS</div>
     <p style="font-size:14px;color:#5D6D7E;line-height:1.8;margin-bottom:16px;">
