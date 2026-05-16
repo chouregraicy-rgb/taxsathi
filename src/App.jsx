@@ -485,13 +485,23 @@ function useAuth() {
       setActiveCompany(cos[0]);
     }
 
-    setPlan(p?.plan || "free");
-
     // ── TRIAL CHECK ────────────────────────────────────────────────
-    if (p?.plan_status === "trial" && p?.trial_ends_at) {
-      const trialEnd = new Date(p.trial_ends_at);
+    // Re-fetch user with trial fields explicitly
+    const { data: freshUser } = await supabase
+      .from("users")
+      .select("plan, plan_status, trial_started_at, trial_ends_at")
+      .eq("id", uid)
+      .single();
+
+    const effectivePlan = freshUser?.plan || p?.plan || "free";
+    const effectiveStatus = freshUser?.plan_status || p?.plan_status || "active";
+    const effectiveTrialEnd = freshUser?.trial_ends_at || p?.trial_ends_at;
+
+    setPlan(effectivePlan);
+
+    if (effectiveStatus === "trial" && effectiveTrialEnd) {
+      const trialEnd = new Date(effectiveTrialEnd);
       if (new Date() > trialEnd) {
-        // Trial expired — downgrade to free silently
         await supabase.from("users").update({ plan: "free", plan_status: "expired" }).eq("id", uid);
         setPlan("free");
         setPlanStatus("expired");
@@ -500,8 +510,8 @@ function useAuth() {
         setTrialEndsAt(trialEnd);
       }
     } else {
-      setPlanStatus(p?.plan_status || "active");
-      setTrialEndsAt(p?.trial_ends_at ? new Date(p.trial_ends_at) : null);
+      setPlanStatus(effectiveStatus);
+      setTrialEndsAt(effectiveTrialEnd ? new Date(effectiveTrialEnd) : null);
     }
     // ───────────────────────────────────────────────────────────────
 
@@ -549,8 +559,8 @@ function useAuth() {
     }
     // ──────────────────────────────────────────────────────────────
 
-    // Insert user profile
-    await supabase.from("users").upsert({
+    // Insert user profile with trial data
+    const { error: upsertError } = await supabase.from("users").upsert({
       id: uid, name, email, mobile,
       plan: planToAssign,
       plan_status: planStatusToAssign,
@@ -558,7 +568,8 @@ function useAuth() {
         trial_started_at: trialStart.toISOString(),
         trial_ends_at: trialEnd.toISOString(),
       }),
-    });
+    }, { onConflict: "id" });
+    if (upsertError) console.error("Trial upsert error:", upsertError.message);
 
     // Insert company
     const { data: existingCo } = await supabase.from("companies").select("id").eq("user_id", uid).single();
@@ -2227,7 +2238,7 @@ async function handleUpgrade(planId) {
         </div>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:28 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:16, marginBottom:28 }}>
         {PLANS.map(p => (
           <div key={p.id} id={"plan_card_" + p.id} style={{ ...card, padding:24, border:`2px solid ${highlightPlan===p.id&&plan!==p.id?"#F39C12":plan===p.id?p.color:p.popular?p.color+"44":C.border}`, position:"relative", background:highlightPlan===p.id&&plan!==p.id?"#FFF9E6":plan===p.id?p.color+"0a":C.white, transition:"all 0.3s" }}>
             {highlightPlan===p.id && plan!==p.id && <div style={{ position:"absolute", top:-12, left:"50%", transform:"translateX(-50%)", background:"#F39C12", color:C.sidebar, fontSize:11, fontWeight:800, padding:"3px 14px", borderRadius:20, whiteSpace:"nowrap" }}>👆 YOUR CHOSEN PLAN</div>}
@@ -2315,7 +2326,7 @@ async function handleUpgrade(planId) {
           </div>
         </div>
 
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:20 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:12, marginBottom:20 }}>
           {[
             { type:"CA Firm (Small)", price:"₹799/mo", icon:"👨‍💼", desc:"Up to 50 clients\nYour own branded app\nCustom domain", color:"#2E86C1" },
             { type:"CA Firm (Medium)", price:"₹1,500/mo", icon:"🏢", desc:"Up to 200 clients\nAll Pro features\nPriority support", color:"#1B4F72" },
@@ -2392,7 +2403,7 @@ function Dashboard({ summary, profile, plan, setPage }) {
           {plan.toUpperCase()} PLAN
         </span>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:16, marginBottom:24 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:12, marginBottom:24 }}>
         {stats.map((s,i) => (
           <div key={i} style={{ ...card, padding:"18px 20px", borderTop:`3px solid ${s.color}` }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
@@ -2811,7 +2822,7 @@ function CAEnrollment() {
       </div>
 
       {/* Stats */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:24 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:12, marginBottom:24 }}>
         {[
           { label:"CAs Enrolled", value:"35+",   icon:"👨‍💼", color:C.primary },
           { label:"Cities Covered",value:"20+",  icon:"📍",  color:C.success },
@@ -4035,7 +4046,7 @@ function ExpensePage({ data, auth }) {
         <div><div style={{ fontSize:20, fontWeight:800 }}>💸 Expense Tracking</div><div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Track all business expenses with GST input credit</div></div>
         <button style={btn()} onClick={()=>setShow(true)}>+ Add Expense</button>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:24 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:12, marginBottom:24 }}>
         {[{ label:"Total Expenses", value:fmt(total), color:C.danger, icon:"💸" },{ label:"GST Input Credit", value:fmt(totalGST), color:C.success, icon:"💰" },{ label:"This Month", value:fmt(expenses.filter(e=>e.date?.slice(0,7)===new Date().toISOString().slice(0,7)).reduce((a,e)=>a+Number(e.amount||0),0)), color:C.primary, icon:"📅" },{ label:"Total Records", value:expenses.length, color:C.purple, icon:"📋" }].map((s,i)=>(
           <div key={i} style={{ ...card, padding:"16px 20px", borderTop:`3px solid ${s.color}` }}>
             <div style={{ fontSize:11, color:C.textMuted, fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>{s.label}</div>
@@ -4250,7 +4261,7 @@ function BankReconciliation({ data }) {
         <div style={{ fontSize:20, fontWeight:800 }}>🏦 Bank Reconciliation</div>
         <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Upload bank statement and match with your invoices</div>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:12, marginBottom:20 }}>
         {[{ label:"Bank Transactions", value:bankTxns.length, color:C.primary },{ label:"Matched", value:matchedCount, color:C.success },{ label:"Unmatched", value:unmatchedBank.length, color:C.danger },{ label:"Match Rate", value:bankTxns.length?Math.round(matchedCount/bankTxns.length*100)+"%":"0%", color:C.accent }].map((s,i)=>(
           <div key={i} style={{ ...card, padding:"16px 20px", borderTop:`3px solid ${s.color}` }}>
             <div style={{ fontSize:11, color:C.textMuted, fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>{s.label}</div>
@@ -4384,7 +4395,7 @@ function GSTR2BReconciliation({ data }) {
         <div style={{ fontSize:20, fontWeight:800 }}>📑 GSTR-2B Reconciliation</div>
         <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Match GSTR-2B data with your purchase records to maximise ITC</div>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:12, marginBottom:20 }}>
         {[{ label:"GSTR-2B Entries", value:gstr2b.length, color:C.primary },{ label:"Matched", value:matchedCount, color:C.success },{ label:"Mismatches", value:gstr2b.length-matchedCount, color:C.danger },{ label:"Unclaimed ITC", value:fmt(missingITC), color:C.warning }].map((s,i)=>(
           <div key={i} style={{ ...card, padding:"16px 20px", borderTop:`3px solid ${s.color}` }}>
             <div style={{ fontSize:11, color:C.textMuted, fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>{s.label}</div>
@@ -4465,7 +4476,7 @@ function TDSManager({ auth }) {
         <div><div style={{ fontSize:20, fontWeight:800 }}>📋 TDS Manager</div><div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Track TDS deductions, deposits and Form 26AS</div></div>
         <button style={btn()} onClick={()=>setShow(true)}>+ Add TDS Entry</button>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:24 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:12, marginBottom:24 }}>
         {[{ label:"Total TDS Deducted", value:fmt(totalTDS), color:C.primary },{ label:"Pending Deposit", value:fmt(pendingTDS), color:C.danger },{ label:"Deposited", value:fmt(depositedTDS), color:C.success },{ label:"Total Entries", value:entries.length, color:C.purple }].map((s,i)=>(
           <div key={i} style={{ ...card, padding:"16px 20px", borderTop:`3px solid ${s.color}` }}>
             <div style={{ fontSize:11, color:C.textMuted, fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>{s.label}</div>
@@ -4983,7 +4994,7 @@ function InventoryPage({ data }) {
         <div><div style={{fontSize:20,fontWeight:800}}>📦 Inventory Management</div><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Track stock levels, auto-update on sales, set reorder alerts</div></div>
         <button style={btn()} onClick={()=>setShow(true)}>+ Add Item</button>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:12,marginBottom:20}}>
         {[{label:"Total Items",value:items.length,color:C.primary,icon:"📦"},{label:"Low Stock Alerts",value:lowStock.length,color:C.danger,icon:"⚠️"},{label:"Total Stock Value",value:fmt(totalValue),color:C.success,icon:"💰"},{label:"Out of Stock",value:items.filter(i=>i.current_stock===0).length,color:C.warning,icon:"🚫"}].map((s,i)=>(
           <div key={i} style={{...card,padding:"16px 20px",borderTop:`3px solid ${s.color}`}}>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><div style={{fontSize:11,color:C.textMuted,fontWeight:700,textTransform:"uppercase"}}>{s.label}</div><span style={{fontSize:18}}>{s.icon}</span></div>
@@ -5183,7 +5194,7 @@ function RecurringInvoices({ auth, data }) {
         <div><div style={{fontSize:20,fontWeight:800}}>🔁 Recurring Invoices</div><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Auto-generate invoices for subscription clients every month</div></div>
         <button style={btn()} onClick={()=>setShow(true)}>+ New Recurring Invoice</button>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:12,marginBottom:20}}>
         {[{label:"Active Schedules",value:activeCount,color:C.success},{label:"Monthly Recurring",value:fmt(monthlyRevenue),color:C.primary},{label:"Total Schedules",value:recurring.length,color:C.purple},{label:"Invoices Generated",value:recurring.reduce((a,r)=>a+(r.invoices_generated||0),0),color:C.accent}].map((s,i)=>(
           <div key={i} style={{...card,padding:"16px 20px",borderTop:`3px solid ${s.color}`}}>
             <div style={{fontSize:11,color:C.textMuted,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>{s.label}</div>
@@ -5413,7 +5424,7 @@ function PayrollPage({ auth }) {
         <div><div style={{fontSize:20,fontWeight:800}}>💼 Payroll Management</div><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Manage salaries, PF, ESI, TDS deductions and generate payslips</div></div>
         <div style={{display:"flex",gap:10}}><button style={btn("success")} onClick={runPayroll} disabled={employees.length===0}>▶ Run Payroll</button><button style={btn()} onClick={()=>setShow(true)}>+ Add Employee</button></div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:12,marginBottom:20}}>
         {[{label:"Total Employees",value:employees.filter(e=>e.status==="Active").length,color:C.primary},{label:"Gross Salary/Month",value:fmt(totalGross),color:C.success},{label:"Net Payout",value:fmt(totalNet),color:C.primary},{label:"Total PF (Employee)",value:fmt(totalPF),color:C.warning}].map((s,i)=>(
           <div key={i} style={{...card,padding:"16px 20px",borderTop:`3px solid ${s.color}`}}>
             <div style={{fontSize:11,color:C.textMuted,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>{s.label}</div>
@@ -5762,7 +5773,7 @@ function ETDSFiling({ auth }) {
         <div style={{ fontSize:20, fontWeight:800 }}>📤 e-TDS Filing (FVU Generator)</div>
         <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Generate FVU files for Form 24Q (Salary TDS) and Form 26Q (Non-Salary TDS) — submit on NSDL portal</div>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:12, marginBottom:20 }}>
         {[{ label:"Employees (24Q)", value:employees.length, color:C.primary },{ label:"TDS Entries (26Q)", value:tdsEntries.length, color:C.success },{ label:"Salary TDS (Annual)", value:fmt(totalTDS24Q), color:C.warning },{ label:"Non-Salary TDS", value:fmt(totalTDS26Q), color:C.purple }].map((s,i) => (
           <div key={i} style={{ ...card, padding:"16px 20px", borderTop:`3px solid ${s.color}` }}>
             <div style={{ fontSize:11, color:C.textMuted, fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>{s.label}</div>
@@ -6771,7 +6782,7 @@ export default function App() {
             </button>
           </div>
         )}
-        <div style={{ flex:1, overflowY:"auto", maxHeight:"100dvh", padding:page==="ai"?20:24 }}>
+        <div style={{ flex:1, overflowY:"auto", maxHeight:"100dvh", padding:page==="ai"?12:16, overflowX:"hidden" }}>
           {(() => {
             const FREE_PAGES    = ["dashboard","invoice","upload","reports","calendar","clients","settings","billing","companies"];
             const STARTER_PAGES = [...FREE_PAGES,"ai","whatsapp","einvoice","expenses","recurring","gst_health","client_portal","payments"];
