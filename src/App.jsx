@@ -3493,6 +3493,10 @@ function ClientsPage({ data, auth }) {
   const [show, setShow] = useState(false);
   const [f, setF] = useState({ company_name:"", gstin:"", contact_name:"", email:"", mobile:"", state:"Maharashtra" });
   const [deleting, setDeleting] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [editF, setEditF] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [editSuccess, setEditSuccess] = useState(false);
 
   async function handleDelete(id, name) {
     if (!window.confirm(`Delete client "${name}"? This cannot be undone.`)) return;
@@ -3501,12 +3505,40 @@ function ClientsPage({ data, auth }) {
     setDeleting(null);
   }
 
+  function startEdit(c) {
+    setEditing(c.id);
+    setEditF({ company_name: c.company_name||"", gstin: c.gstin||"", contact_name: c.contact_name||"", email: c.email||"", mobile: c.mobile||"", state: c.state||"Maharashtra" });
+    setShow(false);
+  }
+
+  async function handleEditSave(id) {
+    if (!editF.company_name) return alert("Company name is required");
+    setSaving(true);
+    const { error } = await supabase.from("clients").update(editF).eq("id", id);
+    if (error) { alert("Error updating client: " + error.message); setSaving(false); return; }
+    // Update local list without reload
+    const idx = data.clients.findIndex(c => c.id === id);
+    if (idx !== -1) Object.assign(data.clients[idx], editF);
+    setEditSuccess(true);
+    setTimeout(() => setEditSuccess(false), 2500);
+    setSaving(false);
+    setEditing(null);
+  }
+
   return (
     <div>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
         <div><div style={{ fontSize:20, fontWeight:800 }}>👥 Clients</div><div style={{ fontSize:13, color:C.textMuted }}>{data.clients.length} clients</div></div>
-        <button style={btn()} onClick={()=>setShow(!show)}>+ Add Client</button>
+        <button style={btn()} onClick={()=>{ setShow(!show); setEditing(null); }}>+ Add Client</button>
       </div>
+
+      {editSuccess && (
+        <div style={{ background:"#EAFAF1", border:"1px solid #1E844940", borderRadius:8, padding:"12px 18px", marginBottom:16, color:C.success, fontWeight:600, fontSize:14 }}>
+          ✅ Client updated successfully!
+        </div>
+      )}
+
+      {/* ── ADD CLIENT FORM ── */}
       {show && (
         <div style={{ ...card, marginBottom:20, background:C.primaryLighter }}>
           <div style={{ fontWeight:700, marginBottom:14, color:C.primary }}>New Client</div>
@@ -3529,13 +3561,58 @@ function ClientsPage({ data, auth }) {
           </div>
         </div>
       )}
+
+      {/* ── EDIT CLIENT FORM ── */}
+      {editing && (
+        <div style={{ ...card, marginBottom:20, background:"#FFFBEA", border:`1.5px solid ${C.accent}50` }}>
+          <div style={{ fontWeight:700, marginBottom:4, color:C.accent, fontSize:15 }}>✏️ Edit Client</div>
+          <div style={{ fontSize:12, color:C.textMuted, marginBottom:16 }}>Make corrections below and click Save Changes.</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+            <div>
+              <div style={lbl}>Company Name *</div>
+              <input style={inp} value={editF.company_name} onChange={e=>setEditF({...editF,company_name:e.target.value})} />
+            </div>
+            <div>
+              <div style={lbl}>GSTIN</div>
+              <input style={inp} value={editF.gstin} onChange={e=>setEditF({...editF,gstin:e.target.value.toUpperCase()})} />
+            </div>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:12 }}>
+            <div>
+              <div style={lbl}>Contact Name</div>
+              <input style={inp} value={editF.contact_name} onChange={e=>setEditF({...editF,contact_name:e.target.value})} />
+            </div>
+            <div>
+              <div style={lbl}>Mobile (WhatsApp)</div>
+              <input style={inp} value={editF.mobile} maxLength={10} onChange={e=>setEditF({...editF,mobile:e.target.value.replace(/\D/g,"")})} />
+            </div>
+            <div>
+              <div style={lbl}>Email</div>
+              <input style={inp} type="email" value={editF.email} onChange={e=>setEditF({...editF,email:e.target.value})} />
+            </div>
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <div style={lbl}>State</div>
+            <select style={inp} value={editF.state} onChange={e=>setEditF({...editF,state:e.target.value})}>
+              {STATES.map(s=><option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div style={{ display:"flex", gap:10 }}>
+            <button style={{ ...btn("success"), padding:"10px 24px" }} disabled={saving} onClick={()=>handleEditSave(editing)}>
+              {saving ? "⏳ Saving…" : "✅ Save Changes"}
+            </button>
+            <button style={btn("outline")} onClick={()=>setEditing(null)}>✕ Cancel</button>
+          </div>
+        </div>
+      )}
+
       <div style={card}>
         <table style={{ width:"100%", borderCollapse:"collapse" }}>
-          <thead><tr>{["Company","GSTIN","State","Contact","Mobile","Email","Status","Action"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+          <thead><tr>{["Company","GSTIN","State","Contact","Mobile","Email","Status","Actions"].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
           <tbody>{data.clients.length===0?(
             <tr><td colSpan={8} style={{...TD,textAlign:"center",padding:30,color:C.textMuted}}>No clients yet — add your first client above</td></tr>
           ):data.clients.map((c,i)=>(
-            <tr key={i}>
+            <tr key={i} style={{ background: editing===c.id ? "#FFFDE7" : "transparent" }}>
               <td style={{...TD,fontWeight:700}}>{c.company_name}</td>
               <td style={{...TD,fontFamily:"monospace",fontSize:11}}>{c.gstin||"—"}</td>
               <td style={TD}>{c.state}</td>
@@ -3550,13 +3627,21 @@ function ClientsPage({ data, auth }) {
               <td style={TD}>{c.email||"—"}</td>
               <td style={TD}><span style={badge(c.status==="Active"?C.success:C.textMuted)}>{c.status}</span></td>
               <td style={TD}>
-                <button
-                  style={{ ...btn("danger"), fontSize:11, padding:"4px 12px" }}
-                  onClick={() => handleDelete(c.id, c.company_name)}
-                  disabled={deleting === c.id}
-                >
-                  {deleting === c.id ? "⏳" : "🗑️ Delete"}
-                </button>
+                <div style={{ display:"flex", gap:6 }}>
+                  <button
+                    style={{ ...btn("outline"), fontSize:11, padding:"4px 10px", borderColor: C.accent, color: C.accent }}
+                    onClick={() => editing===c.id ? setEditing(null) : startEdit(c)}
+                  >
+                    {editing===c.id ? "✕ Close" : "✏️ Edit"}
+                  </button>
+                  <button
+                    style={{ ...btn("danger"), fontSize:11, padding:"4px 10px" }}
+                    onClick={() => handleDelete(c.id, c.company_name)}
+                    disabled={deleting === c.id}
+                  >
+                    {deleting === c.id ? "⏳" : "🗑️"}
+                  </button>
+                </div>
               </td>
             </tr>
           ))}</tbody>
