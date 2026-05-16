@@ -763,11 +763,22 @@ function AuthScreen({ onLogin, onSignup, onReset }) {
   ];
 
   const planList = [
-    { name:"Free", price:"₹0", desc:"Forever free", color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","5 Clients"] },
-    { name:"Starter", price:"₹299/mo", desc:"For small business", color:"#2E86C1", features:["3 GSTINs","Excel Upload","50 Clients","AI Assistant","E-Invoice"] },
-    { name:"Pro", price:"₹599/mo", desc:"Most Popular ⭐", color:"#1B4F72", popular:true, features:["10 GSTINs","CA Marketplace","Bank Recon","E-Way Bill","Unlimited AI"] },
-    { name:"Enterprise", price:"₹799/mo", desc:"For large orgs", color:"#7D3C98", features:["Unlimited GSTINs","White-label","Tally Import","Onboarding Call"] },
+    { id:"free",       name:"Free",       price:"₹0",      desc:"Forever free",      color:"#5D6D7E", features:["1 GSTIN","Unlimited Invoices","GST Reports","5 Clients"] },
+    { id:"starter",   name:"Starter",    price:"₹299/mo", desc:"For small business", color:"#2E86C1", features:["3 GSTINs","Excel Upload","50 Clients","AI Assistant","E-Invoice"] },
+    { id:"pro",       name:"Pro",        price:"₹599/mo", desc:"Most Popular ⭐",    color:"#1B4F72", popular:true, features:["10 GSTINs","CA Marketplace","Bank Recon","E-Way Bill","Unlimited AI"] },
+    { id:"enterprise",name:"Enterprise", price:"₹799/mo", desc:"For large orgs",     color:"#7D3C98", features:["Unlimited GSTINs","White-label","Tally Import","Onboarding Call"] },
   ];
+
+  function handlePlanCTA(planId) {
+    if (planId === "enterprise") {
+      // Enterprise → WhatsApp directly
+      window.open("https://wa.me/919981432648?text=Hi%20TaxSaathi%2C%20I%20am%20interested%20in%20the%20Enterprise%20plan.%20Please%20contact%20me.", "_blank");
+      return;
+    }
+    sessionStorage.setItem("ts_selected_plan", planId);
+    setMode("signup");
+    setShowForm(true);
+  }
 
   return (
     <div style={{ fontFamily:"'Segoe UI', Arial, sans-serif", background:"#F4F6F8", minHeight:"100vh", overflowY:"auto", overflowX:"hidden" }}>
@@ -838,10 +849,12 @@ function AuthScreen({ onLogin, onSignup, onReset }) {
                   </li>
                 ))}
               </ul>
-              <button onClick={()=>{ setMode("signup"); setShowForm(true); }} style={{ width:"100%", padding:10, borderRadius:8, fontWeight:700, fontSize:13, cursor:"pointer", background:p.popular?"#F39C12":"transparent", color:p.popular?C.sidebar:C.accent, border:p.popular?"none":`1.5px solid ${C.accent}` }}>
-                {p.name==="Free" ? "Start Free" : "Start 7-Day Free Trial"}
+              <button onClick={()=>handlePlanCTA(p.id)} style={{ width:"100%", padding:10, borderRadius:8, fontWeight:700, fontSize:13, cursor:"pointer", background:p.popular?"#F39C12":"transparent", color:p.popular?C.sidebar:C.accent, border:p.popular?"none":`1.5px solid ${C.accent}` }}>
+                {p.id==="free" ? "Start Free" : p.id==="enterprise" ? "Contact Sales" : "Start 7-Day Free Trial"}
               </button>
-              {p.name !== "Free" && <div style={{ textAlign:"center", fontSize:11, marginTop:7, color:p.popular?"rgba(255,255,255,0.55)":"#5D6D7E" }}>✅ No credit card required</div>}
+              {p.id !== "free" && <div style={{ textAlign:"center", fontSize:11, marginTop:7, color:p.popular?"rgba(255,255,255,0.55)":"#5D6D7E" }}>
+                {p.id==="enterprise" ? "📞 We will contact you within 24hrs" : "✅ No credit card required"}
+              </div>}
             </div>
           ))}
         </div>
@@ -1889,6 +1902,23 @@ function Subscription({ plan, upgradePlan, user, auth }) {
   const [couponMsg, setCouponMsg] = useState(null); // { text, valid, planId }
   const [applying, setApplying]  = useState(false);
 
+  // Auto-highlight plan chosen from landing page pricing section
+  const [highlightPlan] = useState(() => {
+    const p = sessionStorage.getItem("ts_selected_plan");
+    sessionStorage.removeItem("ts_selected_plan"); // consume once
+    return p || null;
+  });
+
+  // Scroll to highlighted plan card on mount
+  useEffect(() => {
+    if (highlightPlan) {
+      setTimeout(() => {
+        const el = document.getElementById("plan_card_" + highlightPlan);
+        if (el) el.scrollIntoView({ behavior:"smooth", block:"center" });
+      }, 300);
+    }
+  }, [highlightPlan]);
+
   function applyCoupon() {
     const code = coupon.trim().toUpperCase();
     if (!code) return;
@@ -2071,8 +2101,9 @@ async function handleUpgrade(planId) {
 
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:28 }}>
         {PLANS.map(p => (
-          <div key={p.id} style={{ ...card, padding:24, border:`2px solid ${plan===p.id?p.color:p.popular?p.color+"44":C.border}`, position:"relative", background:plan===p.id?p.color+"0a":C.white }}>
-            {p.popular && <div style={{ position:"absolute", top:-12, left:"50%", transform:"translateX(-50%)", background:p.color, color:C.white, fontSize:11, fontWeight:700, padding:"3px 12px", borderRadius:20 }}>MOST POPULAR</div>}
+          <div key={p.id} id={"plan_card_" + p.id} style={{ ...card, padding:24, border:`2px solid ${highlightPlan===p.id&&plan!==p.id?"#F39C12":plan===p.id?p.color:p.popular?p.color+"44":C.border}`, position:"relative", background:highlightPlan===p.id&&plan!==p.id?"#FFF9E6":plan===p.id?p.color+"0a":C.white, transition:"all 0.3s" }}>
+            {highlightPlan===p.id && plan!==p.id && <div style={{ position:"absolute", top:-12, left:"50%", transform:"translateX(-50%)", background:"#F39C12", color:C.sidebar, fontSize:11, fontWeight:800, padding:"3px 14px", borderRadius:20, whiteSpace:"nowrap" }}>👆 YOUR CHOSEN PLAN</div>}
+            {p.popular && highlightPlan!==p.id && <div style={{ position:"absolute", top:-12, left:"50%", transform:"translateX(-50%)", background:p.color, color:C.white, fontSize:11, fontWeight:700, padding:"3px 12px", borderRadius:20 }}>MOST POPULAR</div>}
             {plan===p.id && <div style={{ position:"absolute", top:-12, right:16, background:C.success, color:C.white, fontSize:11, fontWeight:700, padding:"3px 12px", borderRadius:20 }}>✓ CURRENT</div>}
             <div style={{ fontWeight:800, fontSize:16, color:p.color, marginBottom:8 }}>{p.name}</div>
             <div style={{ marginBottom:16 }}>
