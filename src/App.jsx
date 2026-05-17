@@ -457,14 +457,33 @@ function useAuth() {
     // Auto-create user profile if missing (Google OAuth users)
     if (!p) {
       const n = au?.user_metadata?.full_name || au?.user_metadata?.name || au?.email?.split("@")[0] || "User";
-      const { data: newP } = await supabase.from("users").upsert({ id: uid, name: n, email: au?.email, plan: "free" }).select().single();
-      p = newP || { id: uid, name: n, plan: "free" };
+      // New user — give them 7-day trial
+      const now = new Date();
+      const trialEnd = new Date(now); trialEnd.setDate(trialEnd.getDate() + 7);
+      const { data: newP } = await supabase.from("users").upsert({
+        id: uid, name: n, email: au?.email,
+        plan: "pro", plan_status: "trial",
+        trial_started_at: now.toISOString(),
+        trial_ends_at: trialEnd.toISOString(),
+      }).select().single();
+      p = newP || { id: uid, name: n, plan: "pro", plan_status: "trial", trial_ends_at: trialEnd.toISOString() };
     } else if (p && !p.name) {
       const n = au?.user_metadata?.full_name || au?.user_metadata?.name || au?.email?.split("@")[0] || "";
       if (n) {
         await supabase.from("users").upsert({ id: uid, name: n, email: au?.email, plan: p?.plan || "free" });
         p.name = n;
       }
+    } else if (p && p.plan === "free" && !p.trial_started_at && !p.plan_status) {
+      // Existing user with no trial yet — give them one (catches signup RLS failure)
+      const now = new Date();
+      const trialEnd = new Date(now); trialEnd.setDate(trialEnd.getDate() + 7);
+      await supabase.from("users").update({
+        plan: "pro", plan_status: "trial",
+        trial_started_at: now.toISOString(),
+        trial_ends_at: trialEnd.toISOString(),
+      }).eq("id", uid);
+      p.plan = "pro"; p.plan_status = "trial";
+      p.trial_ends_at = trialEnd.toISOString();
     }
     setProfile(p);
 
@@ -710,6 +729,23 @@ function useData(companyId) {
     return data || inv;
   }
 
+  async function updateInvoice(id, invoiceData) {
+    const { lines, ...invWithoutLines } = invoiceData;
+    const totals = lines.reduce((a, l) => ({
+      taxable: a.taxable + Number(l.amount||0),
+      cgst: a.cgst + Number(l.cgst||0),
+      sgst: a.sgst + Number(l.sgst||0),
+      igst: a.igst + Number(l.igst||0),
+      total: a.total + Number(l.total||0),
+    }), { taxable:0, cgst:0, sgst:0, igst:0, total:0 });
+    const { error } = await supabase.from("gst_invoices").update({
+      ...invWithoutLines, ...totals,
+      invoice_data: JSON.stringify(lines)
+    }).eq("id", id);
+    if (error) throw error;
+    await loadData();
+  }
+
   async function deleteInvoice(id) {
     await supabase.from("gst_invoices").delete().eq("id", id);
     setInvoices(i => i.filter(inv => inv.id !== id));
@@ -740,7 +776,7 @@ function useData(companyId) {
     setClients(c => c.filter(cl => cl.id !== id));
   }
 
-  return { sales, purchases, clients, invoices, uploading, uploadExcel, saveInvoice, deleteInvoice, computeSummary, addClient, deleteClient };
+  return { sales, purchases, clients, invoices, uploading, uploadExcel, saveInvoice, updateInvoice, deleteInvoice, computeSummary, addClient, deleteClient };
 }
 
 // ─── AUTH SCREEN ──────────────────────────────────────────────────────────────
@@ -1219,7 +1255,7 @@ function HSNSearch({ value, onHsnChange, onSelect }) {
   );
 }
 
-function InvoiceGenerator({ company, clients, saveInvoice, setPage, invoices, deleteInvoice }) {
+function InvoiceGenerator({ company, clients, saveInvoice, updateInvoice, setPage, invoices, deleteInvoice }) {
   const emptyLine = () => ({ description:"", hsn:"", qty:1, unit:"Nos", rate:0, gst_rate:18, amount:0, cgst:0, sgst:0, igst:0, total:0 });
   const [inv, setInv] = useState({
     invoice_number: "INV-" + Date.now().toString().slice(-6),
@@ -1233,6 +1269,28 @@ function InvoiceGenerator({ company, clients, saveInvoice, setPage, invoices, de
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [editingId, setEditingId] = useState(null); // id of invoice being edited
+
+  function loadInvoiceForEdit(savedInv) {
+    const lines = savedInv.invoice_data ? JSON.parse(savedInv.invoice_data) : [emptyLine()];
+    setInv({
+      invoice_number: savedInv.invoice_number,
+      invoice_date: savedInv.invoice_date,
+      due_date: savedInv.due_date || "",
+      place_of_supply: savedInv.place_of_supply || company?.state || "Maharashtra",
+      customer_name: savedInv.customer_name || "",
+      customer_gstin: savedInv.customer_gstin || "",
+      customer_address: savedInv.customer_address || "",
+      customer_state: savedInv.customer_state || "Maharashtra",
+      customer_email: savedInv.customer_email || "",
+      notes: savedInv.notes || "",
+      terms: savedInv.terms || "",
+      lines,
+    });
+    setEditingId(savedInv.id);
+    setPreview(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   const isInterstate = inv.customer_state !== (company?.state || "Maharashtra");
 
@@ -1381,17 +1439,45 @@ function InvoiceGenerator({ company, clients, saveInvoice, setPage, invoices, de
 
   return (
     <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:12 }}>
         <div>
-          <div style={{ fontSize:20, fontWeight:800 }}>🧾 GST Invoice Generator</div>
-          <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>Create professional GST-compliant tax invoices</div>
+          <div style={{ fontSize:20, fontWeight:800 }}>🧾 {editingId ? "Edit Invoice" : "GST Invoice Generator"}</div>
+          <div style={{ fontSize:13, color:C.textMuted, marginTop:4 }}>
+            {editingId
+              ? <span style={{ color:"#F39C12", fontWeight:600 }}>✏️ Editing: {inv.invoice_number} — make changes and click Save</span>
+              : "Create professional GST-compliant tax invoices"
+            }
+          </div>
         </div>
-        <div style={{ display:"flex", gap:10 }}>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+          {editingId && (
+            <button style={btn("outline")} onClick={() => {
+              setEditingId(null);
+              setInv({
+                invoice_number: "INV-" + Date.now().toString().slice(-6),
+                invoice_date: new Date().toISOString().slice(0,10),
+                due_date: new Date(Date.now()+30*864e5).toISOString().slice(0,10),
+                place_of_supply: company?.state || "Maharashtra",
+                customer_name:"", customer_gstin:"", customer_address:"", customer_state:"Maharashtra",
+                notes:"Thank you for your business!", terms:"Payment due within 30 days.",
+                lines: [emptyLine()],
+              });
+            }}>+ New Invoice</button>
+          )}
           <button style={btn("outline")} onClick={() => setPreview(!preview)}>{preview ? "✏️ Edit" : "👁 Preview"}</button>
-          <button style={btn("success")} onClick={handleSave} disabled={saving}>{saving ? "Saving…" : saved ? "✅ Saved!" : "💾 Save Invoice"}</button>
+          <button style={btn("success")} onClick={handleSave} disabled={saving}>
+            {saving ? "Saving…" : saved ? "✅ Saved!" : editingId ? "💾 Update Invoice" : "💾 Save Invoice"}
+          </button>
           <button style={btn()} onClick={printInvoice}>🖨️ Print / PDF</button>
         </div>
       </div>
+
+      {editingId && (
+        <div style={{ background:"#FFF9E6", border:"1.5px solid #F39C12", borderRadius:8, padding:"10px 16px", marginBottom:16, fontSize:13, color:"#7D6608", display:"flex", alignItems:"center", gap:10 }}>
+          <span>⚠️</span>
+          <span>You are editing a saved invoice. Click <strong>Update Invoice</strong> to save changes, or <strong>+ New Invoice</strong> to start fresh.</span>
+        </div>
+      )}
 
       {/* Company details warning */}
       {!company?.id && (
@@ -1806,12 +1892,12 @@ GSTIN: ${company?.gstin || "—"}`;
         <div style={{ ...card, marginTop:24 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
             <div style={{ fontWeight:700, fontSize:15, color:C.primary }}>📋 Saved Invoices ({invoices.length})</div>
-            <div style={{ fontSize:12, color:C.textMuted }}>Click to reprint or delete</div>
+            <div style={{ fontSize:12, color:C.textMuted }}>Edit, reprint or delete</div>
           </div>
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead>
               <tr>
-                {["Invoice #","Customer","Date","Due Date","Total","Action"].map(h => (
+                {["Invoice #","Customer","Date","Due Date","Total","Actions"].map(h => (
                   <th key={h} style={TH}>{h}</th>
                 ))}
               </tr>
@@ -1825,16 +1911,34 @@ GSTIN: ${company?.gstin || "—"}`;
                   <td style={TD}>{inv.due_date}</td>
                   <td style={{ ...TD, fontWeight:700 }}>{fmt(inv.total)}</td>
                   <td style={TD}>
-                    <button
-                      style={{ ...btn("danger"), fontSize:11, padding:"4px 10px" }}
-                      onClick={() => {
-                        if (window.confirm(`Delete invoice ${inv.invoice_number}? This cannot be undone.`)) {
-                          deleteInvoice(inv.id);
-                        }
-                      }}
-                    >
-                      🗑️ Delete
-                    </button>
+                    <div style={{ display:"flex", gap:6 }}>
+                      <button
+                        style={{ ...btn("outline"), fontSize:11, padding:"4px 10px", borderColor:C.accent, color:C.accent }}
+                        onClick={() => loadInvoiceForEdit(inv)}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        style={{ ...btn("outline"), fontSize:11, padding:"4px 10px" }}
+                        onClick={() => {
+                          // Load invoice and print
+                          loadInvoiceForEdit(inv);
+                          setTimeout(() => printInvoice(), 100);
+                        }}
+                      >
+                        🖨️
+                      </button>
+                      <button
+                        style={{ ...btn("danger"), fontSize:11, padding:"4px 10px" }}
+                        onClick={() => {
+                          if (window.confirm(`Delete invoice ${inv.invoice_number}? This cannot be undone.`)) {
+                            deleteInvoice(inv.id);
+                          }
+                        }}
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -6836,7 +6940,7 @@ export default function App() {
             return (
               <>
                 {page==="dashboard"       && <Dashboard summary={summary} profile={auth.profile} plan={auth.plan} setPage={setPage} />}
-                {page==="invoice"         && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} setPage={setPage} invoices={data.invoices} deleteInvoice={data.deleteInvoice} />}
+                {page==="invoice"         && <InvoiceGenerator company={auth.activeCompany} clients={data.clients} saveInvoice={data.saveInvoice} updateInvoice={data.updateInvoice} setPage={setPage} invoices={data.invoices} deleteInvoice={data.deleteInvoice} />}
                 {page==="upload"          && <UploadPage data={data} />}
                 {page==="reports"         && <ReportsPage data={data} summary={summary} />}
                 {page==="ai"              && <AIAssistant summary={summary} company={auth.activeCompany} />}
