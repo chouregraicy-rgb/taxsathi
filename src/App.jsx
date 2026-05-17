@@ -6846,12 +6846,15 @@ export default function App() {
 
       {/* Main */}
       <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", height:"100dvh", minHeight:"100dvh" }}>
-        <div style={{ background:C.white, borderBottom:`1px solid ${C.border}`, padding:"0 24px", height:54, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
-          <div style={{ fontWeight:700, fontSize:16 }}>{nav.find(n=>n.id===page)?.icon} {nav.find(n=>n.id===page)?.label}</div>
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            {auth.activeCompany && <div style={{ fontSize:12, color:C.textMuted, background:C.bg, padding:"4px 12px", borderRadius:20, border:`1px solid ${C.border}` }}>🏢 {auth.activeCompany.company_name}</div>}
-            <div style={{ fontSize:12, color:C.textMuted, background:C.bg, padding:"4px 12px", borderRadius:20, border:`1px solid ${C.border}` }}>{`📅 ${new Date().toLocaleString("en-IN",{month:"long",year:"numeric"})}`}</div>
-            <button onClick={()=>setDark(d=>!d)} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:20, padding:"4px 12px", cursor:"pointer", fontSize:13, color:C.textMuted }}>{dark?"☀️ Light":"🌙 Dark"}</button>
+        <div style={{ background:C.white, borderBottom:`1px solid ${C.border}`, padding:"0 12px", height:52, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <button onClick={()=>setSidebarOpen(o=>!o)} style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, fontSize:18, cursor:"pointer", color:C.text, padding:"5px 10px", lineHeight:1, flexShrink:0 }}>☰</button>
+            <div style={{ fontWeight:700, fontSize:14, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:"calc(100vw - 160px)" }}>{nav.find(n=>n.id===page)?.icon} {nav.find(n=>n.id===page)?.label}</div>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+            {!isMobile && auth.activeCompany && <div style={{ fontSize:11, color:C.textMuted, background:C.bg, padding:"4px 10px", borderRadius:20, border:`1px solid ${C.border}` }}>🏢 {auth.activeCompany.company_name}</div>}
+            {!isMobile && <div style={{ fontSize:11, color:C.textMuted, background:C.bg, padding:"4px 10px", borderRadius:20, border:`1px solid ${C.border}` }}>{`📅 ${new Date().toLocaleString("en-IN",{month:"long",year:"numeric"})}`}</div>}
+            <button onClick={()=>setDark(d=>!d)} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:20, padding:"5px 10px", cursor:"pointer", fontSize:13, color:C.textMuted, lineHeight:1 }}>{dark?"☀️":"🌙"}</button>
           </div>
         </div>
 
