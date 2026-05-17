@@ -6709,7 +6709,12 @@ export default function App() {
   const [page, setPage] = useState("dashboard");
   const [dark, setDark] = useState(() => localStorage.getItem("ts_dark") === "1");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isMobile = () => window.innerWidth < 768;
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   useEffect(() => {
     document.body.style.background = dark ? "#0D1117" : "";
     document.body.style.color = dark ? "#E6EDF3" : "";
@@ -6788,13 +6793,13 @@ export default function App() {
       )}
 
       {/* Sidebar */}
-      <div id="taxs-sidebar" style={{ width:220, background:C.sidebar, display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto", position: window.innerWidth < 768 ? "fixed" : "relative", left:0, top:0, height:"100vh", zIndex:999, transform: window.innerWidth < 768 && !sidebarOpen ? "translateX(-100%)" : "translateX(0)", transition:"transform 0.25s ease", boxShadow: window.innerWidth < 768 && sidebarOpen ? "4px 0 20px rgba(0,0,0,0.3)" : "none" }}>
+      <div id="taxs-sidebar" style={{ width:220, background:C.sidebar, display:"flex", flexDirection:"column", flexShrink:0, overflowY:"auto", position: isMobile ? "fixed" : "relative", left:0, top:0, height:"100vh", zIndex:999, transform: isMobile && !sidebarOpen ? "translateX(-100%)" : "translateX(0)", transition:"transform 0.25s ease", boxShadow: isMobile && sidebarOpen ? "4px 0 20px rgba(0,0,0,0.3)" : "none" }}>
         <div style={{ padding:"18px 16px 14px", borderBottom:"1px solid rgba(255,255,255,0.08)", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div>
             <div style={{ fontSize:18, fontWeight:900, color:C.white }}>🇮🇳 TaxSaathi</div>
             <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", marginTop:2, letterSpacing:1, textTransform:"uppercase" }}>India's GST & Tax Platform</div>
           </div>
-          <button onClick={()=>setSidebarOpen(false)} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.5)", fontSize:20, cursor:"pointer", padding:4, display: window.innerWidth < 768 ? "block" : "none" }}>✕</button>
+          <button onClick={()=>setSidebarOpen(false)} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.5)", fontSize:20, cursor:"pointer", padding:4, display: isMobile ? "block" : "none" }}>✕</button>
         </div>
 
         {/* Company Switcher */}
@@ -6811,7 +6816,7 @@ export default function App() {
             const isLocked = n.plan && planOrder.indexOf(n.plan) > userPlanIdx;
             const planColor = n.plan === "starter" ? "#2E86C1" : n.plan === "pro" ? "#1B4F72" : n.plan === "enterprise" ? "#7D3C98" : "#E74C3C";
             return (
-              <div key={n.id} onClick={()=>{ setPage(n.id); if(window.innerWidth < 768) setSidebarOpen(false); }} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", cursor:"pointer", background:page===n.id?"rgba(46,134,193,0.3)":"transparent", color:page===n.id?C.white:isLocked?"rgba(255,255,255,0.3)":"rgba(255,255,255,0.55)", fontSize:13, fontWeight:page===n.id?600:400, borderLeft:`3px solid ${page===n.id?C.primaryLight:"transparent"}`, transition:"all 0.15s", position:"relative" }}>
+              <div key={n.id} onClick={()=>{ setPage(n.id); if(isMobile) setSidebarOpen(false); }} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", cursor:"pointer", background:page===n.id?"rgba(46,134,193,0.3)":"transparent", color:page===n.id?C.white:isLocked?"rgba(255,255,255,0.3)":"rgba(255,255,255,0.55)", fontSize:13, fontWeight:page===n.id?600:400, borderLeft:`3px solid ${page===n.id?C.primaryLight:"transparent"}`, transition:"all 0.15s", position:"relative" }}>
                 <span style={{ fontSize:15 }}>{n.icon}</span>
                 <span style={{ flex:1 }}>{n.label}</span>
                 {isLocked
